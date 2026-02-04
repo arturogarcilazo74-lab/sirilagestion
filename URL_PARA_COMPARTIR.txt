@@ -1,0 +1,49 @@
+=================================================================
+    DIRECCION WEB - PRIMARIA JAIME NUNO (SISTEMA SIRILA)
+=================================================================
+
+Tu enlace para acceder a la aplicación desde CUALQUIER lugar:
+
+    https://primaria-jaimenuno-sirila.loca.lt
+
+-----------------------------------------------------------------
+ IMPORTANTE: PANTALLA DE SEGURIDAD (Tunnel Password)
+-----------------------------------------------------------------
+Si al entrar te pide "Tunnel Password", debes poner la IP
+del servidor.
+
+PARA OBTENER LA CLAVE:
+1. Abre el archivo "OBTENER_CLAVE_ACCESO.bat" en esta carpeta.
+2. Copia el número que aparece (Ej: 187.134.xxx.xxx)
+3. Pégalo en la página y da click en "Click to Submit".
+
+=================================================================
+
+INSTRUCCIONES:
+
+1. Copia este enlace exactamente como aparece arriba
+2. Péga este enlace en WhatsApp, correo, o navegador
+3. Este enlace SIEMPRE será el mismo
+4. Puedes compartirlo con padres, maestros y cualquier persona
+   que necesite acceder a la plataforma
+
+IMPORTANTE:
+- La computadora donde está instalado Sirila debe estar encendida
+- No cierres la ventana del servidor
+- Guarda este enlace en tus favoritos
+
+=================================================================
+
+¿QUIERES CAMBIAR EL NOMBRE?
+
+1. Cierra el servidor
+2. Edita el archivo: compartir_internet.bat
+3. Cambia la línea correspondiente al subdominio
+4. Guarda y reinicia el servidor
+
+=================================================================
+
+Soporte: miguelroman02@gmail.com
+Desarrollador: Sistemas Sirila
+
+=================================================================

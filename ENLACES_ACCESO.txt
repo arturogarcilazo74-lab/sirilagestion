@@ -1,0 +1,58 @@
+=============================================
+  SERVIDOR SIRILA - ENLACES DE ACCESO
+=============================================
+
+✅ SERVIDOR ACTIVO
+
+---------------------------------------------
+📍 ACCESO LOCAL (desde tu PC):
+---------------------------------------------
+
+http://localhost:3001
+
+PIN Director: admin
+
+
+---------------------------------------------
+🌐 ACCESO DESDE INTERNET:
+---------------------------------------------
+
+Para obtener la URL de internet:
+
+1. Abre PowerShell o CMD
+2. Escribe este comando:
+
+   cloudflared tunnel --url http://localhost:3001
+
+3. Espera 30 segundos
+
+4. Verás una URL como:
+   https://algo-palabra-random.trycloudflare.com
+
+5. ¡Esa es tu URL para compartir!
+
+
+---------------------------------------------
+💾 DATOS GUARDADOS EN:
+---------------------------------------------
+
+server\database.json
+
+(Haz respaldo de este archivo regularmente)
+
+
+---------------------------------------------
+📱 COMPARTIR CON PADRES/MAESTROS:
+---------------------------------------------
+
+"Sistema Escolar Primaria Jaime Nunó
+
+🔗 [PEGA AQUÍ TU URL DE CLOUDFLARE]
+
+Padres: usen CURP del alumno
+Maestros: usen su PIN"
+
+
+=============================================
+  ¿PROBLEMAS? Lee: INSTRUCCIONES_SERVIDOR.md
+=============================================

@@ -1,0 +1,7 @@
+{
+  "name": "SirilaGestion",
+  "description": "Sistema integral de control escolar SirilaGestion con IA para asistencia QR, formación de equipos, control de tareas y seguimiento conductual.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#4f46e5" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Sirila" />
+  <link rel="apple-touch-icon" href="/logo escuela.png" />
+  <title>Sirila - Gestión Escolar</title>
+  <link rel="stylesheet" href="/index.css">
+  <script>
+    // Fail-safe for White Screen Debugging
+    window.onerror = function (msg, url, line, col, error) {
+      alert("Error Detectado:\n" + msg + "\nEn: " + url + ":" + line);
+    };
+
+    window.addEventListener('unhandledrejection', function (event) {
+      alert("Error de Promesa:\n" + event.reason);
+    });
+
+    // Check if React mounts
+    setTimeout(function () {
+      var root = document.getElementById('root');
+      if (root && root.innerHTML === '' && window.location.protocol === 'file:') {
+        alert("La aplicación no cargó correctamente.\n\nPrueba presionar Ctrl+Shift+I para ver la consola de errores.");
+      }
+    }, 8000);
+  </script>
+</head>
+
+<body class="bg-slate-50 text-slate-900">
+  <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+
+</html>
