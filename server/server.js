@@ -1,11 +1,17 @@
-const express = require('express');
-const cors = require('cors');
-const fs = require('fs');
-const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '.env') });
+import express from 'express';
+import cors from 'cors';
+import fs from 'fs';
+import path from 'path';
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { initDB, getPool } from './db.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+dotenv.config({ path: path.join(__dirname, '.env') });
 
 const app = express();
-const { getPool } = require('./db');
 const PORT = process.env.PORT || 3001;
 
 app.use(cors());
@@ -26,7 +32,6 @@ const DB_FILE = path.join(__dirname, 'database.json');
 // Try to initialize MySQL, fallback to JSON
 async function initStorage() {
     try {
-        const { initDB } = require('./db');
         pool = await initDB();
         useMySQL = true;
         console.log('✅ MySQL connected successfully!');
@@ -98,7 +103,7 @@ app.get('/api/full-state', async (req, res) => {
         }
 
         // Original MySQL code
-        const { getPool } = require('./db');
+        // Original MySQL code
         const pool = getPool();
 
         // Students
@@ -914,8 +919,8 @@ app.delete('/api/books/:id', async (req, res) => {
     }
 });
 
-// Handle React Routing, return all requests to React app
-app.get('*', (req, res) => {
+// Handle React Routing, return all requests to React app (Fixed for Express 5)
+app.get(/^(.*)$/, (req, res) => {
     res.sendFile(path.join(__dirname, '../dist-app', 'index.html'));
 });
 

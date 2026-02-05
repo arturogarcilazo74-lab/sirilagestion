@@ -1,19 +1,28 @@
-const mysql = require('mysql2/promise');
-const fs = require('fs');
-const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '.env') });
+import mysql from 'mysql2/promise';
+import fs from 'fs';
+import path from 'path';
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+dotenv.config({ path: path.join(__dirname, '.env') });
 
 const dbConfig = {
     host: process.env.DB_HOST || process.env.MYSQLHOST || 'localhost',
     user: process.env.DB_USER || process.env.MYSQLUSER || 'root',
     password: process.env.DB_PASSWORD || process.env.MYSQLPASSWORD || '',
     port: process.env.DB_PORT || process.env.MYSQLPORT || 3306,
-    multipleStatements: true // Needed for running schema.sql
+    multipleStatements: true, // Needed for running schema.sql
+    ssl: (process.env.DB_HOST || process.env.MYSQLHOST || '').includes('aivencloud') ? {
+        rejectUnauthorized: false
+    } : null
 };
 
 let pool = null;
 
-async function initDB() {
+export async function initDB() {
     let retries = 10;
     while (retries > 0) {
         try {
@@ -58,11 +67,9 @@ async function initDB() {
     }
 }
 
-function getPool() {
+export function getPool() {
     if (!pool) {
         throw new Error('Database not initialized. Call initDB first.');
     }
     return pool;
 }
-
-module.exports = { initDB, getPool };
