@@ -198,7 +198,9 @@ app.get('/api/full-state', async (req, res) => {
         console.log('Fetching school_config...');
         // Config
         console.log('Fetching school_config...');
-        const [configRows] = await pool.query('SELECT * FROM school_config WHERE config_key = "main_config"');
+        // Config
+        console.log('Fetching school_config...');
+        const [configRows] = await pool.query('SELECT * FROM school_config WHERE config_key = ?', ['main_config']);
 
         // Staff Tasks
         let staffTasks = [];
@@ -812,7 +814,7 @@ app.put('/api/parent/messages/read', async (req, res) => {
     try {
         const pool = getPool();
         // Mark all messages FROM PARENT for this student as read
-        await pool.query('UPDATE parent_messages SET is_read = 1 WHERE student_id = ? AND sender = "PARENT"', [studentId]);
+        await pool.query('UPDATE parent_messages SET is_read = 1 WHERE student_id = ? AND sender = ?', [studentId, 'PARENT']);
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: error.message });
