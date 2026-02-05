@@ -22,6 +22,10 @@ const dbConfig = {
 
 let pool = null;
 
+// Debug: Check what HOST is actually being used
+const debugHost = process.env.DB_HOST || process.env.MYSQLHOST || 'localhost';
+console.log(`[DEBUG] Attempting to connect to Host: ${debugHost.substring(0, 15)}...`);
+
 export async function initDB() {
     let retries = 5;
     while (retries > 0) {
