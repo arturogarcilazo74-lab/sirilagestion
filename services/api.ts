@@ -90,7 +90,7 @@ export const api = {
 
     // Check if DB is empty / Alive Check
     checkStatus: async () => {
-        const res = await fetch(`${API_URL}/full-state`);
+        const res = await fetch(`${API_URL}/full-state?_t=${Date.now()}`);
         if (!res.ok) throw new Error('Network error');
         return await res.json();
     },

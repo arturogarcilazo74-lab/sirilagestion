@@ -47,10 +47,10 @@ export default defineConfig({
             handler: 'NetworkFirst',
             options: {
               cacheName: 'api-cache',
-              networkTimeoutSeconds: 5, // Timeout before falling back to cache
+              networkTimeoutSeconds: 20, // Increased for Render Cold Start (Free Tier)
               expiration: {
-                maxEntries: 500,
-                maxAgeSeconds: 60 * 60 * 24 * 30 // 1 month
+                maxEntries: 200,
+                maxAgeSeconds: 60 * 60 * 24 * 7 // 1 week
               },
               cacheableResponse: {
                 statuses: [0, 200]
