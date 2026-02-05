@@ -26,14 +26,16 @@ async function checkCloudData() {
         const conn = await mysql.createConnection(cloudConfig);
         console.log('✅ Connection Successful!');
 
-        const [students] = await conn.query('SELECT COUNT(*) as count FROM students');
-        console.log(`students: ${students[0].count}`);
+        const tables = ['students', 'assignments', 'events', 'behavior_logs', 'finance_events', 'staff_tasks', 'books', 'school_config', 'parent_messages', 'notifications'];
 
-        const [assignments] = await conn.query('SELECT COUNT(*) as count FROM assignments');
-        console.log(`assignments: ${assignments[0].count}`);
-
-        const [events] = await conn.query('SELECT COUNT(*) as count FROM events');
-        console.log(`events: ${events[0].count}`);
+        for (const table of tables) {
+            try {
+                const [rows] = await conn.query(`SELECT COUNT(*) as count FROM ${table}`);
+                console.log(`${table}: ${rows[0].count}`);
+            } catch (e) {
+                console.log(`${table}: ERROR - ${e.message}`);
+            }
+        }
 
         conn.end();
     } catch (error) {

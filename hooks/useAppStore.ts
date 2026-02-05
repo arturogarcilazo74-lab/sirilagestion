@@ -59,7 +59,9 @@ export const useAppStore = () => {
             console.error(`ERROR CRÍTICO: No se pudo guardar ${key} en el dispositivo.`, e);
             const win = window as any;
             if (!win.localStorage_alert_shown) {
-                alert("⚠️ MEMORIA LLENA: Tu navegador no tiene más espacio para guardar cambios offline. \n\nPor favor, enciende el servidor para sincronizar y liberar espacio, o borra fotos pesadas de los alumnos.");
+                // Suppress alert for Cloud users, just warn in console
+                console.warn("⚠️ LocalStorage limit reached. Offline backup might be incomplete, but Cloud data is safe.");
+                // alert("⚠️ MEMORIA LLENA: ..."); 
                 win.localStorage_alert_shown = true;
             }
         }
