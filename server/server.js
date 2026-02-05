@@ -22,7 +22,18 @@ const distPath = path.join(__dirname, '../dist-app');
 app.use(express.static(distPath));
 
 // Endpoint for checking if server is alive
-app.get('/health', (req, res) => res.send('OK'));
+// Endpoint for checking if server is alive and Diagnostics
+app.get('/health', (req, res) => {
+    res.json({
+        status: 'OK',
+        uptime: process.uptime(),
+        storage: useMySQL ? 'MySQL' : 'JSON (Fallback)',
+        dbHost: process.env.MYSQLHOST ? 'Configured in Env' : 'Not Configured',
+        dbName: process.env.MYSQLDATABASE || 'N/A',
+        mysqlConnection: useMySQL ? 'Active' : 'Failed',
+        message: useMySQL ? 'System Healthy' : 'Warning: Using local JSON file instead of Cloud DB'
+    });
+});
 
 // --- STORAGE STRATEGY ---
 let useMySQL = false;

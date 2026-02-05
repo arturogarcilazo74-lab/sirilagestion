@@ -23,23 +23,21 @@ const dbConfig = {
 let pool = null;
 
 export async function initDB() {
-    let retries = 10;
+    let retries = 5;
     while (retries > 0) {
         try {
-            // 1. Create connection to create DB if not exists
-            const connection = await mysql.createConnection(dbConfig);
             const dbName = process.env.DB_NAME || process.env.MYSQLDATABASE || 'sirila_db';
-            await connection.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\`;`);
 
-            // Try to increase packet size for large image syncs
+            // 1. Try to create DB if NOT in production (or catch error if it fails)
             try {
-                // Only if user has permissions
-                // await connection.query('SET GLOBAL max_allowed_packet=1073741824'); 
+                const connection = await mysql.createConnection(dbConfig);
+                await connection.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\`;`);
+                await connection.end();
             } catch (e) {
-                // console.warn('Failed to set max_allowed_packet:', e.message);
+                console.warn('⚠️  Could not create database (might already exist or permission denied). Attempting to connect anyway...');
+                // In cloud (Aiven), we might not have permission to CREATE DATABASE, or we just connect to the default one.
+                // We proceed to create the pool.
             }
-
-            await connection.end();
 
             // 2. Create pool with database selected
             pool = mysql.createPool({
@@ -50,12 +48,18 @@ export async function initDB() {
                 queueLimit: 0
             });
 
-            // 3. Run Schema
-            const schemaPath = path.join(__dirname, 'schema.sql');
-            const schema = fs.readFileSync(schemaPath, 'utf8');
-            await pool.query(schema);
+            // 3. Test Connection & Run Schema
+            const connection = await pool.getConnection();
+            try {
+                const schemaPath = path.join(__dirname, 'schema.sql');
+                const schema = fs.readFileSync(schemaPath, 'utf8');
+                // Only run schema if tables don't exist? Or allow errors (IF NOT EXISTS is in schema)
+                await connection.query(schema);
+                console.log('Database initialized and schema loaded.');
+            } finally {
+                connection.release();
+            }
 
-            console.log('Database initialized and schema loaded.');
             return pool;
         } catch (error) {
             console.error(`Error initializing database (Attempts left: ${retries}):`, error.message);
