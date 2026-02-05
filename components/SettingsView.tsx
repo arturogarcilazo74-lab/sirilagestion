@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { SchoolConfig } from '../types';
-import { Save, User, School, MapPin, Clock, Upload, Building2, BookOpen, Hash, Mail, CheckCircle2, Phone, Users, Plus, Trash2, Edit2, Shield } from 'lucide-react';
+import { Save, User, School, MapPin, Clock, Upload, Building2, BookOpen, Hash, Mail, CheckCircle2, Phone, Users, Plus, Trash2, Edit2, Shield, Globe } from 'lucide-react';
 
 interface SettingsViewProps {
   config: SchoolConfig;
@@ -727,6 +727,53 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ config, onSave, onEx
                 <br />
                 Estado: <span className="text-green-600 font-bold">Conectado</span>
               </p>
+            </div>
+
+            <div className="flex flex-col gap-2 md:col-span-2 border-t border-slate-200 pt-4 mt-2">
+              <h4 className="font-bold text-slate-700 flex items-center gap-2">
+                <Globe className="text-indigo-500" size={18} />
+                Conexión del Servidor (API)
+              </h4>
+              <p className="text-xs text-slate-500 mb-2">
+                Si estás migrando a la nube, pega aquí tu URL de Render (ej. https://tuescuela.onrender.com).
+                Deja esto <strong>vacío</strong> para detectar automáticamente.
+              </p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  id="serverUrlInput"
+                  placeholder={window.location.origin}
+                  defaultValue={localStorage.getItem('SIRILA_SERVER_URL') || ''}
+                  className="w-full p-2 border border-slate-300 rounded-lg text-sm font-mono"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const input = document.getElementById('serverUrlInput') as HTMLInputElement;
+                    let val = input.value.trim();
+                    if (val) {
+                      // Remove trailing slash and /api if present
+                      val = val.replace(/\/$/, "").replace(/\/api$/, "");
+                      // Add /api normalization handled by api.ts, but let's save base
+                      if (!val.startsWith('http')) val = 'https://' + val;
+                      // Just save the base, api.ts handles /api appending if needed or does it?
+                      // api.ts does: if (!cleanUrl.endsWith('/api')) cleanUrl += '/api';
+                      // So we should save it WITHOUT /api if we want to be clean, but let's follow api.ts convention
+                      if (!val.endsWith('/api')) val += '/api';
+
+                      localStorage.setItem('SIRILA_SERVER_URL', val);
+                      alert(`Conexión actualizada a: ${val}\n\nLa aplicación se reiniciará.`);
+                    } else {
+                      localStorage.removeItem('SIRILA_SERVER_URL');
+                      alert('Configuración de servidor restablecida a "Automático".');
+                    }
+                    window.location.reload();
+                  }}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 whitespace-nowrap"
+                >
+                  Guardar
+                </button>
+              </div>
             </div>
           </div>
         </div>
