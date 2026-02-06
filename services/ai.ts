@@ -215,153 +215,146 @@ export const generateWorksheetSVG = async (topic: string, type: string, extraIns
 };
 
 export const generateCompleteWorksheet = async (topic: string, type: string, extraInstructions?: string): Promise<{ svg: string, svgBase64?: string, zones: any[], draggables: any[] }> => {
-  const prompt = `GENERADOR DE FICHAS EDUCATIVAS PROFESIONALES
+  const prompt = `Eres un diseñador educativo experto. Genera una ficha interactiva para 4to Grado de Primaria.
 
 TEMA: ${topic}
-TIPO: ${type}
+TIPO DE ACTIVIDAD: ${type}
 ${extraInstructions ? `INSTRUCCIONES ADICIONALES: ${extraInstructions}` : ''}
 
-═══════════════════════════════════════════════════════════════════
-PARTE 1: CÓDIGO SVG
-═══════════════════════════════════════════════════════════════════
-
-Genera un SVG educativo siguiendo EXACTAMENTE estas especificaciones:
-
-📐 ESTRUCTURA OBLIGATORIA:
-\`\`\`xml
-<svg width="1200" height="1600" viewBox="0 0 1200 1600" xmlns="http://www.w3.org/2000/svg">
-  <!-- FONDO BLANCO -->
-  <rect width="1200" height="1600" fill="#FFFFFF"/>
-  
-  <!-- ENCABEZADO (y=50-150) -->
-  <text x="600" y="100" font-size="48" font-weight="bold" text-anchor="middle" fill="#2563EB">
-    [TÍTULO DE LA ACTIVIDAD]
-  </text>
-  
-  <!-- INSTRUCCIONES (y=170-220) -->
-  <text x="600" y="200" font-size="24" text-anchor="middle" fill="#475569">
-    [Instrucciones claras en una línea]
-  </text>
-  
-  <!-- CONTENIDO PRINCIPAL (y=250-1400) -->
-  <!-- MÁXIMO 6 ELEMENTOS con 150px de separación vertical entre cada uno -->
-  
-  <!-- DECORACIÓN DE PIE (y=1450-1550) -->
-  <text x="600" y="1500" font-size="20" text-anchor="middle" fill="#94A3B8">
-    4to Grado • ${topic}
-  </text>
-</svg>
-\`\`\`
-
-🎨 REGLAS DE DISEÑO ESTRICTAS:
-
-1. ESPACIADO VERTICAL:
-   - Encabezado: y=50-150 (100px de altura)
-   - Instrucciones: y=170-220 (50px de altura)
-   - Separador: 30px entre secciones
-   - Cada elemento de contenido: MÍNIMO 150px de altura
-   - Espacio entre elementos: MÍNIMO 50px
-
-2. MÁRGENES HORIZONTALES:
-   - Margen izquierdo: x=100
-   - Margen derecho: x=1100
-   - Área de trabajo: 1000px de ancho
-
-3. TIPOGRAFÍA:
-   - Título principal: 48px, negrita, color #2563EB
-   - Subtítulos/preguntas: 32px, negrita, color #334155
-   - Texto normal: 24px, color #475569
-   - Respuestas/espacios: 20px, color #94A3B8
-
-4. ELEMENTOS VISUALES:
-   - Cajas de respuesta: rectángulos con stroke="#94A3B8" stroke-width="2" fill="none"
-   - Líneas decorativas: stroke="#E2E8F0" stroke-width="2"
-   - Números/letras de pregunta: dentro de círculos de radio 20px
-
-5. CONTENIDO (según tipo):
-   ${type.toLowerCase().includes('sopa') ? `
-   - SOPA DE LETRAS: grid de 10x10 con letras de 24px, espaciado uniforme de 40px
-   - Palabras a buscar: lista a la derecha, 28px cada palabra
-   ` : type.toLowerCase().includes('crucigrama') ? `
-   - CRUCIGRAMA: casillas de 40x40px, números de pista 16px
-   - Pistas horizontales y verticales: separadas, numeradas, 24px
-   ` : `
-   - PREGUNTAS: máximo 6, numeradas del 1-6
-   - Cada pregunta ocupa 200px verticales (pregunta + espacio respuesta)
-   - Espacio para respuesta: caja de 800x50px debajo de cada pregunta
-   `}
-
-═══════════════════════════════════════════════════════════════════
-SEPARADOR
-═══════════════════════════════════════════════════════════════════
-___JSON_DATA___
-
-═══════════════════════════════════════════════════════════════════
-PARTE 2: DATOS INTERACTIVOS (JSON)
-═══════════════════════════════════════════════════════════════════
-
-Genera un objeto JSON con las zonas interactivas que coincidan EXACTAMENTE con el SVG:
-
-\`\`\`json
+RESPONDE CON UN OBJETO JSON con esta estructura EXACTA:
 {
+  "svg": "CÓDIGO SVG COMPLETO COMO STRING (sin saltos de línea reales, usa espacios)",
   "interactiveZones": [
     {
-      "id": "zona_1",
-      "type": "TEXT_INPUT|DROP_ZONE|SELECTABLE|MATCH_SOURCE|MATCH_TARGET",
-      "x": 10,  // Porcentaje del ancho (0-100)
-      "y": 20,  // Porcentaje de la altura (0-100)
-      "width": 60,  // Porcentaje del ancho
-      "height": 5,  // Porcentaje de la altura
-      "correctAnswer": "respuesta correcta",
-      "matchId": "A",  // Solo para tipo MATCH
+      "id": "zona1",
+      "type": "TEXT_INPUT",
+      "x": 10,
+      "y": 20,
+      "width": 60,
+      "height": 5,
+      "correctAnswer": "respuesta",
       "points": 1
     }
   ],
-  "draggableItems": [
-    {
-      "id": "drag_1",
-      "content": "Texto de la etiqueta"
-    }
-  ]
+  "draggableItems": []
 }
-\`\`\`
 
-⚠️ VALIDACIÓN FINAL:
-- [ ] El SVG tiene exactamente 1200x1600
-- [ ] Hay un fondo blanco sólido
-- [ ] El texto más pequeño es 20px
-- [ ] Ningún elemento se solapa
-- [ ] Las coordenadas JSON coinciden con las posiciones en el SVG
-- [ ] Máximo 6 elementos interactivos
-- [ ] Todo el contenido está dentro de los márgenes (x: 100-1100)
+═══════════════════════════════════════════════════════════════════
+ESPECIFICACIONES PARA EL SVG (campo "svg"):
+═══════════════════════════════════════════════════════════════════
 
-GENERA AHORA LA FICHA COMPLETA.`;
+El SVG debe ser UN STRING DE UNA SOLA LÍNEA. Usa espacios en lugar de saltos de línea.
+
+ESTRUCTURA OBLIGATORIA:
+<svg width="1200" height="1600" viewBox="0 0 1200 1600" xmlns="http://www.w3.org/2000/svg"> <rect width="1200" height="1600" fill="#FFFFFF"/> <text x="600" y="100" font-size="48" font-weight="bold" text-anchor="middle" fill="#2563EB">${topic}</text> <text x="600" y="180" font-size="28" text-anchor="middle" fill="#64748B">INSTRUCCIONES CLARAS</text> [CONTENIDO PRINCIPAL AQUÍ] <text x="600" y="1520" font-size="18" text-anchor="middle" fill="#94A3B8">4to Grado</text> </svg>
+
+REGLAS DE DISEÑO ESTRICTAS:
+
+1. LAYOUT VERTICAL:
+   - Título: y=100 (48px)
+   - Instrucciones: y=180 (28px)
+   - Contenido: y=250 a y=1400
+   - MÁXIMO 6 preguntas/elementos
+   - Separación entre elementos: 180px
+
+2. MÁRGENES:
+   - Izquierda: x=120
+   - Derecha: x=1080
+   - Centrado: x=600
+
+3. TAMAÑOS DE FUENTE:
+   - Título: 48px
+   - Subtítulos/Preguntas: 36px
+   - Texto normal: 28px
+   - NUNCA usar fuente menor a 24px
+
+4. ELEMENTOS POR TIPO:
+${type.toLowerCase().includes('sopa') ? `
+   SOPA DE LETRAS:
+   - Grid 8x8 (más legible que 10x10)
+   - Cada letra: 32px, bold
+   - Espaciado: 55px entre letras
+   - Posición del grid: x=250, y=300
+   - Lista de palabras a buscar: x=800, y=300, una por línea (32px entre cada una)
+` : type.toLowerCase().includes('crucigrama') ? `
+   CRUCIGRAMA:
+   - Casillas: 50x50px (grandes y legibles)
+   - Números de pista: 18px
+   - Grid centrado en x=600
+   - Pistas abajo del grid (28px)
+` : `
+   PREGUNTAS/EJERCICIOS:
+   - Máximo 6 preguntas
+   - Cada pregunta:
+     * Número en círculo (radius=25, fill="#3B82F6")
+     * Texto de pregunta: 32px, x=200
+     * Caja de respuesta: rect (800x60px, stroke="#CBD5E1", stroke-width="3", fill="none")
+   - Espaciado vertical: 180px entre cada pregunta
+   - Primera pregunta: y=300
+`}
+
+5. COLORES:
+   - Fondo: #FFFFFF (blanco)
+   - Título: #2563EB (azul)
+   - Texto principal: #334155 (gris oscuro)
+   - Texto secundario: #64748B (gris medio)
+   - Bordes/cajas: #CBD5E1 (gris claro)
+   - Acentos: #3B82F6 (azul brillante)
+
+═══════════════════════════════════════════════════════════════════
+ESPECIFICACIONES PARA interactiveZones:
+═══════════════════════════════════════════════════════════════════
+
+Las coordenadas x, y, width, height son PORCENTAJES (0-100) relativos al SVG.
+
+Tipos disponibles:
+- "TEXT_INPUT": para escribir respuestas
+- "SELECTABLE": para seleccionar (ej. letras en sopa de letras)
+- "DROP_ZONE": para arrastrar elementos
+- "MATCH_SOURCE" / "MATCH_TARGET": para unir con líneas
+
+IMPORTANTE: 
+- Las zonas deben coincidir EXACTAMENTE con los elementos dibujados en el SVG
+- Máximo 20 zonas interactivas
+- Para sopas de letras: crea una zona SELECTABLE por cada letra de las palabras correctas
+
+VALIDA ANTES DE RESPONDER:
+[ ] El SVG es un string de una sola línea
+[ ] Tiene fondo blanco sólido
+[ ] El texto más pequeño es 24px
+[ ] Máximo 6 elementos principales
+[ ] Las zonas coinciden con las posiciones del SVG
+[ ] Todo está dentro de los márgenes (x: 120-1080)
+
+RESPONDE SOLO CON EL JSON. NO agregues texto antes ni después.`;
 
   try {
-    const text = await generateWithFallback(prompt); // Removed JSON expectation option to allow mixed output
+    const text = await generateWithFallback(prompt, { responseMimeType: "application/json" });
 
-    // Split key sections
-    const parts = text.split("___JSON_DATA___");
-    if (parts.length < 2) throw new Error("Formato de respuesta inválido (falta separador)");
+    // Clean up common AI formatting issues
+    let cleaned = text.replace(/```json|```/g, '').trim();
 
-    // 1. Process SVG
-    let svgRaw = parts[0].trim();
-    // Remove markdown code blocks if present
-    if (svgRaw.includes('```')) {
-      svgRaw = svgRaw.replace(/```xml|```svg|```/g, '').trim();
+    // Try parsing the JSON
+    let data;
+    try {
+      data = JSON.parse(cleaned);
+    } catch (parseError) {
+      console.warn("First JSON parse failed, attempting cleanup...", parseError);
+      // Remove potential problematic newlines inside strings
+      cleaned = cleaned.replace(/\n/g, ' ');
+      data = JSON.parse(cleaned);
     }
-    // Ensure it starts with <svg
-    const svgStart = svgRaw.indexOf('<svg');
-    const svgEnd = svgRaw.lastIndexOf('</svg>');
-    if (svgStart === -1 || svgEnd === -1) throw new Error("No se encontró código SVG válido");
-    const finalSvg = svgRaw.substring(svgStart, svgEnd + 6);
 
-    // 2. Process JSON
-    let jsonRaw = parts[1].trim();
-    jsonRaw = jsonRaw.replace(/```json|```/g, '').trim();
-    const data = JSON.parse(jsonRaw);
+    // Validate required fields
+    if (!data.svg) throw new Error("El campo 'svg' es obligatorio");
+    if (!data.interactiveZones) throw new Error("El campo 'interactiveZones' es obligatorio");
 
-    // 3. Client-side Base64 Encoding (Robust)
+    const finalSvg = data.svg.trim();
+
+    // Validate it's actually SVG
+    if (!finalSvg.includes('<svg')) throw new Error("El campo 'svg' no contiene código SVG válido");
+
+    // Client-side Base64 Encoding
     const encodedSvg = typeof window !== 'undefined'
       ? window.btoa(unescape(encodeURIComponent(finalSvg)))
       : Buffer.from(finalSvg).toString('base64');
@@ -373,7 +366,7 @@ GENERA AHORA LA FICHA COMPLETA.`;
       draggables: data.draggableItems || []
     };
   } catch (e: any) {
-    console.error("AI Gen Error", e);
+    console.error("AI Worksheet Generation Error:", e);
     throw new Error(`Complete Worksheet Error: ${e.message}`);
   }
 };
