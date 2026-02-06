@@ -10,12 +10,13 @@ const generateWithFallback = async (input: string | any[], config?: any): Promis
     throw new Error("No se encontró la API Key de Gemini. Si estás en la Nube (Render), asegúrate de haber agregado VITE_GEMINI_API_KEY en la pestaña Environment y que el valor empiece con 'AIza...'. Nota: Render requiere un nuevo Deploy manual para aplicar cambios en variables VITE_.");
   }
 
-  // Robust model list
+  // Robust model list - PRIORITIZING PRO MODELS for better quality
   let modelsToTry = [
-    "gemini-2.0-flash",
-    "gemini-1.5-flash",
+    "gemini-2.0-pro",
     "gemini-1.5-pro",
-    "gemini-1.0-pro"
+    "gemini-1.0-pro",
+    "gemini-2.0-flash",
+    "gemini-1.5-flash"
   ];
 
   // 1. Dynamic Discovery
@@ -33,11 +34,13 @@ const generateWithFallback = async (input: string | any[], config?: any): Promis
 
         if (availableModels.length > 0) {
           console.log("AI Discovery: Modelos encontrados:", availableModels);
+          // PRIORIDAD: Modelos PRO primero (mejor calidad para generación de actividades)
           const preferred = [
-            ...availableModels.filter((m: string) => m.includes('2.0-flash')),
-            ...availableModels.filter((m: string) => m.includes('1.5-flash')),
+            ...availableModels.filter((m: string) => m.includes('2.0-pro')),
             ...availableModels.filter((m: string) => m.includes('1.5-pro')),
             ...availableModels.filter((m: string) => m.includes('1.0-pro')),
+            ...availableModels.filter((m: string) => m.includes('2.0-flash')),
+            ...availableModels.filter((m: string) => m.includes('1.5-flash')),
             ...availableModels
           ];
           modelsToTry = [...new Set(preferred)];
