@@ -221,8 +221,7 @@ Tema: ${topic}
 Tipo de Actividad: ${type}
 Instrucciones extra: ${extraInstructions || ''}
 
-DEBES responder con un JSON que contenga:
-1. "svg": Código SVG válido (1200x1600), estético, con colores pasteles/educativos, fuentes legibles y espacios claros para respuestas. Evita amontonar texto. Usa viewBox="0 0 1200 1600".
+DEBES responder con un JSON que contenga225: 1. "svg_base64": Código SVG (1200x1600) convertido a string BASE64.
 2. "interactiveZones": Arreglo de objetos (InteractiveZone):
    - id: string único
    - type: 'TEXT_INPUT' | 'DROP_ZONE' | 'SELECTABLE' | 'MATCH_SOURCE' | 'MATCH_TARGET'
@@ -235,10 +234,10 @@ DEBES responder con un JSON que contenga:
    - content: texto de la etiqueta a arrastrar.
 
 Asegúrate de que las coordenadas (x,y) de las zonas coincidan EXACTAMENTE con los espacios visuales dibujados en el SVG.
-IMPORTANTE: El campo 'svg' contiene código HTML/XML.
-1. Debes ESCAPAR TODAS las comillas dobles internas con barra invertida (ejemplo: width=\"100\").
-2. EL STRING DEL SVG DEBE SER UNA SOLA LÍNEA SIN SALTOS DE LÍNEA REALES. Usa para todo el código SVG una sola línea continua o escapa los saltos de línea con \\n.
-Responde ÚNICAMENTE el JSON.`;
+IMPORTANTE:
+1. El campo "svg_base64" debe contener el código SVG COMPLETO convertido a BASE64 (standard base64 encoding).
+2. DEBES USAR BASE64 para evitar errores de caracteres de control en JSON. NO envíes el SVG en texto plano en el campo "svg", usa "svg_base64".
+Responde ÚNICAMENTE el JSON minificado (sin saltos de línea ni comentarios).`;
 
   try {
     const text = await generateWithFallback(prompt, { responseMimeType: "application/json" });
@@ -256,9 +255,19 @@ Responde ÚNICAMENTE el JSON.`;
       cleaned = cleaned.replace(/\n/g, " ");
       data = JSON.parse(cleaned);
     }
-    if (!data.svg || !data.interactiveZones) throw new Error("Respuesta incompleta de la IA");
+    if (!data.svg_base64 && !data.svg) throw new Error("Respuesta incompleta de la IA");
+
+    let svgContent = data.svg;
+    if (data.svg_base64) {
+      try {
+        svgContent = atob(data.svg_base64);
+      } catch (e) {
+        console.error("Base64 decode failed, using raw if available", e);
+      }
+    }
+
     return {
-      svg: data.svg,
+      svg: svgContent,
       zones: data.interactiveZones,
       draggables: data.draggableItems || []
     };
