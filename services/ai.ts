@@ -221,7 +221,10 @@ Tema: ${topic}
 Tipo de Actividad: ${type}
 Instrucciones extra: ${extraInstructions || ''}
 
-DEBES responder con un JSON que contenga225: 1. "svg_base64": Código SVG (1200x1600) convertido a string BASE64.
+DEBES responder con un JSON que contenga:
+1. "svg_base64": Código SVG (1200x1600) convertido a string BASE64.
+   - El SVG debe incluir explícitamente contenido visual (títulos, preguntas, líneas decorativas).
+   - Los input boxes o huecos deben estar dibujados en el SVG para referencia visual.
 2. "interactiveZones": Arreglo de objetos (InteractiveZone):
    - id: string único
    - type: 'TEXT_INPUT' | 'DROP_ZONE' | 'SELECTABLE' | 'MATCH_SOURCE' | 'MATCH_TARGET'
@@ -234,10 +237,18 @@ DEBES responder con un JSON que contenga225: 1. "svg_base64": Código SVG (1200x
    - content: texto de la etiqueta a arrastrar.
 
 Asegúrate de que las coordenadas (x,y) de las zonas coincidan EXACTAMENTE con los espacios visuales dibujados en el SVG.
+
+REGLAS DE DISEÑO OBLIGATORIAS:
+1. MÁXIMO 8 PREGUNTAS/ÍTEMS. No satures la hoja.
+2. ESPACIADO: Deja al menos 10% de espacio vertical entre cada pregunta/zona.
+3. SVG FONDO: Debe tener un rectángulo blanco obvio de fondo (<rect width="100%" height="100%" fill="white" />).
+4. TEXTO GRANDE: Usa fuentes de tamaño min 24px.
+5. NO solapes zonas. Distribuye verticalmente de arriba a abajo.
+
 IMPORTANTE:
-1. El campo "svg_base64" debe contener el código SVG COMPLETO convertido a BASE64 (standard base64 encoding).
-2. DEBES USAR BASE64 para evitar errores de caracteres de control en JSON. NO envíes el SVG en texto plano en el campo "svg", usa "svg_base64".
-Responde ÚNICAMENTE el JSON minificado (sin saltos de línea ni comentarios).`;
+1. El campo "svg_base64" debe contener el código SVG COMPLETO convertido a BASE64.
+2. DEBES USAR BASE64. NO envíes texto plano en "svg".
+Responde ÚNICAMENTE el JSON minificado.`;
 
   try {
     const text = await generateWithFallback(prompt, { responseMimeType: "application/json" });
