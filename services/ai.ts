@@ -221,69 +221,67 @@ Tema: ${topic}
 Tipo de Actividad: ${type}
 Instrucciones extra: ${extraInstructions || ''}
 
-DEBES responder con un JSON que contenga:
-1. "svg_base64": Código SVG (1200x1600) convertido a string BASE64.
-   - El SVG debe incluir explícitamente contenido visual (títulos, preguntas, líneas decorativas).
-   - Los input boxes o huecos deben estar dibujados en el SVG para referencia visual.
-2. "interactiveZones": Arreglo de objetos (InteractiveZone):
-   - id: string único
-   - type: 'TEXT_INPUT' | 'DROP_ZONE' | 'SELECTABLE' | 'MATCH_SOURCE' | 'MATCH_TARGET'
-   - x, y, width, height: números (0-100) representando el % de posición y tamaño sobre el SVG.
-   - correctAnswer: respuesta esperada (para texto o drop).
-   - matchId: identificador (ej. "A", "1") para unir parejas Origen-Destino.
-   - points: puntos (ej. 1).
-3. "draggableItems": Arreglo de objetos (DraggableItem) si la actividad es de arrastrar:
-   - id: string
-   - content: texto de la etiqueta a arrastrar.
+FORMATO DE RESPUESTA (ESTRICTO):
+1. Primero, escribe TODO el código SVG dentro de un bloque de código markdown xml.
+2. Luego, escribe EXACTAMENTE el separador: "___JSON_DATA___"
+3. Finalmente, escribe el objeto JSON dentro de un bloque de código markdown json.
 
-Asegúrate de que las coordenadas (x,y) de las zonas coincidan EXACTAMENTE con los espacios visuales dibujados en el SVG.
+REGLAS PARA EL SVG
+- Dimensiones: width="1200" height="1600" viewBox="0 0 1200 1600"
+- Fondo blanco sólido obligatorio: <rect width="100%" height="100%" fill="white" />
+- Texto grande y legible (min 24px)
+- Espaciado amplio (agrupado verticalmente, evita solapes)
 
-REGLAS DE DISEÑO OBLIGATORIAS:
-1. MÁXIMO 8 PREGUNTAS/ÍTEMS. No satures la hoja.
-2. ESPACIADO: Deja al menos 10% de espacio vertical entre cada pregunta/zona.
-3. SVG FONDO: Debe tener un rectángulo blanco obvio de fondo (<rect width="100%" height="100%" fill="white" />).
-4. TEXTO GRANDE: Usa fuentes de tamaño min 24px.
-5. NO solapes zonas. Distribuye verticalmente de arriba a abajo.
-
-IMPORTANTE:
-1. El campo "svg_base64" debe contener el código SVG COMPLETO convertido a BASE64.
-2. DEBES USAR BASE64. NO envíes texto plano en "svg".
-Responde ÚNICAMENTE el JSON minificado.`;
+REGLAS PARA EL JSON
+Responde con un JSON que contenga:
+{
+  "interactiveZones": [
+     {
+       "id": "...", "type": "...", "x": 0, "y": 0, "width": 0, "height": 0,
+       "correctAnswer": "...", "matchId": "...", "points": 1
+     }
+  ],
+  "draggableItems": [ { "id": "...", "content": "..." } ]
+}
+`;
 
   try {
-    const text = await generateWithFallback(prompt, { responseMimeType: "application/json" });
-    // Aggressive cleanup for common JSON errors from LLMs
-    let cleaned = text.replace(/```json|```/g, '').trim();
-    // Remove real line breaks inside string literals if possible or just rely on the prompt. 
-    // A simple regex fix for bad control chars is risky but we can try to escape unescaped newlines if parsing fails.
+    const text = await generateWithFallback(prompt); // Removed JSON expectation option to allow mixed output
 
-    let data;
-    try {
-      data = JSON.parse(cleaned);
-    } catch (parseError) {
-      console.warn("JSON Parse specific error, attempting auto-fix for control characters...");
-      // Try to remove newlines that might be breaking the string
-      cleaned = cleaned.replace(/\n/g, " ");
-      data = JSON.parse(cleaned);
-    }
-    if (!data.svg_base64 && !data.svg) throw new Error("Respuesta incompleta de la IA");
+    // Split key sections
+    const parts = text.split("___JSON_DATA___");
+    if (parts.length < 2) throw new Error("Formato de respuesta inválido (falta separador)");
 
-    let svgContent = data.svg || '';
-    if (data.svg_base64) {
-      try {
-        svgContent = atob(data.svg_base64);
-      } catch (e) {
-        console.error("Base64 decode failed, using raw if available", e);
-      }
+    // 1. Process SVG
+    let svgRaw = parts[0].trim();
+    // Remove markdown code blocks if present
+    if (svgRaw.includes('```')) {
+      svgRaw = svgRaw.replace(/```xml|```svg|```/g, '').trim();
     }
+    // Ensure it starts with <svg
+    const svgStart = svgRaw.indexOf('<svg');
+    const svgEnd = svgRaw.lastIndexOf('</svg>');
+    if (svgStart === -1 || svgEnd === -1) throw new Error("No se encontró código SVG válido");
+    const finalSvg = svgRaw.substring(svgStart, svgEnd + 6);
+
+    // 2. Process JSON
+    let jsonRaw = parts[1].trim();
+    jsonRaw = jsonRaw.replace(/```json|```/g, '').trim();
+    const data = JSON.parse(jsonRaw);
+
+    // 3. Client-side Base64 Encoding (Robust)
+    const encodedSvg = typeof window !== 'undefined'
+      ? window.btoa(unescape(encodeURIComponent(finalSvg)))
+      : Buffer.from(finalSvg).toString('base64');
 
     return {
-      svg: svgContent,
-      svgBase64: data.svg_base64,
-      zones: data.interactiveZones,
+      svg: finalSvg,
+      svgBase64: encodedSvg,
+      zones: data.interactiveZones || [],
       draggables: data.draggableItems || []
     };
   } catch (e: any) {
+    console.error("AI Gen Error", e);
     throw new Error(`Complete Worksheet Error: ${e.message}`);
   }
 };
