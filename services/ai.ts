@@ -235,6 +235,7 @@ DEBES responder con un JSON que contenga:
    - content: texto de la etiqueta a arrastrar.
 
 Asegúrate de que las coordenadas (x,y) de las zonas coincidan EXACTAMENTE con los espacios visuales dibujados en el SVG.
+IMPORTANTE: El campo 'svg' contiene código HTML/XML. Debes ESCAPAR TODAS las comillas dobles internas con barra invertida (ejemplo: width=\"100\"). Si no las escapas, el JSON fallará.
 Responde ÚNICAMENTE el JSON.`;
 
   try {
