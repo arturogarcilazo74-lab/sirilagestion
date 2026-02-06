@@ -235,13 +235,27 @@ DEBES responder con un JSON que contenga:
    - content: texto de la etiqueta a arrastrar.
 
 Asegúrate de que las coordenadas (x,y) de las zonas coincidan EXACTAMENTE con los espacios visuales dibujados en el SVG.
-IMPORTANTE: El campo 'svg' contiene código HTML/XML. Debes ESCAPAR TODAS las comillas dobles internas con barra invertida (ejemplo: width=\"100\"). Si no las escapas, el JSON fallará.
+IMPORTANTE: El campo 'svg' contiene código HTML/XML.
+1. Debes ESCAPAR TODAS las comillas dobles internas con barra invertida (ejemplo: width=\"100\").
+2. EL STRING DEL SVG DEBE SER UNA SOLA LÍNEA SIN SALTOS DE LÍNEA REALES. Usa para todo el código SVG una sola línea continua o escapa los saltos de línea con \\n.
 Responde ÚNICAMENTE el JSON.`;
 
   try {
     const text = await generateWithFallback(prompt, { responseMimeType: "application/json" });
-    const cleaned = text.replace(/```json|```/g, '').trim();
-    const data = JSON.parse(cleaned);
+    // Aggressive cleanup for common JSON errors from LLMs
+    let cleaned = text.replace(/```json|```/g, '').trim();
+    // Remove real line breaks inside string literals if possible or just rely on the prompt. 
+    // A simple regex fix for bad control chars is risky but we can try to escape unescaped newlines if parsing fails.
+
+    let data;
+    try {
+      data = JSON.parse(cleaned);
+    } catch (parseError) {
+      console.warn("JSON Parse specific error, attempting auto-fix for control characters...");
+      // Try to remove newlines that might be breaking the string
+      cleaned = cleaned.replace(/\n/g, " ");
+      data = JSON.parse(cleaned);
+    }
     if (!data.svg || !data.interactiveZones) throw new Error("Respuesta incompleta de la IA");
     return {
       svg: data.svg,
