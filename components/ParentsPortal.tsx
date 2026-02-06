@@ -376,10 +376,16 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
         const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
         const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
 
+        // Correct offset calculation with scaling
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const currentX = (clientX - rect.left) * scaleX;
+        const currentY = (clientY - rect.top) * scaleY;
+
         setIsDrawing(true);
         setLastPos({
-            x: clientX - rect.left,
-            y: clientY - rect.top
+            x: currentX,
+            y: currentY
         });
     };
 
@@ -390,15 +396,14 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
         if (!ctx) return;
 
         const rect = canvas.getBoundingClientRect();
-        // Handle scrolling offset if needed, but clientX/Y relative to rect usually works if rect accounts for scroll
-        // However, if rect is fixed and content scrolls, we might need care. 
-        // In this implementation, canvas is inside a scrolling container, BUT the canvas itself defines the drawing surface.
-        // rect.left/top comes from the canvas element's position in the viewport.
         const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
         const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
 
-        const currentX = clientX - rect.left;
-        const currentY = clientY - rect.top;
+        // Correct offset calculation with scaling
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const currentX = (clientX - rect.left) * scaleX;
+        const currentY = (clientY - rect.top) * scaleY;
 
         ctx.beginPath();
         ctx.moveTo(lastPos.x, lastPos.y);
@@ -1237,10 +1242,9 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                 </div>
             )}
 
-            {/* WORKSHEET MODAL - REDESIGNED FOR USABILITY */}
             {activeWorksheet && activeWorksheet.interactiveData && activeWorksheet.interactiveData.type === 'WORKSHEET' && (
-                <div className="fixed inset-0 z-50 bg-slate-900/95 backdrop-blur-md flex items-center justify-center p-0 md:p-4 animate-fadeIn">
-                    <div className="bg-white md:rounded-2xl w-full max-w-5xl h-full md:h-[95vh] flex flex-col shadow-2xl overflow-hidden">
+                <div className="fixed inset-0 z-50 bg-slate-900 flex items-center justify-center animate-fadeIn">
+                    <div className="bg-white w-full h-full flex flex-col shadow-2xl overflow-hidden">
                         {/* Header */}
                         <div className="bg-indigo-600 p-4 text-white flex justify-between items-center flex-shrink-0 shadow-md z-20">
                             <div>
@@ -1427,8 +1431,9 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                         ) : zone.type === 'SELECTABLE' ? (
                                             <div
                                                 onClick={() => {
-                                                    if (drawMode !== 'MOVE' && drawMode !== 'PEN') return; // Allow interaction mainly in pointer modes, or just always? Let's say any mode except drawing on top?
-                                                    // Actually, user might want to select while drawing. Let's allow global click.
+                                                    // Allow selection in ANY mode usually, or specific modes.
+                                                    // Removing the check allows User to click letters while Pen/Highlighter is active.
+                                                    // This is better for "Sopa de Letras" mixed usage.
                                                     const isSelected = selectedZoneIds.includes(zone.id);
                                                     setSelectedZoneIds(isSelected ? selectedZoneIds.filter(id => id !== zone.id) : [...selectedZoneIds, zone.id]);
                                                 }}
@@ -1441,6 +1446,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                         ) : (zone.type === 'MATCH_SOURCE' || zone.type === 'MATCH_TARGET') ? (
                                             <div
                                                 onClick={() => {
+                                                    // Allow connecting even if drawing tool is active? Yes, clicking a specific point supersedes drawing.
                                                     if (zone.type === 'MATCH_SOURCE') {
                                                         // Start connecting (or re-start)
                                                         setActiveMatchSource(zone.id);
