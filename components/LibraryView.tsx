@@ -28,6 +28,8 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ students, books, onBac
         fileUrl: ''
     });
 
+    const [isUploading, setIsUploading] = useState(false);
+
     const grades = ['TODOS', '1ro', '2do', '3ro', '4to', '5to', '6to', 'GLOBAL'];
 
     const filteredBooks = books.filter(book => {
@@ -41,12 +43,59 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ students, books, onBac
         const file = e.target.files?.[0];
         if (!file) return;
 
+        setIsUploading(true);
         const reader = new FileReader();
         reader.onload = (event) => {
             const base64 = event.target?.result as string;
             setNewBook(prev => ({ ...prev, [field]: base64 }));
+            setIsUploading(false);
+        };
+        reader.onerror = () => {
+            console.error("Error reading file");
+            setIsUploading(false);
         };
         reader.readAsDataURL(file);
+    };
+
+    const openBook = (fileUrl: string | undefined) => {
+        if (!fileUrl) return;
+
+        // If it's already a URL, just open it
+        if (fileUrl.startsWith('http')) {
+            window.open(fileUrl, '_blank');
+            return;
+        }
+
+        // Handle data URI (base64)
+        try {
+            const parts = fileUrl.split(';base64,');
+            if (parts.length !== 2) {
+                // Not a standard data URI, try direct opening as fallback
+                window.open(fileUrl, '_blank');
+                return;
+            }
+
+            const contentType = parts[0].split(':')[1];
+            const raw = window.atob(parts[1]);
+            const rawLength = raw.length;
+            const uInt8Array = new Uint8Array(rawLength);
+
+            for (let i = 0; i < rawLength; ++i) {
+                uInt8Array[i] = raw.charCodeAt(i);
+            }
+
+            const blob = new Blob([uInt8Array], { type: contentType });
+            const url = URL.createObjectURL(blob);
+
+            const newWindow = window.open(url, '_blank');
+            if (!newWindow) {
+                alert("El navegador bloqueó la apertura de la ventana emergente. Por favor, permite las ventanas emergentes para este sitio.");
+            }
+        } catch (error) {
+            console.error("Error opening book blob:", error);
+            // Final fallback
+            window.open(fileUrl, '_blank');
+        }
     };
 
     const handleSubmitBook = (e: React.FormEvent) => {
@@ -167,14 +216,13 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ students, books, onBac
 
                                     {book.fileUrl && (
                                         <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                            <a
-                                                href={book.fileUrl}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
+                                            <button
+                                                onClick={() => { if (book.fileUrl) openBook(book.fileUrl); }}
                                                 className="bg-white text-slate-900 p-3 rounded-full hover:scale-110 transition-transform shadow-lg"
+                                                title="Abrir Libro"
                                             >
                                                 <ExternalLink size={24} />
-                                            </a>
+                                            </button>
                                         </div>
                                     )}
                                 </div>
@@ -383,9 +431,13 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ students, books, onBac
 
                             <button
                                 type="submit"
-                                className="w-full py-4 bg-amber-500 text-white rounded-2xl font-black text-lg hover:bg-amber-600 shadow-xl shadow-amber-200 transition-all active:scale-[0.98]"
+                                disabled={isUploading}
+                                className={`w-full py-4 rounded-2xl font-black text-lg shadow-xl transition-all active:scale-[0.98] ${isUploading
+                                    ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                                    : 'bg-amber-500 text-white hover:bg-amber-600 shadow-amber-200'
+                                    }`}
                             >
-                                GUARDAR EN BIBLIOTECA
+                                {isUploading ? 'PROCESANDO ARCHIVO...' : 'GUARDAR EN BIBLIOTECA'}
                             </button>
                         </form>
                     </div>

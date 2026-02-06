@@ -61,19 +61,35 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
         }
     }, [isLoggedIn]);
 
-    const handleStartQuiz = (assignment: Assignment) => {
-        if (!assignment.interactiveData) {
-            alert("Error: Esta actividad no contiene datos interactivos.");
-            return;
+    const handleStartQuiz = async (assignment: Assignment) => {
+        let fullAssignment = assignment;
+
+        // Lazy load full data if missing or stripped (Optimized Load Support)
+        const isStripped = assignment.interactiveData && (assignment.interactiveData as any).hasContent && !assignment.interactiveData.imageUrl && !assignment.interactiveData.questions;
+
+        if (!assignment.interactiveData || isStripped) {
+            try {
+                const data = await api.getAssignmentById(assignment.id);
+                if (data && data.interactiveData) {
+                    fullAssignment = { ...assignment, interactiveData: data.interactiveData };
+                } else {
+                    alert("Error: No se pudieron cargar los datos de esta actividad.");
+                    return;
+                }
+            } catch (e) {
+                console.error("Failed to load assignment detail", e);
+                alert("Error de conexión al cargar la actividad.");
+                return;
+            }
         }
 
-        if (assignment.interactiveData.type === 'WORKSHEET') {
-            setActiveWorksheet(assignment);
+        if (fullAssignment.interactiveData?.type === 'WORKSHEET') {
+            setActiveWorksheet(fullAssignment);
 
             // Initialize draggable items if any
-            if (assignment.interactiveData.draggableItems && assignment.interactiveData.draggableItems.length > 0) {
+            if (fullAssignment.interactiveData.draggableItems && fullAssignment.interactiveData.draggableItems.length > 0) {
                 // Initial placement: Start them at the top (tray) or specified initial pos
-                setActiveDraggableItems(assignment.interactiveData.draggableItems.map((item, idx) => ({
+                setActiveDraggableItems(fullAssignment.interactiveData.draggableItems.map((item, idx) => ({
                     id: item.id,
                     content: item.content,
                     type: item.type,
@@ -87,12 +103,12 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
             return;
         }
 
-        if (assignment.interactiveData.type === 'QUIZ') {
-            if (!assignment.interactiveData.questions || assignment.interactiveData.questions.length === 0) {
+        if (fullAssignment.interactiveData?.type === 'QUIZ') {
+            if (!fullAssignment.interactiveData.questions || fullAssignment.interactiveData.questions.length === 0) {
                 alert("Error: Esta actividad está marcada como interactiva pero no contiene preguntas válidas.");
                 return;
             }
-            setActiveQuiz(assignment);
+            setActiveQuiz(fullAssignment);
             setQuizAnswers({});
             setQuizResult(null);
         }
@@ -304,13 +320,19 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
             }
 
             // 2. Show Result
-            alert(`¡Ficha Calificada!\n\nCalificación: ${score}/10\n\n${feedback}`);
+            const minPass = activeWorksheet.interactiveData?.type === 'WORKSHEET' ? (activeWorksheet.interactiveData.minScoreToPass ?? 6) : 6;
+            const passed = score >= minPass;
 
-            // 3. Mark as complete
-            const newCompleted = [...new Set([...(student.completedAssignmentIds || []), activeWorksheet.id])];
+            alert(`¡Ficha Calificada!\n\nCalificación: ${score}/10\n\n${feedback}${!passed ? `\n\nNo has alcanzado el puntaje mínimo (${minPass}).` : ''}`);
+
+            // 3. Mark as complete (Only if passed or if no minScore requirement, but typically we want pass)
+            const newCompleted = passed ? [...new Set([...(student.completedAssignmentIds || []), activeWorksheet.id])] : (student.completedAssignmentIds || []);
+            const newResults = { ...(student.assignmentResults || {}), [activeWorksheet.id]: score };
+
             const updatedStudent = {
                 ...student,
                 completedAssignmentIds: newCompleted,
+                assignmentResults: newResults,
                 assignmentsCompleted: newCompleted.length
             };
             setStudent(updatedStudent);
@@ -318,7 +340,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
 
             // Notify Teacher via Message
             try {
-                await api.sendParentMessage(student.id, `✅ Ficha completada: ${activeWorksheet.title} (Calificación: ${score}/10)`, 'PARENT');
+                await api.sendParentMessage(student.id, `✅ Ficha completada: ${activeWorksheet.title} (Calificación: ${score}/10) ${!passed ? '[NO APROBADO]' : ''}`, 'PARENT');
             } catch (err) { console.error("Failed to notify teacher", err); }
 
             // 4. Download evidence
@@ -449,7 +471,8 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
         }
 
         const score = Math.round(rawScore);
-        const passed = score >= 6; // Pass mark 6/10
+        const minPass = activeQuiz.interactiveData.minScoreToPass ?? 6;
+        const passed = score >= minPass;
 
         setQuizResult({ score, passed });
         if (isLate) {
@@ -459,13 +482,13 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
         if (passed) {
             // Update Student
             const newCompleted = [...new Set([...(student.completedAssignmentIds || []), activeQuiz.id])];
-            // const newGrades = [...(student.grades || []), score * 10]; // REMOVED: Incompatible with TrimesterGrade type
+            const newResults = { ...(student.assignmentResults || {}), [activeQuiz.id]: score };
 
             const updatedStudent = {
                 ...student,
                 completedAssignmentIds: newCompleted,
-                assignmentsCompleted: newCompleted.length,
-                // grades: newGrades
+                assignmentResults: newResults,
+                assignmentsCompleted: newCompleted.length
             };
 
             setStudent(updatedStudent);
@@ -475,6 +498,14 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
             try {
                 await api.sendParentMessage(student.id, `✅ Cuestionario completado: ${activeQuiz.title} (Calificación: ${score}/10)`, 'PARENT');
             } catch (err) { console.error("Failed to notify teacher", err); }
+        } else {
+            // If failed, still save result but don't mark as complete? 
+            // Better to save result so teacher sees it.
+            const newResults = { ...(student.assignmentResults || {}), [activeQuiz.id]: score };
+            const updatedStudent = { ...student, assignmentResults: newResults };
+            setStudent(updatedStudent);
+            await api.saveStudent(updatedStudent);
+            alert(`No has alcanzado el puntaje mínimo (${minPass}/10). Puedes intentarlo de nuevo.`);
         }
     };
     const [messages, setMessages] = useState<any[]>([]);
@@ -968,13 +999,21 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                             return student?.completedAssignmentIds?.includes(assign.id);
                                         }).map(assign => {
                                             const isInteractive = assign.type === 'INTERACTIVE';
+                                            const score = student?.assignmentResults?.[assign.id];
                                             return (
-                                                <div key={assign.id} className="bg-slate-50 p-4 rounded-xl border border-slate-200/50">
+                                                <div key={assign.id} className="bg-slate-50 p-4 rounded-xl border border-slate-200/50 relative overflow-hidden">
                                                     <div className="flex justify-between items-center mb-1">
                                                         <h4 className="font-bold text-slate-700 text-sm line-through decoration-slate-400">{assign.title}</h4>
-                                                        <span className="text-emerald-600 flex items-center gap-1 text-[10px] font-bold bg-emerald-50 px-2 py-0.5 rounded">
-                                                            <CheckCircle size={10} /> Entregada
-                                                        </span>
+                                                        <div className="flex items-center gap-2">
+                                                            {score !== undefined && (
+                                                                <span className={`px-2 py-0.5 rounded font-bold text-[10px] ${score >= 6 ? 'bg-indigo-100 text-indigo-700' : 'bg-red-100 text-red-700'}`}>
+                                                                    Nota: {score}/10
+                                                                </span>
+                                                            )}
+                                                            <span className="text-emerald-600 flex items-center gap-1 text-[10px] font-bold bg-emerald-50 px-2 py-0.5 rounded">
+                                                                <CheckCircle size={10} /> Entregada
+                                                            </span>
+                                                        </div>
                                                     </div>
                                                     <p className="text-[10px] text-slate-400">
                                                         Vencía: {new Date(assign.dueDate).toLocaleDateString()}

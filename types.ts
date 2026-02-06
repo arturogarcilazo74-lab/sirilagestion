@@ -36,6 +36,7 @@ export interface Student {
   behaviorPoints: number; // Positive or negative
   assignmentsCompleted: number;
   completedAssignmentIds: string[]; // List of IDs of completed assignments
+  assignmentResults?: Record<string, number>; // assignmentId -> score (0-10)
   totalAssignments: number;
   participationCount: number;
   grades: TrimesterGrade[]; // Array of exactly 3 trimesters (indices 0, 1, 2)
@@ -96,6 +97,7 @@ export interface WorksheetData {
   type: 'WORKSHEET';
   imageUrl: string;
   gradingCriteria?: string;
+  minScoreToPass?: number;
   answerKeyPoints?: { x: number, y: number }[]; // Legacy
   interactiveZones?: InteractiveZone[]; // NEW: Defined areas
   draggableItems?: DraggableItem[];

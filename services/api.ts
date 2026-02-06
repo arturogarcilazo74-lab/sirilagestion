@@ -28,10 +28,32 @@ const GET_BASE_URL = () => {
 const OFFLINE_QUEUE_KEY = 'SIRILA_OFFLINE_QUEUE';
 
 const addToQueue = (endpoint: string, method: string, body: any) => {
-    const queue = JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY) || '[]');
-    queue.push({ endpoint, method, body, timestamp: Date.now() });
-    localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
-    console.log(`Action queued for offline sync: ${method} ${endpoint}`);
+    try {
+        const queue = JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY) || '[]');
+
+        // Prevent infinite growth
+        if (queue.length > 200) {
+            console.warn("Offline queue too large. Dropping oldest items.");
+            queue.shift();
+        }
+
+        queue.push({ endpoint, method, body, timestamp: Date.now() });
+        localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
+        console.log(`Action queued for offline sync: ${method} ${endpoint}`);
+    } catch (e) {
+        console.error("CRITICAL: Failed to add to offline queue (Quota exceeded?)", e);
+        // If we can't even add to queue, the device is completely full.
+        // We try to clear some cache to make room for user actions (which are more important)
+        try {
+            localStorage.removeItem('SIRILA_CACHE_STUDENTS'); // Clear largest cache
+            localStorage.removeItem('SIRILA_CACHE_BOOKS');
+            console.log("Attempted to free space by clearing non-essential caches.");
+        } catch (inner) { }
+    }
+};
+
+const clearQueue = () => {
+    localStorage.removeItem(OFFLINE_QUEUE_KEY);
 };
 
 const API_URL = GET_BASE_URL(); // Initial load
@@ -67,11 +89,20 @@ export const api = {
             }
         }
 
-        localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(remainingQueue));
+        try {
+            localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(remainingQueue));
+        } catch (e) {
+            console.error("Failed to update queue storage after processing", e);
+        }
+
         if (remainingQueue.length === 0) {
             console.log("Offline queue completely synced!");
         }
         return remainingQueue.length;
+    },
+
+    clearQueue: () => {
+        localStorage.removeItem(OFFLINE_QUEUE_KEY);
     },
 
     getQueueLength: () => {
@@ -82,10 +113,14 @@ export const api = {
 
     // Helper to change URL (called from Settings)
     setServerUrl: (url: string) => {
-        let cleanUrl = url.replace(/\/$/, ""); // Remove trailing slash
-        if (!cleanUrl.endsWith('/api')) cleanUrl += '/api';
-        localStorage.setItem('SIRILA_SERVER_URL', cleanUrl);
-        window.location.reload();
+        try {
+            let cleanUrl = url.replace(/\/$/, ""); // Remove trailing slash
+            if (!cleanUrl.endsWith('/api')) cleanUrl += '/api';
+            localStorage.setItem('SIRILA_SERVER_URL', cleanUrl);
+            window.location.reload();
+        } catch (e) {
+            alert("No se pudo guardar la URL del servidor. Memoria del navegador llena.");
+        }
     },
 
     // Check if DB is empty / Alive Check
@@ -369,6 +404,18 @@ export const api = {
         } catch (e) {
             addToQueue(`/books/${id}`, 'DELETE', null);
         }
+    },
+
+    getAvatars: async () => {
+        const res = await fetch(`${API_URL}/students/avatars`);
+        if (!res.ok) throw new Error('Failed to fetch avatars');
+        return await res.json();
+    },
+
+    getAssignmentById: async (id: string) => {
+        const res = await fetch(`${API_URL}/assignments/${id}`);
+        if (!res.ok) throw new Error('Failed to fetch assignment details');
+        return await res.json();
     }
 };
 

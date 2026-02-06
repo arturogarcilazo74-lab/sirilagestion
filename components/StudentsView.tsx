@@ -547,7 +547,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
                       <td className="p-4">
                         <div className="flex items-center gap-3">
                           <img
-                            src={student.avatar}
+                            src={student.avatar === "PENDING_LOAD" ? `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random` : (student.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random`)}
                             alt={student.name}
                             className="w-10 h-10 rounded-full object-cover border border-slate-200"
                           />
@@ -691,7 +691,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
               <div key={student.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <img src={student.avatar} alt={student.name} className="w-12 h-12 rounded-full object-cover border border-slate-100" />
+                    <img src={student.avatar === "PENDING_LOAD" ? `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random` : (student.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random`)} alt={student.name} className="w-12 h-12 rounded-full object-cover border border-slate-100" />
                     <div>
                       <h3 className="font-bold text-slate-800 text-sm">{student.name}</h3>
                       <div className="flex items-center gap-2 mt-1">

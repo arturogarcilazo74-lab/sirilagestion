@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'; // AI Feature Enabled
 import { Student, Assignment, InteractiveQuestion, DraggableItem, InteractiveZone } from '../types';
+import { api } from '../services/api';
 import { CheckCircle, Circle, Plus, Trash2, Calendar, BarChart3, AlertCircle, X, Save, Trophy, TrendingUp, Sparkles, HelpCircle, Eye, EyeOff, Upload, FileText, Image as ImageIcon, Move, Play, BrainCircuit, Settings, Check } from 'lucide-react';
 
 import { generateInteractiveQuiz, generateInteractiveQuizFromContext, generateWorksheetSVG, generateNEMPlanning } from '../services/ai';
@@ -13,7 +14,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 interface ActivitiesViewProps {
   students: Student[];
   assignments: Assignment[];
-  onToggleAssignment: (studentId: string, assignmentId: string) => void;
+  onToggleAssignment: (studentId: string, assignmentId: string, score?: number) => void;
   onAddAssignment: (assignment: Partial<Assignment>) => void; // UPDATED SIGNATURE
   onUpdateAssignment: (id: string, updatedData: Partial<Assignment>) => void;
   onDeleteAssignment: (id: string) => void;
@@ -79,19 +80,49 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
   const [gradingStudentId, setGradingStudentId] = useState<string | null>(null);
   const [gradingScores, setGradingScores] = useState<Record<string, number>>({});
 
-  const handleOpenGrading = (assignment: Assignment, studentId: string) => {
-    setGradingAssignment(assignment);
+  const handleOpenGrading = async (assignment: Assignment, studentId: string) => {
+    let fullAssignment = assignment;
+
+    // Lazy load full data if missing or stripped (Optimized Load Support)
+    const isStripped = assignment.interactiveData && (assignment.interactiveData as any).hasContent && !assignment.interactiveData.questions;
+
+    if (isStripped) {
+      try {
+        const data = await api.getAssignmentById(assignment.id);
+        if (data && data.interactiveData) {
+          fullAssignment = { ...assignment, interactiveData: data.interactiveData };
+        }
+      } catch (e) {
+        console.error("Failed to load assignment detail for grading", e);
+      }
+    }
+
+    setGradingAssignment(fullAssignment);
     setGradingStudentId(studentId);
     setGradingScores({});
   };
 
   const handleSaveGrading = () => {
     if (gradingAssignment && gradingStudentId) {
-      if (!students.find(s => s.id === gradingStudentId)?.completedAssignmentIds.includes(gradingAssignment.id)) {
-        onToggleAssignment(gradingStudentId, gradingAssignment.id);
+      const student = students.find(s => s.id === gradingStudentId);
+      if (student) {
+        // Calculate Score
+        const total = gradingAssignment.interactiveData?.type === 'QUIZ' ? gradingAssignment.interactiveData.questions.length : 1;
+        const correct = Object.values(gradingScores).filter(v => v === 1).length;
+        const score = Math.round((correct / total) * 10);
+
+        const newCompleted = [...new Set([...(student.completedAssignmentIds || []), gradingAssignment.id])];
+        const newResults = { ...(student.assignmentResults || {}), [gradingAssignment.id]: score };
+
+        // We use a local update first if onToggleAssignment doesn't support scores (it usually just toggles)
+        // Ideally we'd have onUpdateStudent but we'll try to use onToggleAssignment and then a manual save if needed
+        // For now, let's assume onToggleAssignment only handles the ID.
+        onToggleAssignment(gradingStudentId, gradingAssignment.id, score);
+
+        // Notify through state or API
+        setGradingAssignment(null);
+        setGradingStudentId(null);
       }
-      setGradingAssignment(null);
-      setGradingStudentId(null);
     }
   };
 
@@ -1086,27 +1117,35 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                       </td>
                       {assignments.map(assignment => {
                         const isCompleted = student.completedAssignmentIds?.includes(assignment.id);
+                        const score = student.assignmentResults?.[assignment.id];
                         return (
                           <td key={`${student.id}-${assignment.id}`} className="p-4 border-l border-slate-100 text-center">
-                            <button
-                              onClick={() => {
-                                if (assignment.assignmentType === 'NEM_EVALUATION' && !isCompleted) {
-                                  // Open Grading Modal if it's a teacher evaluation and not yet completed
-                                  handleOpenGrading(assignment, student.id);
-                                } else {
-                                  // Standard toggle behavior
-                                  onToggleAssignment(student.id, assignment.id);
-                                }
-                              }}
-                              className={`transition-all duration-300 hover:scale-110 active:scale-95 p-2 rounded-full ${isCompleted ? 'text-emerald-500 bg-emerald-50' : 'text-slate-200 hover:text-slate-400 hover:bg-slate-100'
-                                }`}
-                            >
-                              {isCompleted ? (
-                                <CheckCircle className="w-6 h-6 fill-emerald-500 text-white" />
-                              ) : (
-                                <Circle className="w-6 h-6" strokeWidth={2.5} />
+                            <div className="flex flex-col items-center gap-1">
+                              <button
+                                onClick={() => {
+                                  if (assignment.assignmentType === 'NEM_EVALUATION' && !isCompleted) {
+                                    // Open Grading Modal if it's a teacher evaluation and not yet completed
+                                    handleOpenGrading(assignment, student.id);
+                                  } else {
+                                    // Standard toggle behavior
+                                    onToggleAssignment(student.id, assignment.id);
+                                  }
+                                }}
+                                className={`transition-all duration-300 hover:scale-110 active:scale-95 p-2 rounded-full ${isCompleted ? 'text-emerald-500 bg-emerald-50' : 'text-slate-200 hover:text-slate-400 hover:bg-slate-100'
+                                  }`}
+                              >
+                                {isCompleted ? (
+                                  <CheckCircle className="w-6 h-6 fill-emerald-500 text-white" />
+                                ) : (
+                                  <Circle className="w-6 h-6" strokeWidth={2.5} />
+                                )}
+                              </button>
+                              {isCompleted && score !== undefined && (
+                                <span className={`text-[10px] font-bold px-1 rounded ${score >= 6 ? 'bg-indigo-50 text-indigo-600' : 'bg-red-50 text-red-600'}`}>
+                                  {score}/10
+                                </span>
                               )}
-                            </button>
+                            </div>
                           </td>
                         );
                       })}

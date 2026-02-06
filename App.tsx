@@ -23,7 +23,6 @@ import { LandingView } from './components/LandingView';
 import { LibraryView } from './components/LibraryView';
 import { LiteracyView } from './components/LiteracyView';
 
-
 const App: React.FC = () => {
   // Initialize View based on URL mainly for independent Parents Portal access
   const [currentView, setCurrentView] = useState<ViewState>(() => {
@@ -166,39 +165,28 @@ const App: React.FC = () => {
   // --- ASSIGNMENT FILTERING & WRAPPING ---
   let visibleAssignments = store.assignments;
   if (currentUser && currentUser.group !== 'Dirección' && currentUser.role !== 'Director' && currentUser.role !== 'PRINCIPAL') {
-    // Extract grade and letter from user's group for flexible matching
     const userGroupStr = (currentUser.group || '').toUpperCase();
     const userGrade = userGroupStr.match(/(\d+)/)?.[0];
     const userLetter = userGroupStr.match(/[A-F]/)?.[0];
 
     visibleAssignments = store.assignments.filter(a => {
       if (!a.targetGroup || a.targetGroup === 'GLOBAL') {
-        // Legacy: If no group or GLOBAL, show to 4 A for backward compatibility
         return userGrade === '4' && userLetter === 'A';
       }
 
-      // Extract grade and letter from assignment's target group
       const assignmentGroupStr = (a.targetGroup || '').toUpperCase().trim();
       const assignmentGrade = assignmentGroupStr.match(/(\d+)/)?.[0];
       const assignmentLetter = assignmentGroupStr.match(/[A-F]/)?.[0];
 
-      // Robust Matching Logic:
-      // 1. If digits are present in BOTH, compare digits and letters.
       if (userGrade && assignmentGrade) {
         return assignmentGrade === userGrade && assignmentLetter === userLetter;
       }
-
-      // 2. If one has digit and other doesn't, they don't match (unless implicit conversion logic exists, better safe).
       if ((userGrade && !assignmentGrade) || (!userGrade && assignmentGrade)) {
         return false;
       }
-
-      // 3. If NO digits in either (e.g. "PRIMERO A" vs "SEGUNDO A"), compare full string to avoid Letter-only match collision
       if (!userGrade && !assignmentGrade) {
         return userGroupStr === assignmentGroupStr;
       }
-
-      // Fallback
       return false;
     });
   }
@@ -215,11 +203,19 @@ const App: React.FC = () => {
 
   if (currentView === 'LANDING') {
     return (
-      <LandingView
-        onSelectRole={setCurrentView}
-        onSelectUser={setCurrentUser}
-        schoolConfig={store.schoolConfig}
-      />
+      <>
+        {store.isLoading && (
+          <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white/80 backdrop-blur-md">
+            <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p className="text-indigo-900 font-bold animate-pulse">Sincronizando datos...</p>
+          </div>
+        )}
+        <LandingView
+          onSelectRole={setCurrentView}
+          onSelectUser={setCurrentUser}
+          schoolConfig={store.schoolConfig}
+        />
+      </>
     );
   }
 
@@ -228,7 +224,15 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex font-sans text-slate-900">
+    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row relative font-sans text-slate-900">
+      {/* Loading Overlay */}
+      {store.isLoading && (
+        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white/80 backdrop-blur-md">
+          <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p className="text-indigo-900 font-bold animate-pulse">Sincronizando datos...</p>
+        </div>
+      )}
+
       {currentView !== 'USAER' && currentView !== 'LIBRARY' && currentView !== 'LITERACY' && (
         <Sidebar
           currentView={currentView}
@@ -434,7 +438,7 @@ const App: React.FC = () => {
           )}
         </div>
       </main>
-    </div >
+    </div>
   );
 };
 

@@ -107,151 +107,87 @@ function writeJSON(data) {
 app.get('/api/full-state', async (req, res) => {
     try {
         if (!useMySQL) {
-            // Use JSON file
             const data = readJSON();
             res.json({ ...data, isEmpty: data.students.length === 0 });
             return;
         }
 
-        // Original MySQL code
-        // Original MySQL code
         const pool = getPool();
 
-        // Students
-        const [studentRows] = await pool.query('SELECT * FROM students');
+        // 1. Students (Strip avatars to save 90% space)
+        const [studentRows] = await pool.query('SELECT id, curp, name, sex, birth_date, enrollment_date, status, behavior_points, annual_fee_paid, data_json FROM students');
         const students = studentRows.map(row => {
             let base = {};
             try {
                 base = typeof row.data_json === 'string' ? JSON.parse(row.data_json) : (row.data_json || {});
-            } catch (e) {
-                console.error(`Failed to parse data_json for student ${row.id}`, e);
-                base = {};
-            }
-            if (!base || typeof base !== 'object') base = {};
+            } catch (e) { base = {}; }
 
-            // SANITIZATION: Ensure critical arrays/objects exist to prevent Frontend crashes
+            // STRIP AVATAR from both base and root for initial load
+            const avatar = row.avatar || base.avatar;
+            const hasAvatar = !!avatar && avatar.length > 100;
+
             return {
                 ...base,
                 id: row.id,
                 name: row.name,
                 curp: row.curp,
-                avatar: row.avatar || base.avatar,
-                // Defaults if missing in JSON
+                avatar: hasAvatar ? "PENDING_LOAD" : (avatar || ""), // Placeholder
+                hasRealAvatar: hasAvatar,
+                // Defaults
                 grades: Array.isArray(base.grades) ? base.grades : [],
                 attendance: (base.attendance && typeof base.attendance === 'object') ? base.attendance : {},
                 completedAssignmentIds: Array.isArray(base.completedAssignmentIds) ? base.completedAssignmentIds : [],
-                behaviorPoints: typeof base.behaviorPoints === 'number' ? base.behaviorPoints : 0,
-                assignmentsCompleted: typeof base.assignmentsCompleted === 'number' ? base.assignmentsCompleted : 0,
-                totalAssignments: typeof base.totalAssignments === 'number' ? base.totalAssignments : 0,
-                participationCount: typeof base.participationCount === 'number' ? base.participationCount : 0,
-                annualFeePaid: !!base.annualFeePaid
+                assignmentResults: (base.assignmentResults && typeof base.assignmentResults === 'object') ? base.assignmentResults : {},
+                behaviorPoints: typeof row.behavior_points === 'number' ? row.behavior_points : 0
             };
         });
 
-        // Assignments
-        const [assignmentRows] = await pool.query('SELECT * FROM assignments');
+        // 2. Assignments (Strip heavy interactiveData)
+        const [assignmentRows] = await pool.query('SELECT id, title, due_date, data_json FROM assignments');
         const assignments = assignmentRows.map(r => {
             let d = r.data_json || {};
-            if (typeof d === 'string') {
-                try { d = JSON.parse(d); } catch (e) { }
-            }
-            if (!d || typeof d !== 'object') d = {};
+            if (typeof d === 'string') { try { d = JSON.parse(d); } catch (e) { } }
+
+            // Only keep lightweight assignment info for initial state
             return {
                 ...d,
-                id: r.id, // Ensure ID mismatch doesn't happen
-                completedStudentIds: Array.isArray(d.completedStudentIds) ? d.completedStudentIds : []
+                id: r.id,
+                interactiveData: d.interactiveData ? { type: d.interactiveData.type, hasContent: true } : null
             };
         });
 
-        // Events
+        // 3. Other tables (usually smaller)
         const [eventRows] = await pool.query('SELECT * FROM events');
         const events = eventRows.map(r => {
             let d = r.data_json || {};
             if (typeof d === 'string') { try { d = JSON.parse(d); } catch (e) { } }
-            if (!d || typeof d !== 'object') d = {};
             return { ...d, id: r.id };
         });
 
-        // Behavior Logs
         const [logRows] = await pool.query('SELECT * FROM behavior_logs');
         const behaviorLogs = logRows.map(r => {
             let d = r.data_json || {};
             if (typeof d === 'string') { try { d = JSON.parse(d); } catch (e) { } }
-            if (!d || typeof d !== 'object') d = {};
             return { ...d, id: r.id, studentId: r.student_id };
         });
 
-        // Finance
         const [financeRows] = await pool.query('SELECT * FROM finance_events');
         const financeEvents = financeRows.map(r => {
             let d = r.data_json || {};
             if (typeof d === 'string') { try { d = JSON.parse(d); } catch (e) { } }
-            if (!d || typeof d !== 'object') d = {};
-            return {
-                ...d,
-                id: r.id,
-                contributions: (d.contributions && typeof d.contributions === 'object') ? d.contributions : {}
-            };
+            return { ...d, id: r.id };
         });
 
-        // Config
-        console.log('Fetching school_config...');
-        // Config
-        console.log('Fetching school_config...');
-        // Config
-        console.log('Fetching school_config...');
         const [configRows] = await pool.query('SELECT * FROM school_config WHERE config_key = ?', ['main_config']);
-
-        // Staff Tasks
-        let staffTasks = [];
-        try {
-            const [taskRows] = await pool.query('SELECT * FROM staff_tasks');
-            staffTasks = taskRows.map(r => {
-                let d = r.data_json || {};
-                if (typeof d === 'string') { try { d = JSON.parse(d); } catch (e) { } }
-                return {
-                    ...d,
-                    id: r.id,
-                    title: r.title,
-                    description: r.description,
-                    assignedTo: r.assigned_to,
-                    type: r.type,
-                    dueDate: r.due_date,
-                    status: r.status,
-                    createdAt: r.created_at
-                };
-            });
-        } catch (e) {
-            console.error('Error fetching staff_tasks (might not exist yet):', e.message);
-        }
-
-        // Books
-        let books = [];
-        try {
-            const [bookRows] = await pool.query('SELECT * FROM books');
-            books = bookRows.map(r => {
-                let d = r.data_json || {};
-                if (typeof d === 'string') { try { d = JSON.parse(d); } catch (e) { } }
-                return { ...d, id: r.id };
-            });
-        } catch (e) {
-            console.error('Error fetching books:', e.message);
-        }
+        const [taskRows] = await pool.query('SELECT * FROM staff_tasks');
+        const [bookRows] = await pool.query('SELECT * FROM books');
 
         let schoolConfig = null;
         if (configRows.length > 0) {
             try {
-                console.log('Parsing school_config...');
                 const val = configRows[0].config_value;
-                if (typeof val === 'string') {
-                    schoolConfig = JSON.parse(val);
-                } else {
-                    schoolConfig = val;
-                }
-            } catch (e) {
-                console.error('Error parsing school_config:', e);
-                schoolConfig = {};
-            }
+                schoolConfig = typeof val === 'string' ? JSON.parse(val) : val;
+            } catch (e) { schoolConfig = {}; }
         }
 
         res.json({
@@ -260,15 +196,50 @@ app.get('/api/full-state', async (req, res) => {
             events,
             behaviorLogs,
             financeEvents,
-            financeEvents,
             schoolConfig,
-            staffTasks,
-            books,
-            isEmpty: students.length === 0
+            staffTasks: taskRows.map(r => ({ ...r, id: r.id })), // Simplified
+            books: bookRows.map(r => ({ ...r, id: r.id })),
+            isEmpty: students.length === 0,
+            isOptimized: true
         });
 
     } catch (error) {
         console.error(error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// NEW: Endpoint to fetch avatars in small batches or for specific student
+app.get('/api/students/avatars', async (req, res) => {
+    try {
+        const pool = getPool();
+        const [rows] = await pool.query('SELECT id, avatar, data_json FROM students WHERE avatar IS NOT NULL AND avatar != ""');
+        const avatars = {};
+        rows.forEach(r => {
+            let avatar = r.avatar;
+            if (!avatar && r.data_json) {
+                try {
+                    const parsed = typeof r.data_json === 'string' ? JSON.parse(r.data_json) : r.data_json;
+                    avatar = parsed.avatar;
+                } catch (e) { }
+            }
+            if (avatar) avatars[r.id] = avatar;
+        });
+        res.json(avatars);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// NEW: Endpoint to fetch specific assignment data (interactive worksheets)
+app.get('/api/assignments/:id', async (req, res) => {
+    try {
+        const pool = getPool();
+        const [rows] = await pool.query('SELECT data_json FROM assignments WHERE id = ?', [req.params.id]);
+        if (rows.length === 0) return res.status(404).json({ error: 'Not found' });
+        const d = typeof rows[0].data_json === 'string' ? JSON.parse(rows[0].data_json) : rows[0].data_json;
+        res.json(d);
+    } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
@@ -296,6 +267,7 @@ app.post('/api/sync', async (req, res) => {
                     attendance: {},
                     grades: [],
                     completedAssignmentIds: [],
+                    assignmentResults: {},
                     behaviorPoints: 0,
                     assignmentsCompleted: 0,
                     totalAssignments: 0,

@@ -192,9 +192,12 @@ export const useAppStore = () => {
         };
     }, []);
 
+    const [isLoading, setIsLoading] = useState(false);
+
     // -- AUTO-SYNC FROM SERVER ON MOUNT --
     useEffect(() => {
         const loadFromServer = async () => {
+            setIsLoading(true);
             try {
                 console.log("%c☁ Buscando datos en el servidor...", "color: blue; font-weight: bold;");
                 const result = await api.checkStatus();
@@ -223,6 +226,20 @@ export const useAppStore = () => {
                         setStaffTasks(t);
                         setBooks(b);
 
+                        // If response was optimized (stripped avatars), fetch them now
+                        if (result.isOptimized) {
+                            console.log("%c🖼 Cargando imágenes en segundo plano...", "color: purple;");
+                            api.getAvatars().then(avatarMap => {
+                                setStudents(prev => prev.map(student => {
+                                    if (avatarMap[student.id]) {
+                                        return { ...student, avatar: avatarMap[student.id] };
+                                    }
+                                    return student;
+                                }));
+                                console.log("%c✓ Imágenes cargadas", "color: purple; font-weight: bold;");
+                            }).catch(err => console.error("Failed to lazy load avatars:", err));
+                        }
+
                         // CRITICAL: Flush to cache immediately
                         flushCache(s, a, e, l, result.schoolConfig || schoolConfig, f, t, b);
                     } else {
@@ -232,6 +249,8 @@ export const useAppStore = () => {
                 }
             } catch (e) {
                 console.log("%c📵 Servidor desconectado. Usando memoria local del dispositivo.", "color: orange; font-weight: bold;");
+            } finally {
+                setIsLoading(false);
             }
 
             // Always try to process queue on start
@@ -461,21 +480,30 @@ export const useAppStore = () => {
     };
 
     // Activity/Assignment Logic
-    const handleToggleAssignment = (studentId: string, assignmentId: string) => {
+    const handleToggleAssignment = (studentId: string, assignmentId: string, score?: number) => {
         let updatedStudent: Student | null = null;
         setStudents(prev => prev.map(student => {
             if (student.id === studentId) {
                 const isCompleted = student.completedAssignmentIds?.includes(assignmentId);
                 let newCompletedIds = [];
-                if (isCompleted) {
+                let newResults = { ...(student.assignmentResults || {}) };
+
+                if (isCompleted && score === undefined) {
+                    // Normal toggle OFF
                     newCompletedIds = student.completedAssignmentIds.filter(id => id !== assignmentId);
+                    // We keep the result for history unless explicity removed? Usually keep it.
                 } else {
-                    newCompletedIds = [...(student.completedAssignmentIds || []), assignmentId];
+                    // Toggle ON or Updating Score
+                    newCompletedIds = [...new Set([...(student.completedAssignmentIds || []), assignmentId])];
+                    if (score !== undefined) {
+                        newResults[assignmentId] = score;
+                    }
                 }
 
                 updatedStudent = {
                     ...student,
                     completedAssignmentIds: newCompletedIds,
+                    assignmentResults: newResults,
                     assignmentsCompleted: newCompletedIds.length,
                     totalAssignments: assignments.length
                 };
@@ -903,6 +931,7 @@ export const useAppStore = () => {
         books,
         handleAddBook,
         handleUpdateBook,
-        handleDeleteBook
+        handleDeleteBook,
+        isLoading
     };
 };

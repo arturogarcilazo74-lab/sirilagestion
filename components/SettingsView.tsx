@@ -721,6 +721,29 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ config, onSave, onEx
             </div>
 
             <div className="flex flex-col gap-2">
+              <h4 className="font-bold text-slate-700">Cola de Sincronización</h4>
+              <p className="text-sm text-slate-500 mb-2">
+                Si ves errores de "Memoria Llena" (QuotaExceeded), puede ser que tengas muchas acciones pendientes de subir al servidor.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirm('¿Deseas borrar las acciones pendientes? Esto evitará que se suban los cambios realizados mientras estabas desconectado, pero liberará memoria.')) {
+                    import('../services/api').then(m => {
+                      m.api.clearQueue();
+                      alert('Cola de sincronización borrada.');
+                      window.location.reload();
+                    });
+                  }
+                }}
+                className="flex items-center justify-center gap-2 w-full py-3 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl font-bold hover:bg-amber-100 transition-all active:scale-95"
+              >
+                <Trash2 size={18} />
+                Borrar Acciones Pendientes
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-2">
               <h4 className="font-bold text-slate-700">Modo de Depuración</h4>
               <p className="text-sm text-slate-500 mb-2">
                 ID del Servidor: <span className="font-mono bg-slate-200 px-1 rounded">{window.location.hostname}</span>
