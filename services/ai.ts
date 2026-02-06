@@ -198,7 +198,7 @@ export const gradeInteractiveWorksheet = async (imageUrl: string, title: string,
 };
 
 export const generateWorksheetSVG = async (topic: string, type: string, extraInstructions?: string): Promise<string> => {
-  const prompt = `SVG Worksheet for 4th Grade. Topic: ${topic}, Type: ${type}. ${extraInstructions || ''}. Output ONLY valid <svg> code, 800x1100. NO markdown.`;
+  const prompt = `SVG Worksheet for 4th Grade. Topic: ${topic}, Type: ${type}. ${extraInstructions || ''}. Output ONLY valid <svg> code, 1200x1600. NO markdown. Ensure ample spacing between elements. Use readable font sizes (approx 20px-24px). Avoid text overlapping lines or boxes.`;
   try {
     const text = await generateWithFallback(prompt);
     let cleaned = text.trim();
@@ -222,7 +222,7 @@ Tipo de Actividad: ${type}
 Instrucciones extra: ${extraInstructions || ''}
 
 DEBES responder con un JSON que contenga:
-1. "svg": Código SVG válido (800x1100), estético, con colores pasteles/educativos, fuentes legibles y espacios claros para respuestas.
+1. "svg": Código SVG válido (1200x1600), estético, con colores pasteles/educativos, fuentes legibles y espacios claros para respuestas. Evita amontonar texto. Usa viewBox="0 0 1200 1600".
 2. "interactiveZones": Arreglo de objetos (InteractiveZone):
    - id: string único
    - type: 'TEXT_INPUT' | 'DROP_ZONE' | 'SELECTABLE' | 'MATCH_SOURCE' | 'MATCH_TARGET'

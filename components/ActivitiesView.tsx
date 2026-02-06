@@ -765,7 +765,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                           </div>
                         ) : (
                           /* B. Editor Interface */
-                          <div className="flex flex-col lg:flex-row gap-6 h-[600px]">
+                          <div className="flex flex-col lg:flex-row gap-6 h-[85vh]">
                             {/* Toolbar & Canvas */}
                             <div className="flex-1 flex flex-col gap-2">
                               <div className="bg-slate-800 text-white p-2 rounded-xl flex items-center gap-2 shadow-lg">
