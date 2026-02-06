@@ -704,7 +704,11 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                                     setIsGenerating(true);
                                     try {
                                       const data = await generateCompleteWorksheet(aiWorksheetTopic, aiWorksheetType);
-                                      setWorksheetImage(`data:image/svg+xml;utf8,${encodeURIComponent(data.svg)}`);
+                                      if (data.svgBase64) {
+                                        setWorksheetImage(`data:image/svg+xml;base64,${data.svgBase64}`);
+                                      } else {
+                                        setWorksheetImage(`data:image/svg+xml;utf8,${encodeURIComponent(data.svg)}`);
+                                      }
                                       setInteractiveZones(data.zones);
                                       if (data.draggables.length > 0) setDraggableItems(data.draggables);
                                       if (!newTitle) setNewTitle(`Ficha: ${aiWorksheetTopic}`);

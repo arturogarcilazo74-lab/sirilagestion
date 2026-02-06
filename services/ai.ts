@@ -214,7 +214,7 @@ export const generateWorksheetSVG = async (topic: string, type: string, extraIns
   } catch (e: any) { throw new Error(`SVG Error: ${e.message}`); }
 };
 
-export const generateCompleteWorksheet = async (topic: string, type: string, extraInstructions?: string): Promise<{ svg: string, zones: any[], draggables: any[] }> => {
+export const generateCompleteWorksheet = async (topic: string, type: string, extraInstructions?: string): Promise<{ svg: string, svgBase64?: string, zones: any[], draggables: any[] }> => {
   const prompt = `Diseñador Educativo Interactivo.
 Crea una ficha interactiva para 4to Grado de Primaria (NEM México).
 Tema: ${topic}
@@ -268,7 +268,7 @@ Responde ÚNICAMENTE el JSON minificado.`;
     }
     if (!data.svg_base64 && !data.svg) throw new Error("Respuesta incompleta de la IA");
 
-    let svgContent = data.svg;
+    let svgContent = data.svg || '';
     if (data.svg_base64) {
       try {
         svgContent = atob(data.svg_base64);
@@ -279,6 +279,7 @@ Responde ÚNICAMENTE el JSON minificado.`;
 
     return {
       svg: svgContent,
+      svgBase64: data.svg_base64,
       zones: data.interactiveZones,
       draggables: data.draggableItems || []
     };
