@@ -229,7 +229,11 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({ students, onUpda
                     <tr key={student.id} className="hover:bg-indigo-50/30 transition-colors group">
                       <td className="p-4">
                         <div className="flex items-center gap-3">
-                          <img src={student.avatar} alt={student.name} className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm" />
+                          <img
+                            src={student.avatar === "PENDING_LOAD" ? `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random` : (student.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random`)}
+                            alt={student.name}
+                            className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm"
+                          />
                           <div>
                             <div className="font-bold text-slate-800 text-sm">{student.name}</div>
                             <div className="text-xs text-slate-500 font-mono">ID: {student.id}</div>
@@ -286,7 +290,11 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({ students, onUpda
                 <div key={student.id} className="p-4 flex flex-col gap-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <img src={student.avatar} alt={student.name} className="w-12 h-12 rounded-full object-cover border border-slate-100" />
+                      <img
+                        src={student.avatar === "PENDING_LOAD" ? `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random` : (student.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random`)}
+                        alt={student.name}
+                        className="w-12 h-12 rounded-full object-cover border border-slate-100"
+                      />
                       <div>
                         <div className="font-bold text-slate-800 text-sm line-clamp-1">{student.name}</div>
                         <div className="text-xs text-slate-500">ID: {student.id}</div>

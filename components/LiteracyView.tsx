@@ -123,6 +123,7 @@ Lee el siguiente texto y responde las preguntas.
                         className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-purple-400 w-full md:w-64 shadow-sm"
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
+                        aria-label="Buscar estudiante en programa de lectoescritura"
                     />
                 </div>
             </div>
@@ -149,7 +150,11 @@ Lee el siguiente texto y responde las preguntas.
 
                                     <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">
                                         <div className="w-16 h-16 rounded-2xl bg-slate-200 overflow-hidden shadow-inner flex-shrink-0">
-                                            <img src={student.avatar} alt={student.name} className="w-full h-full object-cover" />
+                                            <img
+                                                src={student.avatar === "PENDING_LOAD" ? `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random` : (student.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random`)}
+                                                alt={student.name}
+                                                className="w-full h-full object-cover"
+                                            />
                                         </div>
 
                                         <div className="flex-1">
@@ -274,7 +279,11 @@ Lee el siguiente texto y responde las preguntas.
                                         onClick={() => handleAddStudent(s.id)}
                                         className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all text-left group"
                                     >
-                                        <img src={s.avatar} className="w-10 h-10 rounded-full object-cover bg-slate-200" />
+                                        <img
+                                            src={s.avatar === "PENDING_LOAD" ? `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=random` : (s.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=random`)}
+                                            className="w-10 h-10 rounded-full object-cover bg-slate-200"
+                                            alt={`Avatar de ${s.name}`}
+                                        />
                                         <div>
                                             <p className="font-bold text-slate-700 group-hover:text-purple-600">{s.name}</p>
                                             <p className="text-xs text-slate-400">{s.group}</p>
@@ -330,6 +339,7 @@ Lee el siguiente texto y responde las preguntas.
                                         className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 font-medium focus:ring-2 focus:ring-purple-400 outline-none appearance-none"
                                         value={generatorPrompt.difficulty}
                                         onChange={e => setGeneratorPrompt({ ...generatorPrompt, difficulty: e.target.value as any })}
+                                        aria-label="Nivel de dificultad"
                                     >
                                         <option value="BASICO">Básico (Sílabas simples)</option>
                                         <option value="INTERMEDIO">Intermedio (Frases cortas)</option>
@@ -360,10 +370,10 @@ Lee el siguiente texto y responde las preguntas.
                             {generatedActivity && (
                                 <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200 relative">
                                     <div className="absolute top-4 right-4 flex gap-2">
-                                        <button className="p-2 hover:bg-white rounded-lg text-slate-400 hover:text-purple-600 transition-colors" title="Copiar">
+                                        <button className="p-2 hover:bg-white rounded-lg text-slate-400 hover:text-purple-600 transition-colors" aria-label="Copiar actividad" title="Copiar">
                                             <FileText size={18} />
                                         </button>
-                                        <button className="p-2 hover:bg-white rounded-lg text-slate-400 hover:text-emerald-600 transition-colors" title="Guardar">
+                                        <button className="p-2 hover:bg-white rounded-lg text-slate-400 hover:text-emerald-600 transition-colors" aria-label="Guardar actividad" title="Guardar">
                                             <CheckCircle2 size={18} />
                                         </button>
                                     </div>

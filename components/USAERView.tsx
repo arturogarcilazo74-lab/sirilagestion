@@ -146,7 +146,7 @@ export const USAERView: React.FC<USAERViewProps> = ({
                                 <UserPlus size={20} className="text-blue-600" />
                                 Canalizar Alumno a USAER
                             </h3>
-                            <button onClick={() => setShowReferralModal(false)} className="text-slate-400 hover:text-slate-600">
+                            <button onClick={() => setShowReferralModal(false)} className="text-slate-400 hover:text-slate-600" aria-label="Cerrar modal">
                                 <X size={20} />
                             </button>
                         </div>
@@ -162,6 +162,7 @@ export const USAERView: React.FC<USAERViewProps> = ({
                                     onChange={(e) => setReferralSearch(e.target.value)}
                                     className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 font-medium"
                                     autoFocus
+                                    aria-label="Buscar alumno para canalizar"
                                 />
                             </div>
 
@@ -198,6 +199,7 @@ export const USAERView: React.FC<USAERViewProps> = ({
                                         value={referralBap}
                                         onChange={(e) => setReferralBap(e.target.value)}
                                         className="w-full p-2 rounded-lg border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-blue-500"
+                                        aria-label="Asignar BAP"
                                     >
                                         <option value="NINGUNA">NINGUNA (Solo Seguimiento)</option>
                                         <option value="INTELECTUAL">DISC. INTELECTUAL</option>
@@ -242,7 +244,7 @@ export const USAERView: React.FC<USAERViewProps> = ({
                                 {editingLogId ? <Edit2 size={20} className="text-amber-500" /> : <Plus size={20} className="text-blue-600" />}
                                 {editingLogId ? 'Editar Intervención' : 'Nueva Intervención'}
                             </h3>
-                            <button onClick={() => setShowInterventionModal(false)} className="text-slate-400 hover:text-slate-600">
+                            <button onClick={() => setShowInterventionModal(false)} className="text-slate-400 hover:text-slate-600" aria-label="Cerrar modal">
                                 <X size={20} />
                             </button>
                         </div>
@@ -254,6 +256,7 @@ export const USAERView: React.FC<USAERViewProps> = ({
                                         <button
                                             type="button"
                                             onClick={() => setInterventionType('USAER_OBSERVATION')}
+                                            aria-label="Registrar observación"
                                             className={`p-3 rounded-lg text-left text-xs font-bold transition-all border ${interventionType === 'USAER_OBSERVATION' ? 'bg-blue-50 border-blue-300 text-blue-700 shadow-sm' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}
                                         >
                                             <div className="flex items-center gap-2 mb-1">
@@ -266,6 +269,7 @@ export const USAERView: React.FC<USAERViewProps> = ({
                                         <button
                                             type="button"
                                             onClick={() => setInterventionType('USAER_ACCOMMODATION')}
+                                            aria-label="Registrar ajuste razonable"
                                             className={`p-3 rounded-lg text-left text-xs font-bold transition-all border ${interventionType === 'USAER_ACCOMMODATION' ? 'bg-purple-50 border-purple-300 text-purple-700 shadow-sm' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}
                                         >
                                             <div className="flex items-center gap-2 mb-1">
@@ -278,6 +282,7 @@ export const USAERView: React.FC<USAERViewProps> = ({
                                         <button
                                             type="button"
                                             onClick={() => setInterventionType('USAER_MEETING')}
+                                            aria-label="Registrar entrevista o reunión"
                                             className={`p-3 rounded-lg text-left text-xs font-bold transition-all border ${interventionType === 'USAER_MEETING' ? 'bg-emerald-50 border-emerald-300 text-emerald-700 shadow-sm' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}
                                         >
                                             <div className="flex items-center gap-2 mb-1">
@@ -290,6 +295,7 @@ export const USAERView: React.FC<USAERViewProps> = ({
                                         <button
                                             type="button"
                                             onClick={() => setInterventionType('USAER_SUGGESTION')}
+                                            aria-label="Registrar sugerencia al docente"
                                             className={`p-3 rounded-lg text-left text-xs font-bold transition-all border ${interventionType === 'USAER_SUGGESTION' ? 'bg-orange-50 border-orange-300 text-orange-700 shadow-sm' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}
                                         >
                                             <div className="flex items-center gap-2 mb-1">
@@ -344,7 +350,7 @@ export const USAERView: React.FC<USAERViewProps> = ({
                         <p className="text-slate-400 text-[10px] uppercase font-bold">{activeTab}</p>
                     </div>
                 </div>
-                <button onClick={() => setIsEditingTeacher(!isEditingTeacher)} className="p-2 text-slate-300">
+                <button onClick={() => setIsEditingTeacher(!isEditingTeacher)} className="p-2 text-slate-300" aria-label="Menú móvil">
                     {isEditingTeacher ? <X /> : <Menu />}
                 </button>
             </div>
@@ -625,6 +631,7 @@ export const USAERView: React.FC<USAERViewProps> = ({
                                             onClick={() => setShowReferralModal(true)}
                                             className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition-all"
                                             title="Canalizar nuevo alumno"
+                                            aria-label="Canalizar nuevo alumno"
                                         >
                                             <UserPlus size={20} />
                                         </button>
@@ -638,6 +645,7 @@ export const USAERView: React.FC<USAERViewProps> = ({
                                             value={searchTerm}
                                             onChange={(e) => setSearchTerm(e.target.value)}
                                             className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg outline-none focus:border-blue-500"
+                                            aria-label="Buscar alumno en USAER"
                                         />
                                     </div>
                                 </div>
@@ -659,7 +667,11 @@ export const USAERView: React.FC<USAERViewProps> = ({
                                                 className={`p-3 rounded-xl cursor-pointer transition-all border ${selectedStudentId === student.id ? 'bg-blue-50 border-blue-200 ring-1 ring-blue-200' : 'bg-white border-transparent hover:bg-slate-50 border-slate-100'}`}
                                             >
                                                 <div className="flex items-center gap-3">
-                                                    <img src={student.avatar} alt={student.name} className="w-10 h-10 rounded-full bg-slate-200 object-cover" />
+                                                    <img
+                                                        src={student.avatar === "PENDING_LOAD" ? `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random` : (student.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random`)}
+                                                        alt={`Avatar de ${student.name}`}
+                                                        className="w-10 h-10 rounded-full bg-slate-200 object-cover"
+                                                    />
                                                     <div className="overflow-hidden">
                                                         <h4 className="font-bold text-slate-800 text-sm truncate">{student.name}</h4>
                                                         <div className="flex flex-wrap gap-1 mt-1">
@@ -685,11 +697,17 @@ export const USAERView: React.FC<USAERViewProps> = ({
                                                 <button
                                                     onClick={() => setSelectedStudentId(null)}
                                                     className="md:hidden p-2 -ml-2 text-slate-500 hover:text-slate-800"
+                                                    aria-label="Volver a la lista"
                                                 >
                                                     <ChevronRight className="rotate-180" size={24} />
                                                 </button>
 
-                                                <img src={selectedStudent.avatar} className="w-12 h-12 md:w-16 md:h-16 rounded-full border-4 border-white shadow-sm object-cover shrink-0" title={selectedStudent.name} alt={selectedStudent.name} />
+                                                <img
+                                                    src={selectedStudent.avatar === "PENDING_LOAD" ? `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedStudent.name)}&background=random` : (selectedStudent.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedStudent.name)}&background=random`)}
+                                                    className="w-12 h-12 md:w-16 md:h-16 rounded-full border-4 border-white shadow-sm object-cover shrink-0"
+                                                    title={selectedStudent.name}
+                                                    alt={selectedStudent.name}
+                                                />
                                                 <div className="min-w-0 flex-1">
                                                     <h2 className="text-lg md:text-2xl font-bold text-slate-800 break-words leading-tight">{selectedStudent.name}</h2>
                                                     <div className="text-xs md:text-sm text-slate-500 flex flex-wrap gap-x-4 gap-y-1 mt-1">
@@ -892,6 +910,7 @@ export const USAERView: React.FC<USAERViewProps> = ({
                                                     <button
                                                         onClick={() => onDeleteEvent(event.id)}
                                                         className="text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                        aria-label="Eliminar evento"
                                                     >
                                                         <X size={16} />
                                                     </button>
@@ -918,6 +937,8 @@ export const USAERView: React.FC<USAERViewProps> = ({
                                                     onChange={e => setNewEvent({ ...newEvent, title: e.target.value })}
                                                     className="w-full border border-slate-300 rounded-lg p-2 text-sm outline-none focus:border-orange-500"
                                                     autoFocus
+                                                    placeholder="Ej: Visita de Supervisión"
+                                                    aria-label="Título del evento"
                                                 />
                                             </div>
                                             <div>
@@ -927,6 +948,7 @@ export const USAERView: React.FC<USAERViewProps> = ({
                                                     value={newEvent.date}
                                                     onChange={e => setNewEvent({ ...newEvent, date: e.target.value })}
                                                     className="w-full border border-slate-300 rounded-lg p-2 text-sm outline-none focus:border-orange-500"
+                                                    aria-label="Fecha del evento"
                                                 />
                                             </div>
                                             <div>
@@ -935,6 +957,8 @@ export const USAERView: React.FC<USAERViewProps> = ({
                                                     value={newEvent.description}
                                                     onChange={e => setNewEvent({ ...newEvent, description: e.target.value })}
                                                     className="w-full border border-slate-300 rounded-lg p-2 text-sm outline-none focus:border-orange-500 h-20 resize-none"
+                                                    placeholder="Detalles opcionales..."
+                                                    aria-label="Descripción del evento"
                                                 />
                                             </div>
                                             <div className="flex gap-2 pt-2">

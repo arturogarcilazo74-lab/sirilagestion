@@ -135,7 +135,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ students, books, onBac
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h1 className="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3">
-                        <span className="p-3 bg-amber-100 text-amber-600 rounded-2xl">
+                        <span className="p-3 bg-amber-100 text-amber-600 rounded-2xl" role="img" aria-label="Icono de Biblioteca">
                             <BookIcon size={32} />
                         </span>
                         Biblioteca Escolar
@@ -164,13 +164,14 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ students, books, onBac
                     {/* Filters & Search */}
                     <div className="flex flex-col md:flex-row gap-4">
                         <div className="flex-1 relative">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} aria-hidden="true" title="Buscar" />
                             <input
                                 type="text"
                                 placeholder="Buscar libros, autores o temas..."
                                 className="w-full pl-12 pr-4 py-4 bg-white rounded-2xl border border-slate-200 outline-none focus:ring-2 focus:ring-amber-400 font-medium shadow-sm transition-all text-lg"
                                 value={searchTerm}
                                 onChange={e => setSearchTerm(e.target.value)}
+                                aria-label="Buscar en catálogo de biblioteca"
                             />
                         </div>
 
@@ -238,6 +239,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ students, books, onBac
                                                 if (confirm('¿Eliminar este libro de la biblioteca?')) onDeleteBook(book.id);
                                             }}
                                             className="text-red-400 hover:text-red-600 transition-colors p-1"
+                                            aria-label="Eliminar libro"
                                         >
                                             <Trash2 size={16} />
                                         </button>
@@ -274,10 +276,10 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ students, books, onBac
                                 return (
                                     <tr key={book.id} className="hover:bg-slate-50">
                                         <td className="p-4">
-                                            <div className="flex items-center gap-3">
+                                            <div className="flex items-center gap-3" title={book.title} aria-label={`Detalles de ${book.title}`}>
                                                 {book.cover ? (
-                                                    <img src={book.cover} className="w-8 h-12 object-cover rounded shadow-sm" />
-                                                ) : <div className="w-8 h-12 bg-slate-100 rounded flex items-center justify-center text-slate-300"><BookIcon size={16} /></div>}
+                                                    <img src={book.cover} className="w-8 h-12 object-cover rounded shadow-sm" alt={book.title} title={book.title} />
+                                                ) : <div className="w-8 h-12 bg-slate-100 rounded flex items-center justify-center text-slate-300" role="img" aria-label="Libro sin portada" title="Libro sin portada"><BookIcon size={16} /></div>}
                                                 <span className="font-bold text-slate-700">{book.title}</span>
                                             </div>
                                         </td>
@@ -285,7 +287,11 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ students, books, onBac
                                             {student ? (
                                                 <div className="flex items-center gap-2">
                                                     <div className="w-6 h-6 rounded-full bg-slate-200 overflow-hidden">
-                                                        <img src={student.avatar} className="w-full h-full object-cover" />
+                                                        <img
+                                                            src={student.avatar === "PENDING_LOAD" ? `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random` : (student.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random`)}
+                                                            className="w-full h-full object-cover"
+                                                            alt={`Avatar de ${student.name}`}
+                                                        />
                                                     </div>
                                                     <span className="text-sm font-medium text-slate-600">{student.name}</span>
                                                 </div>
@@ -362,6 +368,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ students, books, onBac
                                         className="w-full px-4 py-3 bg-slate-50 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-amber-500 font-bold appearance-none"
                                         value={newBook.grade}
                                         onChange={e => setNewBook({ ...newBook, grade: e.target.value })}
+                                        aria-label="Seleccionar grado escolar"
                                     >
                                         {grades.map(g => <option key={g} value={g}>{g}</option>)}
                                     </select>
@@ -373,6 +380,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ students, books, onBac
                                         className="w-full px-4 py-3 bg-slate-50 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-amber-500 font-bold appearance-none"
                                         value={newBook.category}
                                         onChange={e => setNewBook({ ...newBook, category: e.target.value })}
+                                        aria-label="Seleccionar categoría"
                                     >
                                         <option value="Libro de Texto">Libro de Texto</option>
                                         <option value="Ficción">Ficción</option>
@@ -400,6 +408,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ students, books, onBac
                                             accept="image/*"
                                             className="absolute inset-0 opacity-0 cursor-pointer"
                                             onChange={e => handleFileUpload(e, 'cover')}
+                                            aria-label="Subir imagen de portada"
                                         />
                                     </div>
                                 </div>
@@ -422,6 +431,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ students, books, onBac
                                             accept=".pdf"
                                             className="absolute inset-0 opacity-0 cursor-pointer"
                                             onChange={e => handleFileUpload(e, 'fileUrl')}
+                                            aria-label="Subir archivo PDF del libro"
                                         />
                                     </div>
                                 </div>

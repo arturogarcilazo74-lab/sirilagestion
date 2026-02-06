@@ -3,7 +3,7 @@ import { Student, Assignment, InteractiveQuestion, DraggableItem, InteractiveZon
 import { api } from '../services/api';
 import { CheckCircle, Circle, Plus, Trash2, Calendar, BarChart3, AlertCircle, X, Save, Trophy, TrendingUp, Sparkles, HelpCircle, Eye, EyeOff, Upload, FileText, Image as ImageIcon, Move, Play, BrainCircuit, Settings, Check } from 'lucide-react';
 
-import { generateInteractiveQuiz, generateInteractiveQuizFromContext, generateWorksheetSVG, generateNEMPlanning } from '../services/ai';
+import { generateInteractiveQuiz, generateInteractiveQuizFromContext, generateWorksheetSVG, generateCompleteWorksheet, autoDetectWorksheetZones, generateNEMPlanning } from '../services/ai';
 import * as pdfjsLib from 'pdfjs-dist';
 // @ts-ignore
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
@@ -129,6 +129,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
   const getRelativeCoords = (e: React.MouseEvent) => {
     if (!imageRef.current || !containerRef.current) return { x: 0, y: 0 };
     const rect = containerRef.current.getBoundingClientRect();
+    // Use the relative container rect which now wraps the image exactly
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
     return { x: Math.max(0, Math.min(100, x)), y: Math.max(0, Math.min(100, y)) };
@@ -702,15 +703,18 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                                     if (!aiWorksheetType || !aiWorksheetTopic) return;
                                     setIsGenerating(true);
                                     try {
-                                      const svgCode = await generateWorksheetSVG(aiWorksheetTopic, 'CUSTOM', aiWorksheetType);
-                                      setWorksheetImage(`data:image/svg+xml;utf8,${encodeURIComponent(svgCode)}`);
+                                      const data = await generateCompleteWorksheet(aiWorksheetTopic, aiWorksheetType);
+                                      setWorksheetImage(`data:image/svg+xml;utf8,${encodeURIComponent(data.svg)}`);
+                                      setInteractiveZones(data.zones);
+                                      if (data.draggables.length > 0) setDraggableItems(data.draggables);
                                       if (!newTitle) setNewTitle(`Ficha: ${aiWorksheetTopic}`);
+                                      alert("¡Ficha generada automáticamente con zonas interactivas!");
                                     } catch (e: any) { alert("Error: " + e.message); } finally { setIsGenerating(false); }
                                   }}
                                   disabled={isGenerating || !aiWorksheetTopic}
                                   className="w-full py-2.5 bg-pink-500 hover:bg-pink-600 text-white rounded-lg font-bold text-sm shadow-md transition-all disabled:opacity-50"
                                 >
-                                  {isGenerating ? 'Generando...' : '✨ Crear Ficha'}
+                                  {isGenerating ? 'Generando...' : '✨ Generación Inteligente (Tipo Canva)'}
                                 </button>
                               </div>
                             </div>
@@ -775,51 +779,104 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                                 <button type="button" onClick={() => setWorksheetImage('')} className="ml-auto text-xs text-red-300 hover:text-red-100 px-3 py-1.5 hover:bg-red-500/20 rounded">Cambiar Imagen</button>
                               </div>
 
-                              <div
-                                className={`flex-1 overflow-auto bg-slate-200 rounded-xl border-2 border-slate-300 relative select-none ${editorTool === 'DRAW' ? 'cursor-crosshair' : 'cursor-default'}`}
-                                ref={containerRef}
-                                onMouseDown={handleMouseDown}
-                                onMouseMove={handleMouseMove}
-                                onMouseUp={handleMouseUp}
-                                onMouseLeave={handleMouseUp}
-                              >
-                                <img ref={imageRef} src={worksheetImage} className="w-full h-auto pointer-events-none" alt="Ficha" />
+                              <div className="flex-1 overflow-auto bg-slate-200 rounded-xl border-2 border-slate-300 custom-scrollbar">
+                                <div
+                                  ref={containerRef}
+                                  className={`relative select-none ${editorTool === 'DRAW' ? 'cursor-crosshair' : 'cursor-default'}`}
+                                  style={{ width: '100%', height: 'auto' }}
+                                  onMouseDown={handleMouseDown}
+                                  onMouseMove={handleMouseMove}
+                                  onMouseUp={handleMouseUp}
+                                  onMouseLeave={handleMouseUp}
+                                >
+                                  <img ref={imageRef} src={worksheetImage} className="w-full h-auto pointer-events-none" alt="Ficha" />
 
-                                {/* Existing Zones */}
-                                {interactiveZones.map(zone => (
-                                  // eslint-disable-next-line
-                                  <div
-                                    key={zone.id}
-                                    onClick={(e) => { e.stopPropagation(); setSelectedZoneId(zone.id); setEditorTool('SELECT'); }}
-                                    style={{ left: `${zone.x}%`, top: `${zone.y}%`, width: `${zone.width}%`, height: `${zone.height}%` }}
-                                    className={`absolute border-2 rounded flex items-center justify-center text-xs font-bold transition-all
-                                             ${selectedZoneId === zone.id ? 'border-yellow-400 bg-yellow-400/20 z-20 ring-2 ring-yellow-200' :
-                                        zone.type === 'DROP_ZONE' ? 'border-pink-500 border-dashed bg-pink-50/20' :
-                                          zone.type === 'SELECTABLE' ? 'border-purple-500 bg-purple-50/20' :
-                                            zone.type.startsWith('MATCH') ? 'border-emerald-500 bg-emerald-50/20' :
-                                              'border-blue-500 bg-blue-50/20'}
-                                          `}
-                                  >
-                                    {zone.type === 'DROP_ZONE' ? <Move size={12} className="text-pink-600" /> :
-                                      zone.type === 'SELECTABLE' ? <CheckCircle size={12} className="text-purple-600" /> :
-                                        zone.type.startsWith('MATCH') ? <div className="flex flex-col items-center"><TrendingUp size={12} className="text-emerald-600" /><span className="text-[8px] bg-white px-1 rounded shadow text-emerald-800">{zone.matchId || '?'}</span></div> :
-                                          <span className="text-blue-700">Abc</span>}
-                                  </div>
-                                ))}
+                                  {/* SVG connection layer for MATCH types */}
+                                  <svg className="absolute inset-0 w-full h-full pointer-events-none z-10" style={{ overflow: 'visible' }}>
+                                    {interactiveZones
+                                      .filter(z => z.type === 'MATCH_SOURCE' && z.matchId)
+                                      .map(source => {
+                                        const targets = interactiveZones.filter(z => z.type === 'MATCH_TARGET' && z.matchId === source.matchId);
+                                        return targets.map(target => (
+                                          <line
+                                            key={`${source.id}-${target.id}`}
+                                            x1={`${source.x + source.width / 2}%`}
+                                            y1={`${source.y + source.height / 2}%`}
+                                            x2={`${target.x + target.width / 2}%`}
+                                            y2={`${target.y + target.height / 2}%`}
+                                            stroke="#10b981"
+                                            strokeWidth="3"
+                                            strokeDasharray="5,5"
+                                            className="animate-pulse"
+                                          />
+                                        ));
+                                      })}
+                                  </svg>
 
-                                {/* Drawing Rect */}
-                                {isDrawing && currentRect && (
-                                  // eslint-disable-next-line
-                                  <div
-                                    style={{ left: `${currentRect.x}%`, top: `${currentRect.y}%`, width: `${currentRect.width}%`, height: `${currentRect.height}%` }}
-                                    className="absolute border-2 border-emerald-400 bg-emerald-400/20" />
-                                )}
+                                  {/* Existing Zones */}
+                                  {interactiveZones.map(zone => (
+                                    // eslint-disable-next-line
+                                    <div
+                                      key={zone.id}
+                                      onClick={(e) => { e.stopPropagation(); setSelectedZoneId(zone.id); setEditorTool('SELECT'); }}
+                                      style={{ left: `${zone.x}%`, top: `${zone.y}%`, width: `${zone.width}%`, height: `${zone.height}%` }}
+                                      className={`absolute border-2 rounded flex items-center justify-center text-xs font-bold transition-all
+                                               ${selectedZoneId === zone.id ? 'border-yellow-400 bg-yellow-400/20 z-20 ring-2 ring-yellow-200' :
+                                          zone.type === 'DROP_ZONE' ? 'border-pink-500 border-dashed bg-pink-50/20' :
+                                            zone.type === 'SELECTABLE' ? 'border-purple-500 bg-purple-50/20' :
+                                              zone.type.startsWith('MATCH') ? 'border-emerald-500 bg-emerald-50/20' :
+                                                'border-blue-500 bg-blue-50/20'}
+                                            `}
+                                    >
+                                      {zone.type === 'DROP_ZONE' ? <Move size={12} className="text-pink-600" /> :
+                                        zone.type === 'SELECTABLE' ? <CheckCircle size={12} className="text-purple-600" /> :
+                                          zone.type.startsWith('MATCH') ? <div className="flex flex-col items-center"><TrendingUp size={12} className="text-emerald-600" /><span className="text-[8px] bg-white px-1 rounded shadow text-emerald-800">{zone.matchId || '?'}</span></div> :
+                                            <span className="text-blue-700">Abc</span>}
+                                    </div>
+                                  ))}
+
+                                  {/* Drawing Rect */}
+                                  {isDrawing && currentRect && (
+                                    // eslint-disable-next-line
+                                    <div
+                                      style={{ left: `${currentRect.x}%`, top: `${currentRect.y}%`, width: `${currentRect.width}%`, height: `${currentRect.height}%` }}
+                                      className="absolute border-2 border-emerald-400 bg-emerald-400/20" />
+                                  )}
+                                </div>
                               </div>
                               <p className="text-[10px] text-slate-400 text-center"><span className="font-bold">Tip:</span> Dibuja recuadros sobre los espacios en blanco de la ficha.</p>
                             </div>
 
                             {/* Sidebar Config */}
                             <div className="w-full lg:w-80 flex flex-col gap-4 h-full overflow-hidden">
+                              {/* GLOBAL AUTO-DETECT ACTION (Canva Style) */}
+                              <button
+                                type="button"
+                                disabled={isGenerating}
+                                onClick={async () => {
+                                  if (!worksheetImage) return;
+                                  setIsGenerating(true);
+                                  try {
+                                    const data = await autoDetectWorksheetZones(worksheetImage, newTitle);
+                                    if (data.zones && data.zones.length > 0) {
+                                      setInteractiveZones(data.zones);
+                                      if (data.draggables && data.draggables.length > 0) {
+                                        setDraggableItems(data.draggables);
+                                      }
+                                      alert(`¡Éxito! Se detectaron ${data.zones.length} zonas y ${data.draggables.length} etiquetas.`);
+                                    } else {
+                                      alert("No se detectaron zonas automáticas. Intenta dibujar una manualmente.");
+                                    }
+                                  } catch (e: any) {
+                                    alert("Error en detección: " + e.message);
+                                  } finally { setIsGenerating(false); }
+                                }}
+                                className="w-full py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl font-bold text-sm shadow-lg flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
+                              >
+                                {isGenerating ? <HelpCircle className="animate-spin" size={18} /> : <Sparkles size={18} />}
+                                {isGenerating ? "Escaneando elementos..." : "Magia IA: Auto-detectar ✨"}
+                              </button>
+
                               {selectedZoneId ? (
                                 <div className="bg-white border-2 border-yellow-400/50 p-4 rounded-xl shadow-lg flex flex-col gap-3 animate-fadeIn">
                                   <div className="flex justify-between items-center pb-2 border-b border-slate-100">
@@ -1095,13 +1152,11 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                     <tr key={student.id} className="hover:bg-slate-50 transition-colors group">
                       <td className="p-4 sticky left-0 bg-white group-hover:bg-slate-50 z-10 border-r border-slate-100 font-medium text-slate-700 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
                         <div className="flex items-center gap-3">
-                          {student.avatar ? (
-                            <img src={student.avatar} alt={student.name} className="w-8 h-8 rounded-full object-cover shadow-sm bg-slate-200" />
-                          ) : (
-                            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 font-bold text-xs">
-                              {student.name.substring(0, 2).toUpperCase()}
-                            </div>
-                          )}
+                          <img
+                            src={student.avatar === "PENDING_LOAD" ? `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random` : (student.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random`)}
+                            alt={student.name}
+                            className="w-8 h-8 rounded-full object-cover shadow-sm bg-slate-200"
+                          />
                           {student.name}
                         </div>
                       </td>

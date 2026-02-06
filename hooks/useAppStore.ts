@@ -228,15 +228,25 @@ export const useAppStore = () => {
 
                         // If response was optimized (stripped avatars), fetch them now
                         if (result.isOptimized) {
-                            console.log("%c🖼 Cargando imágenes en segundo plano...", "color: purple;");
+                            console.log("%c🖼 Iniciando carga de avatars...", "color: purple;");
                             api.getAvatars().then(avatarMap => {
-                                setStudents(prev => prev.map(student => {
-                                    if (avatarMap[student.id]) {
-                                        return { ...student, avatar: avatarMap[student.id] };
-                                    }
-                                    return student;
-                                }));
-                                console.log("%c✓ Imágenes cargadas", "color: purple; font-weight: bold;");
+                                const count = Object.keys(avatarMap).length;
+                                console.log(`%c🖼 Avatars recibidos: ${count}`, "color: purple; font-weight: bold;");
+
+                                setStudents(prev => {
+                                    const updated = prev.map(student => {
+                                        if (avatarMap[student.id]) {
+                                            return { ...student, avatar: avatarMap[student.id] };
+                                        }
+                                        return student;
+                                    });
+
+                                    // CRITICAL: Update cache with full students (including avatars)
+                                    // We need to pass the updated list here
+                                    flushCache(updated, a, e, l, result.schoolConfig || schoolConfig, f, t, b);
+                                    return updated;
+                                });
+                                console.log("%c✓ Avatars aplicados y cacheados", "color: purple; font-weight: bold;");
                             }).catch(err => console.error("Failed to lazy load avatars:", err));
                         }
 

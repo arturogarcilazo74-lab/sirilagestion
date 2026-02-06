@@ -157,7 +157,11 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                                         <tr key={student.id} className="hover:bg-indigo-50/30 transition-colors">
                                             <td className="p-4">
                                                 <div className="flex items-center gap-3">
-                                                    <img src={student.avatar} alt="" className="w-10 h-10 rounded-full border border-slate-200 object-cover" />
+                                                    <img
+                                                        src={student.avatar === "PENDING_LOAD" ? `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random` : (student.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random`)}
+                                                        alt=""
+                                                        className="w-10 h-10 rounded-full border border-slate-200 object-cover"
+                                                    />
                                                     <div>
                                                         <div className="font-bold text-slate-800">{student.name}</div>
                                                         <div className="text-xs text-slate-500">ID: {student.id}</div>

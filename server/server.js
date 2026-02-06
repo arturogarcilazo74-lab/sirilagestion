@@ -115,7 +115,7 @@ app.get('/api/full-state', async (req, res) => {
         const pool = getPool();
 
         // 1. Students (Strip avatars to save 90% space)
-        const [studentRows] = await pool.query('SELECT id, curp, name, sex, birth_date, enrollment_date, status, behavior_points, annual_fee_paid, data_json FROM students');
+        const [studentRows] = await pool.query('SELECT id, curp, name, sex, birth_date, enrollment_date, status, behavior_points, annual_fee_paid, avatar, data_json FROM students');
         const students = studentRows.map(row => {
             let base = {};
             try {
@@ -213,20 +213,25 @@ app.get('/api/full-state', async (req, res) => {
 app.get('/api/students/avatars', async (req, res) => {
     try {
         const pool = getPool();
-        const [rows] = await pool.query('SELECT id, avatar, data_json FROM students WHERE avatar IS NOT NULL AND avatar != ""');
+        // Fetch all students to ensure we check both avatar column and data_json
+        const [rows] = await pool.query('SELECT id, avatar, data_json FROM students');
         const avatars = {};
         rows.forEach(r => {
             let avatar = r.avatar;
-            if (!avatar && r.data_json) {
+            if ((!avatar || avatar === "PENDING_LOAD") && r.data_json) {
                 try {
-                    const parsed = typeof r.data_json === 'string' ? JSON.parse(r.data_json) : r.data_json;
+                    const parsed = typeof r.data_json === 'string' ? JSON.parse(r.data_json) : (r.data_json || {});
                     avatar = parsed.avatar;
                 } catch (e) { }
             }
-            if (avatar) avatars[r.id] = avatar;
+            // Only add to map if it's a real base64 image
+            if (avatar && avatar.length > 100) {
+                avatars[r.id] = avatar;
+            }
         });
         res.json(avatars);
     } catch (error) {
+        console.error("Avatar fetch error:", error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -279,6 +284,12 @@ app.post('/api/sync', async (req, res) => {
                     completedAssignmentIds: Array.isArray(s.completedAssignmentIds) ? s.completedAssignmentIds : []
                 };
 
+                // Protection: Do not save "PENDING_LOAD" placeholder into data_json
+                const finalData = { ...sanitizedStudent };
+                if (finalData.avatar === "PENDING_LOAD") {
+                    delete finalData.avatar;
+                }
+
                 await connection.query(`
                 INSERT INTO students (id, curp, name, sex, birth_date, enrollment_date, status, guardian_name, guardian_phone, avatar, repeater, bap, usaer, behavior_points, annual_fee_paid, data_json)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -291,7 +302,7 @@ app.post('/api/sync', async (req, res) => {
                 status=VALUES(status),
                 guardian_name=VALUES(guardian_name),
                 guardian_phone=VALUES(guardian_phone),
-                avatar=VALUES(avatar),
+                avatar=IF(VALUES(avatar) = 'PENDING_LOAD', avatar, VALUES(avatar)),
                 repeater=VALUES(repeater),
                 bap=VALUES(bap),
                 usaer=VALUES(usaer),
@@ -302,7 +313,7 @@ app.post('/api/sync', async (req, res) => {
                     s.id, s.curp || '', s.name, s.sex === 'MUJER' ? 'MUJER' : 'HOMBRE', s.birthDate || null, s.enrollmentDate || null,
                     s.status || 'INSCRITO', s.guardianName, s.guardianPhone, s.avatar,
                     !!s.repeater, s.bap || 'NINGUNA', !!s.usaer, s.behaviorPoints || 0, !!s.annualFeePaid,
-                    JSON.stringify(sanitizedStudent)
+                    JSON.stringify(finalData)
                 ]);
             }
         }
@@ -406,7 +417,7 @@ app.post('/api/students', async (req, res) => {
       birth_date=VALUES(birth_date),
       guardian_name=VALUES(guardian_name),
       guardian_phone=VALUES(guardian_phone),
-      avatar=VALUES(avatar),
+      avatar=IF(VALUES(avatar) = 'PENDING_LOAD', avatar, VALUES(avatar)),
       repeater=VALUES(repeater),
       bap=VALUES(bap),
       usaer=VALUES(usaer),

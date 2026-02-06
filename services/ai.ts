@@ -7,7 +7,7 @@ const getApiKey = () => (import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.
 const generateWithFallback = async (input: string | any[], config?: any): Promise<string> => {
   const apiKey = getApiKey();
   if (!apiKey) {
-    throw new Error("No se encontró la API Key de Gemini. Asegúrate de configurar VITE_GEMINI_API_KEY en tu archivo .env");
+    throw new Error("No se encontró la API Key de Gemini. Si estás en la Nube (Render), asegúrate de haber agregado VITE_GEMINI_API_KEY en la pestaña Environment y que el valor empiece con 'AIza...'. Nota: Render requiere un nuevo Deploy manual para aplicar cambios en variables VITE_.");
   }
 
   // Robust model list
@@ -212,6 +212,89 @@ export const generateWorksheetSVG = async (topic: string, type: string, extraIns
     if (start === -1) throw new Error("No SVG generated");
     return cleaned.substring(start, end);
   } catch (e: any) { throw new Error(`SVG Error: ${e.message}`); }
+};
+
+export const generateCompleteWorksheet = async (topic: string, type: string, extraInstructions?: string): Promise<{ svg: string, zones: any[], draggables: any[] }> => {
+  const prompt = `Diseñador Educativo Interactivo.
+Crea una ficha interactiva para 4to Grado de Primaria (NEM México).
+Tema: ${topic}
+Tipo de Actividad: ${type}
+Instrucciones extra: ${extraInstructions || ''}
+
+DEBES responder con un JSON que contenga:
+1. "svg": Código SVG válido (800x1100), estético, con colores pasteles/educativos, fuentes legibles y espacios claros para respuestas.
+2. "interactiveZones": Arreglo de objetos (InteractiveZone):
+   - id: string único
+   - type: 'TEXT_INPUT' | 'DROP_ZONE' | 'SELECTABLE' | 'MATCH_SOURCE' | 'MATCH_TARGET'
+   - x, y, width, height: números (0-100) representando el % de posición y tamaño sobre el SVG.
+   - correctAnswer: respuesta esperada (para texto o drop).
+   - matchId: identificador (ej. "A", "1") para unir parejas Origen-Destino.
+   - points: puntos (ej. 1).
+3. "draggableItems": Arreglo de objetos (DraggableItem) si la actividad es de arrastrar:
+   - id: string
+   - content: texto de la etiqueta a arrastrar.
+
+Asegúrate de que las coordenadas (x,y) de las zonas coincidan EXACTAMENTE con los espacios visuales dibujados en el SVG.
+Responde ÚNICAMENTE el JSON.`;
+
+  try {
+    const text = await generateWithFallback(prompt, { responseMimeType: "application/json" });
+    const cleaned = text.replace(/```json|```/g, '').trim();
+    const data = JSON.parse(cleaned);
+    if (!data.svg || !data.interactiveZones) throw new Error("Respuesta incompleta de la IA");
+    return {
+      svg: data.svg,
+      zones: data.interactiveZones,
+      draggables: data.draggableItems || []
+    };
+  } catch (e: any) {
+    throw new Error(`Complete Worksheet Error: ${e.message}`);
+  }
+};
+
+export const autoDetectWorksheetZones = async (imageUrl: string, title?: string): Promise<{ zones: any[], draggables: any[] }> => {
+  const clean = imageUrl.includes('base64,') ? imageUrl.split('base64,')[1] : imageUrl;
+  const prompt = `Actúa como un experto en OCR y UX Educativa.
+Analiza la IMAGEN de esta ficha de trabajo${title ? ` titulada "${title}"` : ''}.
+Identifica todos los espacios donde un alumno debería:
+1. Escribir texto (TEXT_INPUT).
+2. Arrastrar una etiqueta (DROP_ZONE).
+3. Seleccionar una opción (SELECTABLE).
+4. Unir con una línea (MATCH_SOURCE / MATCH_TARGET).
+
+DEBES responder ÚNICAMENTE con un JSON:
+{
+  "zones": [
+    {
+      "id": "uído_único",
+      "type": "TEXT_INPUT" | "DROP_ZONE" | "SELECTABLE" | "MATCH_SOURCE" | "MATCH_TARGET",
+      "x": %_horizontal, "y": %_vertical, "width": %_ancho, "height": %_alto,
+      "correctAnswer": "...", "matchId": "...", "points": 1
+    }
+  ],
+  "draggables": [
+    { "id": "...", "content": "..." }
+  ]
+}
+Importante: Las coordenadas (x, y, width, height) deben ser porcentajes (0-100) relativos a la imagen.
+Analiza con cuidado las líneas, cuadros y espacios en blanco.`;
+
+  const parts = [
+    { text: prompt },
+    { inline_data: { mime_type: "image/jpeg", data: clean } }
+  ];
+
+  try {
+    const text = await generateWithFallback(parts, { responseMimeType: "application/json" });
+    const cleaned = text.replace(/```json|```/g, '').trim();
+    const data = JSON.parse(cleaned);
+    return {
+      zones: data.zones || [],
+      draggables: data.draggables || []
+    };
+  } catch (e: any) {
+    throw new Error(`Auto-detect Error: ${e.message}`);
+  }
 };
 
 export const generateNEMPlanning = async (context: string, images: string[]): Promise<string> => {

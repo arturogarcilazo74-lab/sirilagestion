@@ -897,7 +897,11 @@ export const DashboardView: React.FC<DashboardProps> = ({
                     >
                       <td className="py-3 pl-2">
                         <div className="flex items-center gap-3">
-                          <img src={student.avatar} alt={student.name} className="w-8 h-8 rounded-full object-cover border border-slate-200" />
+                          <img
+                            src={student.avatar === "PENDING_LOAD" ? `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random` : (student.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random`)}
+                            alt={student.name}
+                            className="w-8 h-8 rounded-full object-cover border border-slate-200"
+                          />
                           <span className="font-medium text-slate-700 text-sm group-hover:text-indigo-600 transition-colors">{student.name}</span>
                         </div>
                       </td>
@@ -961,7 +965,7 @@ export const DashboardView: React.FC<DashboardProps> = ({
 
               <div className="flex items-center gap-4">
                 <img
-                  src={selectedStudent.avatar}
+                  src={selectedStudent.avatar === "PENDING_LOAD" ? `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedStudent.name)}&background=random` : (selectedStudent.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedStudent.name)}&background=random`)}
                   alt={selectedStudent.name}
                   className="w-16 h-16 rounded-full border-4 border-white/30"
                 />

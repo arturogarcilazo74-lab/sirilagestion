@@ -123,7 +123,7 @@ export const BehaviorView: React.FC<BehaviorViewProps> = ({ students, onLogBehav
                 <div className="flex items-start gap-3 mb-4">
                   <div className="relative">
                     <img
-                      src={student.avatar || `https://ui-avatars.com/api/?name=${student.name}`}
+                      src={student.avatar === "PENDING_LOAD" ? `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random` : (student.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random`)}
                       className="w-12 h-12 rounded-full object-cover border-2 border-slate-100"
                       alt=""
                     />
@@ -210,7 +210,11 @@ export const BehaviorView: React.FC<BehaviorViewProps> = ({ students, onLogBehav
                 <div key={s.id} className="flex items-center justify-between bg-white/10 p-2 rounded-xl backdrop-blur-md">
                   <div className="flex items-center gap-3">
                     <span className="font-black text-indigo-200 w-4">{idx + 1}</span>
-                    <img src={s.avatar || `https://ui-avatars.com/api/?name=${s.name}`} className="w-8 h-8 rounded-full border border-white/20" alt="" />
+                    <img
+                      src={s.avatar === "PENDING_LOAD" ? `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=random` : (s.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=random`)}
+                      className="w-8 h-8 rounded-full border border-white/20"
+                      alt=""
+                    />
                     <span className="text-xs font-bold truncate max-w-[120px]">{s.name}</span>
                   </div>
                   <span className="font-black bg-white text-indigo-600 px-2 py-0.5 rounded-lg text-xs">
@@ -234,7 +238,7 @@ export const BehaviorView: React.FC<BehaviorViewProps> = ({ students, onLogBehav
               }`}>
               <div className="flex items-center gap-4">
                 <img
-                  src={selectedStudentForAction.avatar || `https://ui-avatars.com/api/?name=${selectedStudentForAction.name}`}
+                  src={selectedStudentForAction.avatar === "PENDING_LOAD" ? `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedStudentForAction.name)}&background=random` : (selectedStudentForAction.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedStudentForAction.name)}&background=random`)}
                   className="w-16 h-16 rounded-2xl border-2 border-white/20 object-cover"
                   alt=""
                 />

@@ -230,7 +230,11 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                                 <tr key={s.id} onClick={() => setViewingStaff(s)} className="hover:bg-slate-50 cursor-pointer transition-colors group">
                                     <td className="p-4 font-bold text-slate-800 flex items-center gap-3">
                                         <div className="w-8 h-8 rounded-full bg-slate-200 overflow-hidden">
-                                            <img src={s.avatar} className="w-full h-full object-cover" />
+                                            <img
+                                                src={s.avatar === "PENDING_LOAD" ? `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=random` : (s.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=random`)}
+                                                className="w-full h-full object-cover"
+                                                alt={`Avatar de ${s.name}`}
+                                            />
                                         </div>
                                         {s.name}
                                     </td>
@@ -271,7 +275,11 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                             <div className="px-8 pb-8">
                                 <div className="relative -mt-12 mb-4 flex justify-between items-end">
                                     <div className="w-24 h-24 rounded-2xl border-4 border-white shadow-lg overflow-hidden bg-white">
-                                        <img src={viewingStaff.avatar || `https://ui-avatars.com/api/?name=${viewingStaff.name}&background=random`} alt={viewingStaff.name} className="w-full h-full object-cover" />
+                                        <img
+                                            src={viewingStaff.avatar === "PENDING_LOAD" ? `https://ui-avatars.com/api/?name=${encodeURIComponent(viewingStaff.name)}&background=random` : (viewingStaff.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(viewingStaff.name)}&background=random`)}
+                                            alt={`Avatar detallado de ${viewingStaff.name}`}
+                                            className="w-full h-full object-cover"
+                                        />
                                     </div>
                                     <div className="mb-1 text-right">
                                         <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${viewingStaff.pin ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
@@ -1056,6 +1064,7 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                                                 title: task.title,
                                                 description: task.description || '',
                                                 assignedTo: task.assignedTo,
+                                                priority: task.priority || 'NORMAL',
                                                 type: task.type,
                                                 dueDate: task.dueDate || ''
                                             });
@@ -1414,7 +1423,7 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                         </div>
                     </div>
                     {/* Close button for mobile inside sidebar too */}
-                    <button onClick={() => setIsMobileMenuOpen(false)} className="md:hidden text-slate-500 hover:text-white">
+                    <button onClick={() => setIsMobileMenuOpen(false)} aria-label="Cerrar menú móvil" className="md:hidden text-slate-500 hover:text-white">
                         <X size={20} />
                     </button>
                 </div>
@@ -1451,6 +1460,7 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                 <div className="p-4 border-t border-slate-800">
                     <button
                         onClick={onLogout}
+                        aria-label="Cerrar sesión"
                         className="flex items-center gap-3 w-full p-3 rounded-xl text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-all font-bold text-sm"
                     >
                         <LogOut size={18} />
@@ -1571,7 +1581,7 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                                                         : 'Incidencias registradas en los últimos 7 días'}
                                                 </p>
                                             </div>
-                                            <button onClick={() => { setShowIncidentsModal(false); setSelectedStudentIdForIncidents(null); }} className="p-2 bg-white/50 hover:bg-white rounded-full text-red-800 transition-colors">
+                                            <button onClick={() => { setShowIncidentsModal(false); setSelectedStudentIdForIncidents(null); }} aria-label="Cerrar modal de reportes" className="p-2 bg-white/50 hover:bg-white rounded-full text-red-800 transition-colors">
                                                 <X size={20} />
                                             </button>
                                         </div>
@@ -1623,6 +1633,7 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                                                                             onClick={() => setViewingIncident(log)}
                                                                             className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition-colors"
                                                                             title="Ver Reporte Completo"
+                                                                            aria-label="Ver Reporte Completo"
                                                                         >
                                                                             <FileText size={18} />
                                                                         </button>
@@ -1634,6 +1645,7 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                                                                             }}
                                                                             className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                                                                             title="Eliminar Reporte"
+                                                                            aria-label="Eliminar Reporte"
                                                                         >
                                                                             <Trash2 size={18} />
                                                                         </button>
@@ -1665,10 +1677,10 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                                                 </h3>
                                             </div>
                                             <div className="flex gap-2">
-                                                <button onClick={() => window.print()} className="p-2 hover:bg-white rounded-lg text-slate-500 hover:text-indigo-600 transition-colors" title="Imprimir">
+                                                <button onClick={() => window.print()} className="p-2 hover:bg-white rounded-lg text-slate-500 hover:text-indigo-600 transition-colors" title="Imprimir" aria-label="Imprimir reporte">
                                                     <Printer size={20} />
                                                 </button>
-                                                <button onClick={() => setViewingIncident(null)} className="p-2 hover:bg-white rounded-lg text-slate-500 hover:text-red-500 transition-colors">
+                                                <button onClick={() => setViewingIncident(null)} className="p-2 hover:bg-white rounded-lg text-slate-500 hover:text-red-500 transition-colors" aria-label="Cerrar reporte">
                                                     <X size={20} />
                                                 </button>
                                             </div>
@@ -1748,7 +1760,7 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                                             </div>
                                         </div>
                                         <div className="bg-slate-50 p-4 border-t border-slate-200 flex justify-end">
-                                            <button onClick={() => setViewingIncident(null)} className="px-6 py-2 bg-slate-800 text-white font-bold rounded-lg hover:bg-slate-900 transition-colors">
+                                            <button onClick={() => setViewingIncident(null)} className="px-6 py-2 bg-slate-800 text-white font-bold rounded-lg hover:bg-slate-900 transition-colors" aria-label="Cerrar Reporte">
                                                 Cerrar Reporte
                                             </button>
                                         </div>
@@ -1829,6 +1841,7 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                                                                     setShowIncidentsModal(true);
                                                                 }}
                                                                 className="text-indigo-600 hover:text-indigo-800 font-medium"
+                                                                aria-label={`Ver detalles de incidente de ${student?.name || incident.studentName || 'Alumno Desconocido'}`}
                                                             >
                                                                 Ver detalles →
                                                             </button>
@@ -1863,6 +1876,7 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                                             key={groupName}
                                             onClick={() => setSelectedGroupStats(groupName)}
                                             className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-lg transition-all cursor-pointer group hover:border-indigo-300 relative overflow-hidden"
+                                            aria-label={`Ver estadísticas del grupo ${groupName}`}
                                         >
                                             <div className="absolute top-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <div className="bg-indigo-50 text-indigo-600 p-1.5 rounded-lg">
@@ -1930,7 +1944,7 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                                                 </div>
                                                 <p className="text-slate-500 text-sm">Resumen detallado del rendimiento y alertas del grupo.</p>
                                             </div>
-                                            <button onClick={() => { setSelectedGroupStats(null); setActiveAnalysisSection(null); }} className="p-2 bg-white rounded-full hover:bg-slate-200 transition-colors text-slate-500">
+                                            <button onClick={() => { setSelectedGroupStats(null); setActiveAnalysisSection(null); }} className="p-2 bg-white rounded-full hover:bg-slate-200 transition-colors text-slate-500" aria-label="Cerrar análisis de grupo">
                                                 <X size={24} />
                                             </button>
                                         </div>
@@ -1986,14 +2000,14 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                                                 });
 
                                                 // BEHAVIOR METRICS
-                                                const groupLogs = behaviorLogs.filter((l: any) => groupStudents.some((s: Student) => s.id === l.studentId));
+                                                const groupLogs = behaviorLogs.filter((l: any) => groupStudents.some((s: Student) => s.id === (l.studentId || l.student_id)));
                                                 const totalIncidents = groupLogs.length;
                                                 const negativeCount = groupLogs.filter((l: any) => l.type === 'NEGATIVE').length;
                                                 const positiveCount = groupLogs.filter((l: any) => l.type === 'POSITIVE').length;
 
                                                 return (
                                                     <div className="space-y-6">
-                                                        {/* Alertas Tempranas (New from Guide) */}
+                                                        {/* Alertas Tempranas */}
                                                         <div className="bg-red-50 border-l-4 border-red-500 rounded-r-xl p-6 shadow-sm">
                                                             <h3 className="font-bold text-red-800 mb-4 flex items-center gap-2">
                                                                 <AlertTriangle size={20} />
@@ -2040,10 +2054,9 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                                                                 return (
                                                                     <div className="space-y-2">
                                                                         {alerts.slice(0, 5).map((alert, idx) => (
-                                                                            <div key={idx} className={`p-3 rounded-lg flex items-center justify-between ${alert.severity === 'high' ? 'bg-red-100 text-red-800 border border-red-200' : 'bg-amber-100 text-amber-800 border border-amber-200'
-                                                                                }`}>
+                                                                            <div key={idx} className={`p-3 rounded-lg flex items-center justify-between ${alert.severity === 'high' ? 'bg-red-100 text-red-800 border border-red-200' : 'bg-amber-100 text-amber-800 border border-amber-200'}`}>
                                                                                 <span><span className="font-black">[{alert.type}]</span> {alert.message}</span>
-                                                                                <button onClick={() => setViewStudent(riskStudents.find(s => s.name.includes(alert.message.split(':')[0])))} className="text-[10px] font-bold underline">Ver Alumno</button>
+                                                                                <button onClick={() => setViewStudent(riskStudents.find((s: Student) => s.name.includes(alert.message.split(':')[0])))} className="text-[10px] font-bold underline" aria-label={`Ver alumno ${alert.message.split(':')[0]}`}>Ver Alumno</button>
                                                                             </div>
                                                                         ))}
                                                                         {alerts.length > 5 && (
@@ -2054,7 +2067,7 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                                                             })()}
                                                         </div>
 
-                                                        {/* Resumen de Situación (New from Guide) */}
+                                                        {/* Resumen de Situación */}
                                                         <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 shadow-inner">
                                                             <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
                                                                 <FileText size={20} className="text-slate-500" />
@@ -2087,14 +2100,9 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                                                             </div>
                                                         </div>
 
-                                                        {/* SUMMARY CARDS - CLICKABLE */}
+                                                        {/* SUMMARY CARDS */}
                                                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-
-                                                            {/* 1. ENROLLMENT CARD */}
-                                                            <div
-                                                                onClick={() => setActiveAnalysisSection(activeAnalysisSection === 'ENROLLMENT' ? null : 'ENROLLMENT')}
-                                                                className={`p-4 rounded-xl border cursor-pointer transition-all hover:shadow-md ${activeAnalysisSection === 'ENROLLMENT' ? 'bg-emerald-100 border-emerald-300 ring-2 ring-emerald-400' : 'bg-emerald-50 border-emerald-100 hover:bg-emerald-100'}`}
-                                                            >
+                                                            <div onClick={() => setActiveAnalysisSection(activeAnalysisSection === 'ENROLLMENT' ? null : 'ENROLLMENT')} className={`p-4 rounded-xl border cursor-pointer transition-all hover:shadow-md ${activeAnalysisSection === 'ENROLLMENT' ? 'bg-emerald-100 border-emerald-300 ring-2 ring-emerald-400' : 'bg-emerald-50 border-emerald-100 hover:bg-emerald-100'}`} aria-label="Ver detalle de matrícula">
                                                                 <div className="flex items-center gap-3">
                                                                     <div className="p-3 bg-white rounded-lg shadow-sm text-emerald-600"><Users size={24} /></div>
                                                                     <div>
@@ -2104,12 +2112,7 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                                                                     </div>
                                                                 </div>
                                                             </div>
-
-                                                            {/* 2. ACADEMIC CARD */}
-                                                            <div
-                                                                onClick={() => setActiveAnalysisSection(activeAnalysisSection === 'ACADEMIC' ? null : 'ACADEMIC')}
-                                                                className={`p-4 rounded-xl border cursor-pointer transition-all hover:shadow-md ${activeAnalysisSection === 'ACADEMIC' ? 'bg-blue-100 border-blue-300 ring-2 ring-blue-400' : 'bg-blue-50 border-blue-100 hover:bg-blue-100'}`}
-                                                            >
+                                                            <div onClick={() => setActiveAnalysisSection(activeAnalysisSection === 'ACADEMIC' ? null : 'ACADEMIC')} className={`p-4 rounded-xl border cursor-pointer transition-all hover:shadow-md ${activeAnalysisSection === 'ACADEMIC' ? 'bg-blue-100 border-blue-300 ring-2 ring-blue-400' : 'bg-blue-50 border-blue-100 hover:bg-blue-100'}`} aria-label="Ver detalle de promedio general">
                                                                 <div className="flex items-center gap-3">
                                                                     <div className="p-3 bg-white rounded-lg shadow-sm text-blue-600"><TrendingUp size={24} /></div>
                                                                     <div>
@@ -2119,12 +2122,7 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                                                                     </div>
                                                                 </div>
                                                             </div>
-
-                                                            {/* 3. RISK CARD */}
-                                                            <div
-                                                                onClick={() => setActiveAnalysisSection(activeAnalysisSection === 'RISK' ? null : 'RISK')}
-                                                                className={`p-4 rounded-xl border cursor-pointer transition-all hover:shadow-md ${activeAnalysisSection === 'RISK' ? 'bg-amber-100 border-amber-300 ring-2 ring-amber-400' : 'bg-amber-50 border-amber-100 hover:bg-amber-100'}`}
-                                                            >
+                                                            <div onClick={() => setActiveAnalysisSection(activeAnalysisSection === 'RISK' ? null : 'RISK')} className={`p-4 rounded-xl border cursor-pointer transition-all hover:shadow-md ${activeAnalysisSection === 'RISK' ? 'bg-amber-100 border-amber-300 ring-2 ring-amber-400' : 'bg-amber-50 border-amber-100 hover:bg-amber-100'}`} aria-label="Ver detalle de alertas de riesgo">
                                                                 <div className="flex items-center gap-3">
                                                                     <div className="p-3 bg-white rounded-lg shadow-sm text-amber-600"><AlertTriangle size={24} /></div>
                                                                     <div>
@@ -2134,12 +2132,7 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                                                                     </div>
                                                                 </div>
                                                             </div>
-
-                                                            {/* 4. BEHAVIOR CARD (NEW) */}
-                                                            <div
-                                                                onClick={() => setActiveAnalysisSection(activeAnalysisSection === 'BEHAVIOR' ? null : 'BEHAVIOR')}
-                                                                className={`p-4 rounded-xl border cursor-pointer transition-all hover:shadow-md ${activeAnalysisSection === 'BEHAVIOR' ? 'bg-purple-100 border-purple-300 ring-2 ring-purple-400' : 'bg-purple-50 border-purple-100 hover:bg-purple-100'}`}
-                                                            >
+                                                            <div onClick={() => setActiveAnalysisSection(activeAnalysisSection === 'BEHAVIOR' ? null : 'BEHAVIOR')} className={`p-4 rounded-xl border cursor-pointer transition-all hover:shadow-md ${activeAnalysisSection === 'BEHAVIOR' ? 'bg-purple-100 border-purple-300 ring-2 ring-purple-400' : 'bg-purple-50 border-purple-100 hover:bg-purple-100'}`} aria-label="Ver detalle de conducta">
                                                                 <div className="flex items-center gap-3">
                                                                     <div className="p-3 bg-white rounded-lg shadow-sm text-purple-600"><MessageSquare size={24} /></div>
                                                                     <div>
@@ -2151,10 +2144,8 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                                                             </div>
                                                         </div>
 
-                                                        {/* DETAIL SECTIONS CONTAINER */}
+                                                        {/* DETAIL SECTIONS */}
                                                         <div className="animate-fadeIn">
-
-                                                            {/* RISK DETAIL SECTION */}
                                                             {activeAnalysisSection === 'RISK' && (
                                                                 <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm">
                                                                     <div className="bg-red-50 p-4 border-b border-red-100 flex justify-between items-center">
@@ -2171,10 +2162,10 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                                                                             </div>
                                                                         ) : (
                                                                             riskStudents.map((s: Student) => (
-                                                                                <div key={s.id} onClick={() => setViewStudent(s)} className="p-4 hover:bg-slate-50 flex justify-between items-center cursor-pointer group/item transition-colors">
+                                                                                <div key={s.id} onClick={() => setViewStudent(s)} className="p-4 hover:bg-slate-50 flex justify-between items-center cursor-pointer group/item transition-colors" aria-label={`Ver perfil de ${s.name}`}>
                                                                                     <div className="flex items-center gap-4">
                                                                                         <div className="w-10 h-10 rounded-full bg-slate-200 overflow-hidden border border-slate-100">
-                                                                                            <img src={s.avatar || `https://ui-avatars.com/api/?name=${s.name}`} className="w-full h-full object-cover" />
+                                                                                            <img src={s.avatar === "PENDING_LOAD" ? `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=random` : (s.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=random`)} className="w-full h-full object-cover" alt={`Avatar de ${s.name}`} />
                                                                                         </div>
                                                                                         <div>
                                                                                             <p className="text-sm font-bold text-slate-800 group-hover/item:text-indigo-600 transition-colors">{s.name}</p>
@@ -2193,11 +2184,7 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                                                                                         </div>
                                                                                     </div>
                                                                                     <div className="flex items-center gap-2">
-                                                                                        <button
-                                                                                            onClick={(e) => { e.stopPropagation(); setReportStudent(s); }}
-                                                                                            className="text-xs px-4 py-2 bg-white border border-slate-200 rounded-lg font-bold text-slate-600 hover:text-indigo-600 hover:border-indigo-400 shadow-sm transition-all hover:shadow">
-                                                                                            Ver Reporte
-                                                                                        </button>
+                                                                                        <button onClick={(e) => { e.stopPropagation(); setReportStudent(s); }} className="text-xs px-4 py-2 bg-white border border-slate-200 rounded-lg font-bold text-slate-600 hover:text-indigo-600 hover:border-indigo-400 shadow-sm transition-all hover:shadow" aria-label={`Ver reporte de ${s.name}`}>Ver Reporte</button>
                                                                                     </div>
                                                                                 </div>
                                                                             ))
@@ -2206,7 +2193,6 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                                                                 </div>
                                                             )}
 
-                                                            {/* BEHAVIOR DETAIL SECTION */}
                                                             {activeAnalysisSection === 'BEHAVIOR' && (
                                                                 <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm">
                                                                     <div className="bg-purple-50 p-4 border-b border-purple-100 flex justify-between items-center">
@@ -2229,24 +2215,18 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                                                                                     </tr>
                                                                                 </thead>
                                                                                 <tbody className="divide-y divide-slate-100">
-                                                                                    {groupLogs
-                                                                                        .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                                                                                        .map((log: any) => (
-                                                                                            <tr
-                                                                                                key={log.id}
-                                                                                                className="hover:bg-slate-50 cursor-pointer group/row transition-colors"
-                                                                                                onClick={() => { setSelectedStudentIdForIncidents(log.studentId || log.student_id); setShowIncidentsModal(true); }}
-                                                                                            >
-                                                                                                <td className="p-3 text-xs text-slate-500">{new Date(log.date).toLocaleDateString()}</td>
-                                                                                                <td className="p-3 font-bold text-slate-700 group-hover/row:text-purple-600 transition-colors">{log.studentName}</td>
-                                                                                                <td className="p-3 text-center">
-                                                                                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${log.type === 'POSITIVE' ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200'}`}>
-                                                                                                        {log.type === 'POSITIVE' ? '+ POSITIVO' : '- NEGATIVO'}
-                                                                                                    </span>
-                                                                                                </td>
-                                                                                                <td className="p-3 text-slate-600">{log.description}</td>
-                                                                                            </tr>
-                                                                                        ))}
+                                                                                    {groupLogs.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((log: any) => (
+                                                                                        <tr key={log.id} className="hover:bg-slate-50 cursor-pointer group/row transition-colors" onClick={() => { setSelectedStudentIdForIncidents(log.studentId || log.student_id); setShowIncidentsModal(true); }} aria-label={`Ver historial de conducta de ${log.studentName}`}>
+                                                                                            <td className="p-3 text-xs text-slate-500">{new Date(log.date).toLocaleDateString()}</td>
+                                                                                            <td className="p-3 font-bold text-slate-700 group-hover/row:text-purple-600 transition-colors">{log.studentName}</td>
+                                                                                            <td className="p-3 text-center">
+                                                                                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${log.type === 'POSITIVE' ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200'}`}>
+                                                                                                    {log.type === 'POSITIVE' ? '+ POSITIVO' : '- NEGATIVO'}
+                                                                                                </span>
+                                                                                            </td>
+                                                                                            <td className="p-3 text-slate-600">{log.description}</td>
+                                                                                        </tr>
+                                                                                    ))}
                                                                                 </tbody>
                                                                             </table>
                                                                         )}
@@ -2254,10 +2234,8 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                                                                 </div>
                                                             )}
 
-                                                            {/* ENROLLMENT DETAIL SECTION */}
                                                             {activeAnalysisSection === 'ENROLLMENT' && (
                                                                 <div className="space-y-4">
-                                                                    {/* BAP / USAER SUB-SECTION */}
                                                                     <div className="border border-indigo-100 rounded-xl overflow-hidden bg-indigo-50/50">
                                                                         <div className="bg-indigo-50 p-3 border-b border-indigo-100 flex justify-between items-center">
                                                                             <h4 className="font-bold text-indigo-800 flex items-center gap-2 text-sm">
@@ -2270,15 +2248,13 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                                                                                 <p className="col-span-2 text-center text-xs text-slate-400 py-4">No hay alumnos con BAP/USAER registrados.</p>
                                                                             ) : (
                                                                                 groupStudents.filter((s: Student) => (s.bap && s.bap !== 'NINGUNA') || s.usaer).map((s: Student) => (
-                                                                                    <div key={s.id} onClick={() => setReportStudent(s)} className="bg-white p-2 rounded border border-indigo-100 flex items-center gap-2 cursor-pointer hover:border-indigo-300">
+                                                                                    <div key={s.id} onClick={() => setReportStudent(s)} className="bg-white p-2 rounded border border-indigo-100 flex items-center gap-2 cursor-pointer hover:border-indigo-300" aria-label={`Ver reporte de ${s.name}`}>
                                                                                         <div className="w-8 h-8 rounded-full bg-slate-200 overflow-hidden shrink-0">
-                                                                                            <img src={s.avatar || `https://ui-avatars.com/api/?name=${s.name}`} className="w-full h-full object-cover" />
+                                                                                            <img src={s.avatar === "PENDING_LOAD" ? `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=random` : (s.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=random`)} className="w-full h-full object-cover" alt={`Avatar de ${s.name}`} />
                                                                                         </div>
                                                                                         <div className="overflow-hidden">
                                                                                             <p className="text-xs font-bold text-slate-800 truncate">{s.name}</p>
-                                                                                            <p className="text-[10px] text-indigo-600 font-medium truncate">
-                                                                                                {s.usaer ? 'USAER ' : ''} {s.bap !== 'NINGUNA' ? s.bap : ''}
-                                                                                            </p>
+                                                                                            <p className="text-[10px] text-indigo-600 font-medium truncate">{s.usaer ? 'USAER ' : ''} {s.bap !== 'NINGUNA' ? s.bap : ''}</p>
                                                                                         </div>
                                                                                     </div>
                                                                                 ))
@@ -2286,7 +2262,6 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                                                                         </div>
                                                                     </div>
 
-                                                                    {/* FULL LIST */}
                                                                     <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm">
                                                                         <div className="bg-slate-50 p-4 border-b border-slate-200 flex justify-between items-center">
                                                                             <h4 className="font-bold text-slate-700 flex items-center gap-2">
@@ -2296,9 +2271,9 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                                                                         </div>
                                                                         <div className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 max-h-[400px] overflow-y-auto">
                                                                             {groupStudents.map((s: Student) => (
-                                                                                <div key={s.id} onClick={() => setReportStudent(s)} className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:border-indigo-400 hover:shadow-md cursor-pointer transition-all bg-white group">
+                                                                                <div key={s.id} onClick={() => setReportStudent(s)} className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:border-indigo-400 hover:shadow-md cursor-pointer transition-all bg-white group" aria-label={`Ver reporte de ${s.name}`}>
                                                                                     <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden border border-slate-100 group-hover:border-indigo-200">
-                                                                                        <img src={s.avatar || `https://ui-avatars.com/api/?name=${s.name}`} className="w-full h-full object-cover" />
+                                                                                        <img src={s.avatar === "PENDING_LOAD" ? `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=random` : (s.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=random`)} className="w-full h-full object-cover" alt={`Avatar de ${s.name}`} />
                                                                                     </div>
                                                                                     <div className="overflow-hidden">
                                                                                         <p className="text-sm font-bold text-slate-800 truncate group-hover:text-indigo-700">{s.name}</p>
@@ -2311,7 +2286,6 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                                                                 </div>
                                                             )}
 
-                                                            {/* ACADEMIC DETAIL SECTION */}
                                                             {activeAnalysisSection === 'ACADEMIC' && (
                                                                 <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm">
                                                                     <div className="bg-blue-50 p-4 border-b border-blue-100 flex justify-between items-center">
@@ -2338,12 +2312,10 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                                                                                         avg = sum / s.grades.length;
                                                                                     }
                                                                                     return (
-                                                                                        <tr key={s.id} className="hover:bg-slate-50 cursor-pointer" onClick={() => setReportStudent(s)}>
+                                                                                        <tr key={s.id} className="hover:bg-slate-50 cursor-pointer" onClick={() => setReportStudent(s)} aria-label={`Ver boleta de ${s.name}`}>
                                                                                             <td className="p-3 font-bold text-slate-700">{s.name}</td>
                                                                                             <td className="p-3 text-center font-mono font-bold text-base">
-                                                                                                <span className={avg < 6 ? 'text-red-600' : avg < 8 ? 'text-amber-600' : 'text-green-600'}>
-                                                                                                    {avg > 0 ? avg.toFixed(1) : '-'}
-                                                                                                </span>
+                                                                                                <span className={avg < 6 ? 'text-red-600' : avg < 8 ? 'text-amber-600' : 'text-green-600'}>{avg > 0 ? avg.toFixed(1) : '-'}</span>
                                                                                             </td>
                                                                                             <td className="p-3 text-center">
                                                                                                 {avg > 0 ? (
@@ -2353,7 +2325,7 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                                                                                                 ) : <span className="text-slate-400 text-xs">Sin evaluaciones</span>}
                                                                                             </td>
                                                                                             <td className="p-3 text-right">
-                                                                                                <button className="text-indigo-600 hover:text-indigo-800 text-xs font-bold">Ver Boleta</button>
+                                                                                                <button className="text-indigo-600 hover:text-indigo-800 text-xs font-bold" aria-label={`Ver boleta de ${s.name}`}>Ver Boleta</button>
                                                                                             </td>
                                                                                         </tr>
                                                                                     );
@@ -2364,16 +2336,12 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                                                                 </div>
                                                             )}
 
-                                                            {/* EMPTY STATE - NO SELECTION */}
                                                             {!activeAnalysisSection && (
                                                                 <div className="text-center py-10 opacity-50">
-                                                                    <div className="bg-slate-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
-                                                                        <Search size={24} className="text-slate-400" />
-                                                                    </div>
+                                                                    <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3 text-slate-400" role="img" aria-label="Selecciona una sección para ver el detalle" title="Selecciona una sección para ver el detalle"><Search size={24} /></div>
                                                                     <p className="text-slate-500 font-medium">Selecciona una tarjeta arriba para ver el detalle</p>
                                                                 </div>
                                                             )}
-
                                                         </div>
                                                     </div>
                                                 );
@@ -2383,67 +2351,69 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                                 </div>
                             )}
                             {/* INCIDENTS HISTORY MODAL */}
-                            {showIncidentsModal && selectedStudentIdForIncidents && (
-                                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fadeIn" onClick={() => setShowIncidentsModal(false)}>
-                                    <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden animate-scaleIn flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
-                                        <div className="bg-slate-50 p-4 border-b border-slate-200 flex justify-between items-center shrink-0">
-                                            <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
-                                                <MessageSquare size={20} className="text-purple-600" />
-                                                Historial de Conducta
-                                            </h3>
-                                            <button onClick={() => setShowIncidentsModal(false)} className="p-2 hover:bg-slate-200 rounded-full text-slate-400 hover:text-slate-600 transition-colors"><X size={20} /></button>
-                                        </div>
-                                        <div className="p-6 overflow-y-auto">
-                                            {/* Student Header */}
-                                            <div className="flex items-center gap-4 mb-6">
-                                                {(() => {
-                                                    const stud = students.find((s: any) => s.id === selectedStudentIdForIncidents);
-                                                    if (!stud) return null;
-                                                    return (
-                                                        <>
-                                                            <div className="w-16 h-16 rounded-full bg-slate-200 overflow-hidden border-2 border-slate-100 shrink-0">
-                                                                <img src={stud.avatar || `https://ui-avatars.com/api/?name=${stud.name}`} className="w-full h-full object-cover" />
-                                                            </div>
-                                                            <div>
-                                                                <h2 className="text-xl font-bold text-slate-800">{stud.name}</h2>
-                                                                <p className="text-slate-500 text-sm">Puntos Actuales: <span className={`font-bold ${stud.behaviorPoints < 0 ? 'text-red-600' : 'text-green-600'}`}>{stud.behaviorPoints > 0 ? '+' : ''}{stud.behaviorPoints}</span></p>
-                                                            </div>
-                                                        </>
-                                                    )
-                                                })()}
+                            {
+                                showIncidentsModal && selectedStudentIdForIncidents && (
+                                    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fadeIn" onClick={() => setShowIncidentsModal(false)}>
+                                        <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden animate-scaleIn flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
+                                            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-purple-50 shrink-0">
+                                                <h3 className="text-xl font-black text-purple-900 flex items-center gap-2">
+                                                    <MessageSquare size={20} className="text-purple-600" />
+                                                    Historial de Conducta
+                                                </h3>
+                                                <button onClick={() => setShowIncidentsModal(false)} aria-label="Cerrar modal de historial" className="p-2 hover:bg-slate-200 rounded-full text-slate-400 hover:text-slate-600 transition-colors"><X size={20} /></button>
                                             </div>
-
-                                            {/* Logs List */}
-                                            {behaviorLogs.filter((l: any) => l.studentId === selectedStudentIdForIncidents).length === 0 ? (
-                                                <div className="text-center py-8 text-slate-400 border border-dashed border-slate-200 rounded-xl">
-                                                    <span className="text-4xl block mb-2">🤷‍♂️</span>
-                                                    No hay incidencias registradas.
-                                                </div>
-                                            ) : (
-                                                <div className="space-y-3">
-                                                    {behaviorLogs.filter((l: any) => l.studentId === selectedStudentIdForIncidents)
-                                                        .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                                                        .map((log: any) => (
-                                                            <div key={log.id} className="flex gap-4 p-4 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-white hover:shadow-sm transition-all">
-                                                                <div className={`shrink-0 w-1 p-0.5 rounded-full ${log.type === 'POSITIVE' ? 'bg-green-400' : 'bg-red-400'}`}></div>
-                                                                <div className="flex-1">
-                                                                    <div className="flex justify-between items-start mb-1">
-                                                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${log.type === 'POSITIVE' ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200'}`}>
-                                                                            {log.type === 'POSITIVE' ? 'POSITIVO' : 'NEGATIVO'}
-                                                                        </span>
-                                                                        <span className="text-xs text-slate-400">{new Date(log.date).toLocaleDateString()}</span>
-                                                                    </div>
-                                                                    <p className="text-slate-700 text-sm font-medium">{log.description}</p>
-                                                                    {log.points && <p className="text-xs text-slate-400 mt-1">Puntos: {log.points > 0 ? '+' : ''}{log.points}</p>}
+                                            <div className="p-6 overflow-y-auto">
+                                                {/* Student Header */}
+                                                <div className="flex items-center gap-4 mb-6">
+                                                    {(() => {
+                                                        const stud = students.find((s: any) => s.id === selectedStudentIdForIncidents);
+                                                        if (!stud) return null;
+                                                        return (
+                                                            <>
+                                                                <div className="w-16 h-16 rounded-full bg-slate-200 overflow-hidden border-2 border-slate-100 shrink-0">
+                                                                    <img src={stud.avatar === "PENDING_LOAD" ? `https://ui-avatars.com/api/?name=${encodeURIComponent(stud.name)}&background=random` : (stud.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(stud.name)}&background=random`)} className="w-full h-full object-cover" alt={stud.name} />
                                                                 </div>
-                                                            </div>
-                                                        ))}
+                                                                <div>
+                                                                    <h2 className="text-xl font-bold text-slate-800">{stud.name}</h2>
+                                                                    <p className="text-slate-500 text-sm">Puntos Actuales: <span className={`font-bold ${stud.behaviorPoints < 0 ? 'text-red-600' : 'text-green-600'}`}>{stud.behaviorPoints > 0 ? '+' : ''}{stud.behaviorPoints}</span></p>
+                                                                </div>
+                                                            </>
+                                                        )
+                                                    })()}
                                                 </div>
-                                            )}
+
+                                                {/* Logs List */}
+                                                {behaviorLogs.filter((l: any) => l.studentId === selectedStudentIdForIncidents).length === 0 ? (
+                                                    <div className="text-center py-8 text-slate-400 border border-dashed border-slate-200 rounded-xl">
+                                                        <span className="text-4xl block mb-2">🤷‍♂️</span>
+                                                        No hay incidencias registradas.
+                                                    </div>
+                                                ) : (
+                                                    <div className="space-y-3">
+                                                        {behaviorLogs.filter((l: any) => l.studentId === selectedStudentIdForIncidents)
+                                                            .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                                                            .map((log: any) => (
+                                                                <div key={log.id} className="flex gap-4 p-4 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-white hover:shadow-sm transition-all">
+                                                                    <div className={`shrink-0 w-1 p-0.5 rounded-full ${log.type === 'POSITIVE' ? 'bg-green-400' : 'bg-red-400'}`}></div>
+                                                                    <div className="flex-1">
+                                                                        <div className="flex justify-between items-start mb-1">
+                                                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${log.type === 'POSITIVE' ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200'}`}>
+                                                                                {log.type === 'POSITIVE' ? 'POSITIVO' : 'NEGATIVO'}
+                                                                            </span>
+                                                                            <span className="text-xs text-slate-400">{new Date(log.date).toLocaleDateString()}</span>
+                                                                        </div>
+                                                                        <p className="text-slate-700 text-sm font-medium">{log.description}</p>
+                                                                        {log.points && <p className="text-xs text-slate-400 mt-1">Puntos: {log.points > 0 ? '+' : ''}{log.points}</p>}
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            )}
+                                )
+                            }
 
                             {/* Staff Tasks Tracking Section */}
                             <div className="col-span-full mt-8">
@@ -2562,7 +2532,7 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                                                                             className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-1.5"
                                                                         >
                                                                             <img
-                                                                                src={staff.avatar || `https://ui-avatars.com/api/?name=${staff.name}&background=random`}
+                                                                                src={staff.avatar === "PENDING_LOAD" ? `https://ui-avatars.com/api/?name=${encodeURIComponent(staff.name)}&background=random` : (staff.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(staff.name)}&background=random`)}
                                                                                 alt={staff.name}
                                                                                 className="w-6 h-6 rounded-full"
                                                                             />
@@ -2611,7 +2581,7 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                                                                                     className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-1.5"
                                                                                 >
                                                                                     <img
-                                                                                        src={staff.avatar || `https://ui-avatars.com/api/?name=${staff.name}&background=random`}
+                                                                                        src={staff.avatar === "PENDING_LOAD" ? `https://ui-avatars.com/api/?name=${encodeURIComponent(staff.name)}&background=random` : (staff.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(staff.name)}&background=random`)}
                                                                                         alt={staff.name}
                                                                                         className="w-6 h-6 rounded-full"
                                                                                     />
@@ -2663,91 +2633,98 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                             </div>
 
                             {/* Add Modal for Dashboard */}
-                            {showAddModal && (
-                                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fadeIn">
-                                    <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl animate-scaleIn">
-                                        <h3 className="text-lg font-bold text-slate-800 mb-4">{editingId ? 'Editar Asignación' : 'Nueva Asignación'}</h3>
+                            {
+                                showAddModal && (
+                                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fadeIn">
+                                        <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl animate-scaleIn">
+                                            <h3 className="text-lg font-bold text-slate-800 mb-4">{editingId ? 'Editar Asignación' : 'Nueva Asignación'}</h3>
 
-                                        <div className="space-y-4">
-                                            <div>
-                                                <label className="block text-xs font-bold text-slate-500 mb-1">Título</label>
-                                                <input autoFocus value={newTask.title} onChange={e => setNewTask({ ...newTask, title: e.target.value })} className="w-full p-2 border border-slate-200 rounded-lg text-sm" placeholder="Ej. Entrega Planeación Enero" />
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-4">
                                                 <div>
-                                                    <label className="block text-xs font-bold text-slate-500 mb-1">Tipo</label>
-                                                    <select value={newTask.type} onChange={e => setNewTask({ ...newTask, type: e.target.value as any })} className="w-full p-2 border border-slate-200 rounded-lg text-sm">
-                                                        <option value="COMMISSION">Comisión / Guardia</option>
-                                                        <option value="DOCUMENTATION">Entrega Documentos</option>
-                                                        <option value="ACTIVITY">Actividad General</option>
+                                                    <label className="block text-xs font-bold text-slate-500 mb-1">Título</label>
+                                                    <input autoFocus value={newTask.title} onChange={e => setNewTask({ ...newTask, title: e.target.value })} className="w-full p-2 border border-slate-200 rounded-lg text-sm" placeholder="Ej. Entrega Planeación Enero" />
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div>
+                                                        <label className="block text-xs font-bold text-slate-500 mb-1">Tipo</label>
+                                                        <select value={newTask.type} onChange={e => setNewTask({ ...newTask, type: e.target.value as any })} className="w-full p-2 border border-slate-200 rounded-lg text-sm">
+                                                            <option value="COMMISSION">Comisión / Guardia</option>
+                                                            <option value="DOCUMENTATION">Entrega Documentos</option>
+                                                            <option value="ACTIVITY">Actividad General</option>
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-xs font-bold text-slate-500 mb-1">Fecha Límite</label>
+                                                        <input type="date" value={newTask.dueDate} onChange={e => setNewTask({ ...newTask, dueDate: e.target.value })} className="w-full p-2 border border-slate-200 rounded-lg text-sm" />
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-bold text-slate-500 mb-1">Asignar A</label>
+                                                    <select value={newTask.assignedTo} onChange={e => setNewTask({ ...newTask, assignedTo: e.target.value })} className="w-full p-2 border border-slate-200 rounded-lg text-sm">
+                                                        <option value="ALL">-- Todo el Personal --</option>
+                                                        <option value="DOCENTES">-- Todos los Docentes --</option>
+                                                        {(schoolConfig.staff || []).filter((s: any) => {
+                                                            const role = (s.role || '').toLowerCase();
+                                                            return !role.includes('director') && !role.includes('dirección');
+                                                        }).map((s: any) => (
+                                                            <option key={s.id} value={s.id}>{s.name} ({s.group})</option>
+                                                        ))}
                                                     </select>
                                                 </div>
                                                 <div>
-                                                    <label className="block text-xs font-bold text-slate-500 mb-1">Fecha Límite</label>
-                                                    <input type="date" value={newTask.dueDate} onChange={e => setNewTask({ ...newTask, dueDate: e.target.value })} className="w-full p-2 border border-slate-200 rounded-lg text-sm" />
+                                                    <label className="block text-xs font-bold text-slate-500 mb-1">Descripción</label>
+                                                    <textarea value={newTask.description} onChange={e => setNewTask({ ...newTask, description: e.target.value })} className="w-full p-2 border border-slate-200 rounded-lg text-sm h-24" placeholder="Detalles de la tarea..." />
                                                 </div>
                                             </div>
-                                            <div>
-                                                <label className="block text-xs font-bold text-slate-500 mb-1">Asignar A</label>
-                                                <select value={newTask.assignedTo} onChange={e => setNewTask({ ...newTask, assignedTo: e.target.value })} className="w-full p-2 border border-slate-200 rounded-lg text-sm">
-                                                    <option value="ALL">-- Todo el Personal --</option>
-                                                    <option value="DOCENTES">-- Todos los Docentes --</option>
-                                                    {(schoolConfig.staff || []).filter((s: any) => {
-                                                        const role = (s.role || '').toLowerCase();
-                                                        return !role.includes('director') && !role.includes('dirección');
-                                                    }).map((s: any) => (
-                                                        <option key={s.id} value={s.id}>{s.name} ({s.group})</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-bold text-slate-500 mb-1">Descripción</label>
-                                                <textarea value={newTask.description} onChange={e => setNewTask({ ...newTask, description: e.target.value })} className="w-full p-2 border border-slate-200 rounded-lg text-sm h-24" placeholder="Detalles de la tarea..." />
-                                            </div>
-                                        </div>
 
-                                        <div className="flex gap-3 mt-6">
-                                            <button onClick={() => setShowAddModal(false)} className="flex-1 px-4 py-2 bg-slate-100 text-slate-600 font-bold rounded-lg hover:bg-slate-200">Cancelar</button>
-                                            <button onClick={handleSaveTask} className="flex-1 px-4 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700">Guardar Asignación</button>
+                                            <div className="flex gap-3 mt-6">
+                                                <button onClick={() => setShowAddModal(false)} className="flex-1 px-4 py-2 bg-slate-100 text-slate-600 font-bold rounded-lg hover:bg-slate-200">Cancelar</button>
+                                                <button onClick={handleSaveTask} className="flex-1 px-4 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700">Guardar Asignación</button>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            )}
-                        </div>
-                    )}
+                                )
+                            }
+                        </div >
+                    )
+                    }
 
                     {activeTab === 'STAFF' && <StaffPanel />}
 
-                    {activeTab === 'FINANCE' && (
-                        // Reusing FinanceView but passing props from store
-                        <div className="animate-fadeIn">
-                            <FinanceView
-                                students={store.students}
-                                financeEvents={store.financeEvents}
-                                onUpdateStudentFee={store.handleUpdateStudentFee}
-                                onAddEvent={store.handleAddFinanceEvent}
-                                onDeleteEvent={store.handleDeleteFinanceEvent}
-                                onUpdateContribution={store.handleUpdateContribution}
-                                readOnly={!canEditContent}
-                            />
-                        </div>
-                    )}
+                    {
+                        activeTab === 'FINANCE' && (
+                            // Reusing FinanceView but passing props from store
+                            <div className="animate-fadeIn">
+                                <FinanceView
+                                    students={store.students}
+                                    financeEvents={store.financeEvents}
+                                    onUpdateStudentFee={store.handleUpdateStudentFee}
+                                    onAddEvent={store.handleAddFinanceEvent}
+                                    onDeleteEvent={store.handleDeleteFinanceEvent}
+                                    onUpdateContribution={store.handleUpdateContribution}
+                                    readOnly={!canEditContent}
+                                />
+                            </div>
+                        )
+                    }
 
-                    {activeTab === 'STUDENTS' && (
-                        // Reusing StudentsView in a container
-                        <div className="animate-fadeIn">
-                            <StudentsView
-                                students={store.students}
-                                onAdd={store.handleAddStudent}
-                                onEdit={store.handleEditStudent}
-                                onDelete={store.handleDeleteStudent}
-                                onImport={store.handleImportStudents}
-                                config={store.schoolConfig}
-                                logs={store.behaviorLogs}
-                                readOnly={!canEditContent}
-                            />
-                        </div>
-                    )}
+                    {
+                        activeTab === 'STUDENTS' && (
+                            // Reusing StudentsView in a container
+                            <div className="animate-fadeIn">
+                                <StudentsView
+                                    students={store.students}
+                                    onAdd={store.handleAddStudent}
+                                    onEdit={store.handleEditStudent}
+                                    onDelete={store.handleDeleteStudent}
+                                    onImport={store.handleImportStudents}
+                                    config={store.schoolConfig}
+                                    logs={store.behaviorLogs}
+                                    readOnly={!canEditContent}
+                                />
+                            </div>
+                        )
+                    }
 
                     {activeTab === 'PARENTS' && <ParentsDirectory />}
 
@@ -2757,573 +2734,589 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
 
                     {activeTab === 'MANAGEMENT' && <TaskManager />}
 
-                    {activeTab === 'NOTICES' && (
-                        <div className="animate-fadeIn">
-                            <CommunicationsView students={store.students} directorMode={true} staffList={store.schoolConfig.staff || []} />
-                        </div>
-                    )}
+                    {
+                        activeTab === 'NOTICES' && (
+                            <div className="animate-fadeIn">
+                                <CommunicationsView students={store.students} directorMode={true} staffList={store.schoolConfig.staff || []} />
+                            </div>
+                        )
+                    }
 
-                    {activeTab === 'SETTINGS' && (
-                        <div className="animate-fadeIn">
-                            <SettingsView
-                                config={store.schoolConfig}
-                                onSave={store.setSchoolConfig}
-                                onExport={store.exportState}
-                                onImport={store.importState}
-                                onSyncToDB={() => store.syncState(true)}
-                                onRecover={store.recoverFromLocalStorage}
-                                directorMode={true}
-                            />
-                        </div>
-                    )}
+                    {
+                        activeTab === 'SETTINGS' && (
+                            <div className="animate-fadeIn">
+                                <SettingsView
+                                    config={store.schoolConfig}
+                                    onSave={store.setSchoolConfig}
+                                    onExport={store.exportState}
+                                    onImport={store.importState}
+                                    onSyncToDB={() => store.syncState(true)}
+                                    onRecover={store.recoverFromLocalStorage}
+                                    directorMode={true}
+                                />
+                            </div>
+                        )
+                    }
 
                     {activeTab === 'DOCUMENTS' && <DocumentsPanel />}
-                </div>
+                </div >
 
                 {/* STUDENT DETAIL MODAL (Read Only) */}
-                {viewStudent && (
-                    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn" onClick={() => setViewStudent(null)}>
-                        <div className="bg-white rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
-                            <div className="bg-slate-50 p-4 border-b border-slate-200 flex justify-between items-center shrink-0">
-                                <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
-                                    <div className="bg-indigo-100 p-1.5 rounded text-indigo-700"><User size={20} /></div>
-                                    Ficha del Alumno
-                                </h3>
-                                <button onClick={() => setViewStudent(null)} className="text-slate-400 hover:text-slate-600 p-2 hover:bg-slate-200 rounded-full transition-colors">
-                                    <X size={20} />
-                                </button>
-                            </div>
+                {
+                    viewStudent && (
+                        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn" onClick={() => setViewStudent(null)}>
+                            <div className="bg-white rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                                <div className="bg-slate-50 p-4 border-b border-slate-200 flex justify-between items-center shrink-0">
+                                    <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
+                                        <div className="bg-indigo-100 p-1.5 rounded text-indigo-700"><User size={20} /></div>
+                                        Ficha del Alumno
+                                    </h3>
+                                    <button onClick={() => setViewStudent(null)} className="text-slate-400 hover:text-slate-600 p-2 hover:bg-slate-200 rounded-full transition-colors">
+                                        <X size={20} />
+                                    </button>
+                                </div>
 
-                            <div className="p-8 overflow-y-auto custom-scrollbar">
-                                <div className="flex flex-col md:flex-row gap-8 items-start mb-8">
-                                    <div className="flex-shrink-0 text-center">
-                                        <img src={viewStudent.avatar || `https://ui-avatars.com/api/?name=${viewStudent.name}`} className="w-32 h-32 rounded-full border-4 border-indigo-50 shadow-lg object-cover mx-auto" alt="Avatar" />
-                                        <div className={`mt-3 px-3 py-1 rounded-full text-xs font-bold inline-block border ${viewStudent.status === 'INSCRITO' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
-                                            {viewStudent.status}
+                                <div className="p-8 overflow-y-auto custom-scrollbar">
+                                    <div className="flex flex-col md:flex-row gap-8 items-start mb-8">
+                                        <div className="flex-shrink-0 text-center">
+                                            <img src={viewStudent.avatar === "PENDING_LOAD" ? `https://ui-avatars.com/api/?name=${encodeURIComponent(viewStudent.name)}&background=random` : (viewStudent.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(viewStudent.name)}&background=random`)} className="w-32 h-32 rounded-full border-4 border-indigo-50 shadow-lg object-cover mx-auto" alt={viewStudent.name} />
+                                            <div className={`mt-3 px-3 py-1 rounded-full text-xs font-bold inline-block border ${viewStudent.status === 'INSCRITO' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
+                                                {viewStudent.status}
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="flex-1 w-full">
-                                        <h2 className="text-2xl font-black text-slate-800 mb-2">{viewStudent.name}</h2>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
-                                            <div><label className="text-[10px] font-bold text-slate-400 uppercase block">CURP</label><p className="font-bold text-slate-700">{viewStudent.curp || 'S/D'}</p></div>
-                                            <div><label className="text-[10px] font-bold text-slate-400 uppercase block">Fecha Nacimiento</label><p className="font-mono text-slate-600">{viewStudent.birthDate || '-'}</p></div>
-                                            <div><label className="text-[10px] font-bold text-slate-400 uppercase block">Grado y Grupo</label><p className="font-bold text-slate-700">{viewStudent.group || schoolConfig.gradeGroup}</p></div>
-                                            <div><label className="text-[10px] font-bold text-slate-400 uppercase block">Sexo</label><p className="text-slate-600">{viewStudent.sex}</p></div>
-                                            <div className="col-span-1 md:col-span-2 bg-slate-50 p-3 rounded border border-slate-100 mt-2">
-                                                <div className="flex gap-4">
-                                                    <div><label className="text-[10px] font-bold text-slate-400 uppercase block">Tutor Legal</label><p className="font-bold text-slate-800">{viewStudent.guardianName || 'No Registrado'}</p></div>
-                                                    <div><label className="text-[10px] font-bold text-slate-400 uppercase block">Teléfono</label><p className="font-bold text-slate-800 flex items-center gap-1"><Phone size={12} />{viewStudent.guardianPhone || 'S/D'}</p></div>
+                                        <div className="flex-1 w-full">
+                                            <h2 className="text-2xl font-black text-slate-800 mb-2">{viewStudent.name}</h2>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
+                                                <div><label className="text-[10px] font-bold text-slate-400 uppercase block">CURP</label><p className="font-bold text-slate-700">{viewStudent.curp || 'S/D'}</p></div>
+                                                <div><label className="text-[10px] font-bold text-slate-400 uppercase block">Fecha Nacimiento</label><p className="font-mono text-slate-600">{viewStudent.birthDate || '-'}</p></div>
+                                                <div><label className="text-[10px] font-bold text-slate-400 uppercase block">Grado y Grupo</label><p className="font-bold text-slate-700">{viewStudent.group || schoolConfig.gradeGroup}</p></div>
+                                                <div><label className="text-[10px] font-bold text-slate-400 uppercase block">Sexo</label><p className="text-slate-600">{viewStudent.sex}</p></div>
+                                                <div className="col-span-1 md:col-span-2 bg-slate-50 p-3 rounded border border-slate-100 mt-2">
+                                                    <div className="flex gap-4">
+                                                        <div><label className="text-[10px] font-bold text-slate-400 uppercase block">Tutor Legal</label><p className="font-bold text-slate-800">{viewStudent.guardianName || 'No Registrado'}</p></div>
+                                                        <div><label className="text-[10px] font-bold text-slate-400 uppercase block">Teléfono</label><p className="font-bold text-slate-800 flex items-center gap-1"><Phone size={12} />{viewStudent.guardianPhone || 'S/D'}</p></div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
 
-                                {/* ALERTS SECTION */}
-                                {(() => {
-                                    // Calculate Risk Factors
-                                    const risks: string[] = [];
+                                    {/* ALERTS SECTION */}
+                                    {(() => {
+                                        // Calculate Risk Factors
+                                        const risks: string[] = [];
 
-                                    // Grade Risk
-                                    let globalAvg = 0;
-                                    if (viewStudent.grades && viewStudent.grades.length > 0) {
-                                        let sum = 0;
-                                        viewStudent.grades.forEach((g: any) => {
-                                            if (typeof g === 'object') sum += (Number(g.lenguajes || 0) + Number(g.saberes || 0) + Number(g.etica || 0) + Number(g.humano || 0)) / 4;
-                                            else sum += Number(g);
-                                        });
-                                        globalAvg = sum / viewStudent.grades.length;
-                                    }
-                                    if (globalAvg > 0 && globalAvg < 7) risks.push(`Promedio Bajo (${globalAvg.toFixed(1)})`);
+                                        // Grade Risk
+                                        let globalAvg = 0;
+                                        if (viewStudent.grades && viewStudent.grades.length > 0) {
+                                            let sum = 0;
+                                            viewStudent.grades.forEach((g: any) => {
+                                                if (typeof g === 'object') sum += (Number(g.lenguajes || 0) + Number(g.saberes || 0) + Number(g.etica || 0) + Number(g.humano || 0)) / 4;
+                                                else sum += Number(g);
+                                            });
+                                            globalAvg = sum / viewStudent.grades.length;
+                                        }
+                                        if (globalAvg > 0 && globalAvg < 7) risks.push(`Promedio Bajo (${globalAvg.toFixed(1)})`);
 
-                                    // Behavior Risk
-                                    if (viewStudent.behaviorPoints < 0) risks.push(`Conducta Negativa (${viewStudent.behaviorPoints} pts)`);
+                                        // Behavior Risk
+                                        if (viewStudent.behaviorPoints < 0) risks.push(`Conducta Negativa (${viewStudent.behaviorPoints} pts)`);
 
-                                    // Repeater Risk
-                                    if (viewStudent.repeater) risks.push('Repetidor del Grado');
+                                        // Repeater Risk
+                                        if (viewStudent.repeater) risks.push('Repetidor del Grado');
 
-                                    // Assignment Risk
-                                    if (viewStudent.totalAssignments > 0) {
-                                        const assignmentRate = (viewStudent.assignmentsCompleted / viewStudent.totalAssignments) * 100;
-                                        if (assignmentRate < 60) risks.push(`Bajo Cumplimiento de Tareas (${Math.round(assignmentRate)}%)`);
-                                    }
+                                        // Assignment Risk
+                                        if (viewStudent.totalAssignments > 0) {
+                                            const assignmentRate = (viewStudent.assignmentsCompleted / viewStudent.totalAssignments) * 100;
+                                            if (assignmentRate < 60) risks.push(`Bajo Cumplimiento de Tareas (${Math.round(assignmentRate)}%)`);
+                                        }
 
-                                    // Attendance Risk
-                                    if (viewStudent.attendance) {
-                                        const absences = Object.values(viewStudent.attendance).filter(x => x === 'Ausente').length;
-                                        if (absences >= 3) risks.push(`Baja Asistencia (${absences} faltas registradas)`);
-                                    }
+                                        // Attendance Risk
+                                        if (viewStudent.attendance) {
+                                            const absences = Object.values(viewStudent.attendance).filter(x => x === 'Ausente').length;
+                                            if (absences >= 3) risks.push(`Baja Asistencia (${absences} faltas registradas)`);
+                                        }
 
-                                    // USAER/BAP
-                                    const hasRisk = risks.length > 0;
-                                    const hasSpecialNeeds = viewStudent.usaer || (viewStudent.bap && viewStudent.bap !== 'NINGUNA');
+                                        // USAER/BAP
+                                        const hasRisk = risks.length > 0;
+                                        const hasSpecialNeeds = viewStudent.usaer || (viewStudent.bap && viewStudent.bap !== 'NINGUNA');
 
-                                    if (hasRisk || hasSpecialNeeds) {
-                                        return (
-                                            <div className="mb-8 p-4 bg-amber-50 border-l-4 border-amber-500 rounded-r-lg">
-                                                <h4 className="font-bold text-amber-800 mb-2 flex items-center gap-2"><AlertTriangle size={18} /> Alertas Detectadas</h4>
+                                        if (hasRisk || hasSpecialNeeds) {
+                                            return (
+                                                <div className="mb-8 p-4 bg-amber-50 border-l-4 border-amber-500 rounded-r-lg">
+                                                    <h4 className="font-bold text-amber-800 mb-2 flex items-center gap-2"><AlertTriangle size={18} /> Alertas Detectadas</h4>
 
-                                                {/* Risk Factors List */}
-                                                {hasRisk && (
-                                                    <div className="mb-3">
-                                                        <p className="text-xs font-bold text-amber-900 uppercase mb-1">Motivos de Riesgo:</p>
-                                                        <ul className="list-disc list-inside text-sm text-amber-800 font-medium ml-2">
-                                                            {risks.map((r, i) => <li key={i}>{r}</li>)}
-                                                        </ul>
-                                                    </div>
-                                                )}
+                                                    {/* Risk Factors List */}
+                                                    {hasRisk && (
+                                                        <div className="mb-3">
+                                                            <p className="text-xs font-bold text-amber-900 uppercase mb-1">Motivos de Riesgo:</p>
+                                                            <ul className="list-disc list-inside text-sm text-amber-800 font-medium ml-2">
+                                                                {risks.map((r, i) => <li key={i}>{r}</li>)}
+                                                            </ul>
+                                                        </div>
+                                                    )}
 
-                                                {/* Special Needs Tags */}
-                                                {hasSpecialNeeds && (
-                                                    <div className="flex flex-wrap gap-2 mt-2 pt-2 border-t border-amber-200">
-                                                        {viewStudent.usaer && <span className="bg-white px-3 py-1 rounded shadow-sm text-xs font-bold text-amber-700 border border-amber-200">USAER</span>}
-                                                        {viewStudent.bap && viewStudent.bap !== 'NINGUNA' && <span className="bg-white px-3 py-1 rounded shadow-sm text-xs font-bold text-amber-700 border border-amber-200">BAP: {viewStudent.bap}</span>}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )
-                                    }
-                                    return null;
-                                })()}
+                                                    {/* Special Needs Tags */}
+                                                    {hasSpecialNeeds && (
+                                                        <div className="flex flex-wrap gap-2 mt-2 pt-2 border-t border-amber-200">
+                                                            {viewStudent.usaer && <span className="bg-white px-3 py-1 rounded shadow-sm text-xs font-bold text-amber-700 border border-amber-200">USAER</span>}
+                                                            {viewStudent.bap && viewStudent.bap !== 'NINGUNA' && <span className="bg-white px-3 py-1 rounded shadow-sm text-xs font-bold text-amber-700 border border-amber-200">BAP: {viewStudent.bap}</span>}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )
+                                        }
+                                        return null;
+                                    })()}
 
-                                {/* GRADES TABLE */}
-                                <div>
-                                    <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><Briefcase size={18} /> Rendimiento Académico</h3>
-                                    <table className="w-full text-sm border-collapse border border-slate-200 mb-4">
-                                        <thead>
-                                            <tr className="bg-slate-100 text-slate-600">
-                                                <th className="border p-2 text-left">Periodo</th>
-                                                <th className="border p-2 text-center w-24">Promedio</th>
-                                                <th className="border p-2 text-center">Nivel</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {/* Simplified logic for grades display in this quick view */}
-                                            {[1, 2, 3].map((tri) => {
-                                                const grade = viewStudent.grades && viewStudent.grades[tri - 1];
-                                                let avg = 0;
-                                                if (grade) {
-                                                    if (typeof grade === 'object') {
-                                                        avg = (Number(grade.lenguajes || 0) + Number(grade.saberes || 0) + Number(grade.etica || 0) + Number(grade.humano || 0)) / 4;
-                                                    } else {
-                                                        avg = Number(grade);
+                                    {/* GRADES TABLE */}
+                                    <div>
+                                        <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><Briefcase size={18} /> Rendimiento Académico</h3>
+                                        <table className="w-full text-sm border-collapse border border-slate-200 mb-4">
+                                            <thead>
+                                                <tr className="bg-slate-100 text-slate-600">
+                                                    <th className="border p-2 text-left">Periodo</th>
+                                                    <th className="border p-2 text-center w-24">Promedio</th>
+                                                    <th className="border p-2 text-center">Nivel</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {/* Simplified logic for grades display in this quick view */}
+                                                {[1, 2, 3].map((tri) => {
+                                                    const grade = viewStudent.grades && viewStudent.grades[tri - 1];
+                                                    let avg = 0;
+                                                    if (grade) {
+                                                        if (typeof grade === 'object') {
+                                                            avg = (Number(grade.lenguajes || 0) + Number(grade.saberes || 0) + Number(grade.etica || 0) + Number(grade.humano || 0)) / 4;
+                                                        } else {
+                                                            avg = Number(grade);
+                                                        }
                                                     }
-                                                }
 
-                                                if (!grade) return <tr key={tri}><td className="border p-2">Trimestre {tri}</td><td colSpan={2} className="border p-2 text-center text-slate-300">-</td></tr>;
+                                                    if (!grade) return <tr key={tri}><td className="border p-2">Trimestre {tri}</td><td colSpan={2} className="border p-2 text-center text-slate-300">-</td></tr>;
 
-                                                return (
-                                                    <tr key={tri}>
-                                                        <td className="border p-2 font-medium">Trimestre {tri}</td>
-                                                        <td className={`border p-2 text-center font-bold ${avg < 6 ? 'text-red-600' : avg < 8 ? 'text-amber-600' : 'text-emerald-600'}`}>{avg.toFixed(1)}</td>
-                                                        <td className="border p-2 text-center text-xs text-slate-500">{avg >= 9 ? 'DESTACADO' : avg >= 8 ? 'SATISFACTORIO' : avg >= 6 ? 'SUFICIENTE' : 'INSUFICIENTE'}</td>
-                                                    </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
+                                                    return (
+                                                        <tr key={tri}>
+                                                            <td className="border p-2 font-medium">Trimestre {tri}</td>
+                                                            <td className={`border p-2 text-center font-bold ${avg < 6 ? 'text-red-600' : avg < 8 ? 'text-amber-600' : 'text-emerald-600'}`}>{avg.toFixed(1)}</td>
+                                                            <td className="border p-2 text-center text-xs text-slate-500">{avg >= 9 ? 'DESTACADO' : avg >= 8 ? 'SATISFACTORIO' : avg >= 6 ? 'SUFICIENTE' : 'INSUFICIENTE'}</td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                )}
+                    )
+                }
 
                 {/* FULL REPORT PRINT VIEW OVERLAY */}
-                {reportStudent && (
-                    <div className="fixed inset-0 z-[120] bg-white overflow-y-auto animate-fadeIn">
-                        {/* Header Actions - Hidden on Print */}
-                        <div className="sticky top-0 bg-slate-800 text-white p-4 flex justify-between items-center print:hidden shadow-lg z-50">
-                            <div className="flex items-center gap-4">
-                                <button
-                                    onClick={() => setReportStudent(null)}
-                                    className="flex items-center gap-2 hover:text-slate-300 transition-colors"
-                                >
-                                    <X size={24} />
-                                    <span className="font-bold">Cerrar</span>
-                                </button>
-                                <div className="h-6 w-px bg-slate-600"></div>
-                                <h2 className="font-bold">Vista Preliminar del Reporte</h2>
-                            </div>
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={() => window.print()}
-                                    className="bg-white text-slate-900 px-6 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-slate-100 transition-colors"
-                                >
-                                    <Printer size={20} />
-                                    Imprimir / Guardar PDF
-                                </button>
-                                <button
-                                    onClick={() => generateReportCard(reportStudent, schoolConfig)}
-                                    className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
-                                >
-                                    <FileDown size={20} />
-                                    Boleta
-                                </button>
-                                <button
-                                    onClick={() => generateBehaviorReport(reportStudent, behaviorLogs, schoolConfig)}
-                                    className="bg-rose-600 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-rose-700 transition-colors shadow-lg shadow-rose-200"
-                                >
-                                    <AlertCircle size={20} />
-                                    Conducta
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Report Content - A4 sized container */}
-                        <div id="print-container" className="max-w-[210mm] mx-auto bg-white p-[10mm] min-h-[297mm] shadow-xl my-8 print:shadow-none print:m-0 print:w-full print:h-auto text-slate-900 text-sm">
-
-                            {/* School Header */}
-                            <div className="flex border-b-2 border-slate-800 pb-6 mb-8 gap-6 items-center">
-                                <div className="w-24 h-24 flex-shrink-0 flex items-center justify-center">
-                                    {schoolConfig.schoolLogo ? (
-                                        <img src={schoolConfig.schoolLogo} alt="Logo" className="max-w-full max-h-full object-contain" />
-                                    ) : (
-                                        <Building2 size={64} className="text-slate-200" />
-                                    )}
+                {
+                    reportStudent && (
+                        <div className="fixed inset-0 z-[120] bg-white overflow-y-auto animate-fadeIn">
+                            {/* Header Actions - Hidden on Print */}
+                            <div className="sticky top-0 bg-slate-800 text-white p-4 flex justify-between items-center print:hidden shadow-lg z-50">
+                                <div className="flex items-center gap-4">
+                                    <button
+                                        onClick={() => setReportStudent(null)}
+                                        className="flex items-center gap-2 hover:text-slate-300 transition-colors"
+                                    >
+                                        <X size={24} />
+                                        <span className="font-bold">Cerrar</span>
+                                    </button>
+                                    <div className="h-6 w-px bg-slate-600"></div>
+                                    <h2 className="font-bold">Vista Preliminar del Reporte</h2>
                                 </div>
-                                <div className="flex-1 text-center">
-                                    <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-1">Secretaría de Educación Pública y Cultura</h3>
-                                    <h1 className="text-2xl font-bold uppercase tracking-wider mb-1 text-slate-900">{schoolConfig.schoolName}</h1>
-                                    <div className="flex justify-center gap-4 text-xs font-bold mt-2 text-slate-500 mb-2">
-                                        <span>C.C.T: {schoolConfig.cct}</span>
-                                        <span>•</span>
-                                        <span>{schoolConfig.zone}</span>
-                                        <span>•</span>
-                                        <span>{schoolConfig.sector}</span>
-                                    </div>
-                                    <p className="text-xs font-medium text-slate-400 uppercase tracking-widest">{schoolConfig.location}</p>
-                                </div>
-                                <div className="w-24 text-right flex flex-col items-center gap-2">
-                                    <div className="border border-slate-300 w-24 h-32 bg-slate-50 flex items-center justify-center overflow-hidden">
-                                        <img src={reportStudent.avatar} alt="Alumno" className="w-full h-full object-cover" />
-                                    </div>
-                                    <div className="border border-slate-200 p-1 bg-white">
-                                        <img
-                                            src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${reportStudent.id}`}
-                                            alt="QR"
-                                            className="w-20 h-20 mix-blend-multiply"
-                                        />
-                                    </div>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => window.print()}
+                                        className="bg-white text-slate-900 px-6 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-slate-100 transition-colors"
+                                    >
+                                        <Printer size={20} />
+                                        Imprimir / Guardar PDF
+                                    </button>
+                                    <button
+                                        onClick={() => generateReportCard(reportStudent, schoolConfig)}
+                                        className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
+                                    >
+                                        <FileDown size={20} />
+                                        Boleta
+                                    </button>
+                                    <button
+                                        onClick={() => generateBehaviorReport(reportStudent, behaviorLogs, schoolConfig)}
+                                        className="bg-rose-600 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-rose-700 transition-colors shadow-lg shadow-rose-200"
+                                    >
+                                        <AlertCircle size={20} />
+                                        Conducta
+                                    </button>
                                 </div>
                             </div>
 
-                            {/* Personal Extended Info */}
-                            <div className="mb-8">
-                                <h2 className="text-lg font-bold bg-slate-800 text-white px-4 py-2 mb-4 uppercase tracking-wider rounded-sm">Ficha de Identificación</h2>
+                            {/* Report Content - A4 sized container */}
+                            <div id="print-container" className="max-w-[210mm] mx-auto bg-white p-[10mm] min-h-[297mm] shadow-xl my-8 print:shadow-none print:m-0 print:w-full print:h-auto text-slate-900 text-sm">
 
-                                <div className="grid grid-cols-4 gap-4 mb-4">
-                                    <div className="col-span-2">
-                                        <label className="block text-[10px] text-slate-500 font-bold uppercase">Nombre Completo</label>
-                                        <div className="font-bold text-lg border-b border-slate-300">{reportStudent.name}</div>
+                                {/* School Header */}
+                                <div className="flex border-b-2 border-slate-800 pb-6 mb-8 gap-6 items-center">
+                                    <div className="w-24 h-24 flex-shrink-0 flex items-center justify-center">
+                                        {schoolConfig.schoolLogo ? (
+                                            <img src={schoolConfig.schoolLogo} alt="Logo" className="max-w-full max-h-full object-contain" />
+                                        ) : (
+                                            <Building2 size={64} className="text-slate-200" />
+                                        )}
                                     </div>
-                                    <div>
-                                        <label className="block text-[10px] text-slate-500 font-bold uppercase">Clave Alumno</label>
-                                        <div className="font-mono text-base border-b border-slate-300">{reportStudent.id}</div>
+                                    <div className="flex-1 text-center">
+                                        <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-1">Secretaría de Educación Pública y Cultura</h3>
+                                        <h1 className="text-2xl font-bold uppercase tracking-wider mb-1 text-slate-900">{schoolConfig.schoolName}</h1>
+                                        <div className="flex justify-center gap-4 text-xs font-bold mt-2 text-slate-500 mb-2">
+                                            <span>C.C.T: {schoolConfig.cct}</span>
+                                            <span>•</span>
+                                            <span>{schoolConfig.zone}</span>
+                                            <span>•</span>
+                                            <span>{schoolConfig.sector}</span>
+                                        </div>
+                                        <p className="text-xs font-medium text-slate-400 uppercase tracking-widest">{schoolConfig.location}</p>
                                     </div>
-                                    <div>
-                                        <label className="block text-[10px] text-slate-500 font-bold uppercase">Estatus</label>
-                                        <div className="font-bold text-base border-b border-slate-300">{reportStudent.status || 'INSCRITO'}</div>
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-4 gap-4 mb-4">
-                                    <div>
-                                        <label className="block text-[10px] text-slate-500 font-bold uppercase">CURP</label>
-                                        <div className="font-mono text-sm border-b border-slate-300">{reportStudent.curp || '-'}</div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-[10px] text-slate-500 font-bold uppercase">Fecha Nacimiento</label>
-                                        <div className="text-sm border-b border-slate-300">{reportStudent.birthDate || '-'}</div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-[10px] text-slate-500 font-bold uppercase">Lugar Nacimiento</label>
-                                        <div className="text-sm border-b border-slate-300">{reportStudent.birthPlace || '-'}</div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-[10px] text-slate-500 font-bold uppercase">Sexo</label>
-                                        <div className="text-sm border-b border-slate-300">{reportStudent.sex || '-'}</div>
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-4 gap-4">
-                                    <div>
-                                        <label className="block text-[10px] text-slate-500 font-bold uppercase">Grado y Grupo</label>
-                                        <div className="text-sm border-b border-slate-300">{reportStudent.group || schoolConfig.gradeGroup}</div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-[10px] text-slate-500 font-bold uppercase">Fecha Alta</label>
-                                        <div className="text-sm border-b border-slate-300">{reportStudent.enrollmentDate || '-'}</div>
-                                    </div>
-                                    <div className="col-span-2">
-                                        <label className="block text-[10px] text-slate-500 font-bold uppercase">Necesidades Educativas</label>
-                                        <div className="text-sm border-b border-slate-300 flex gap-2">
-                                            {reportStudent.usaer && <span className="font-bold text-blue-800">[USAER]</span>}
-                                            {reportStudent.repeater && <span className="font-bold text-red-800">[REPETIDOR]</span>}
-                                            {reportStudent.bap !== 'NINGUNA' && <span>BAP: {reportStudent.bap}</span>}
-                                            {!reportStudent.usaer && !reportStudent.repeater && reportStudent.bap === 'NINGUNA' && <span>SIN OBSERVACIONES</span>}
+                                    <div className="w-24 text-right flex flex-col items-center gap-2">
+                                        <div className="border border-slate-300 w-24 h-32 bg-slate-50 flex items-center justify-center overflow-hidden">
+                                            <img src={reportStudent.avatar === "PENDING_LOAD" ? `https://ui-avatars.com/api/?name=${encodeURIComponent(reportStudent.name)}&background=random` : (reportStudent.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(reportStudent.name)}&background=random`)} alt={reportStudent.name} className="w-full h-full object-cover" />
+                                        </div>
+                                        <div className="border border-slate-200 p-1 bg-white">
+                                            <img
+                                                src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${reportStudent.id}`}
+                                                alt="QR"
+                                                className="w-20 h-20 mix-blend-multiply"
+                                            />
                                         </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            {/* Contact Info */}
-                            <div className="mb-8 p-4 bg-slate-50 rounded border border-slate-200">
-                                <div className="grid grid-cols-3 gap-6">
+                                {/* Personal Extended Info */}
+                                <div className="mb-8">
+                                    <h2 className="text-lg font-bold bg-slate-800 text-white px-4 py-2 mb-4 uppercase tracking-wider rounded-sm">Ficha de Identificación</h2>
+
+                                    <div className="grid grid-cols-4 gap-4 mb-4">
+                                        <div className="col-span-2">
+                                            <label className="block text-[10px] text-slate-500 font-bold uppercase">Nombre Completo</label>
+                                            <div className="font-bold text-lg border-b border-slate-300">{reportStudent.name}</div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] text-slate-500 font-bold uppercase">Clave Alumno</label>
+                                            <div className="font-mono text-base border-b border-slate-300">{reportStudent.id}</div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] text-slate-500 font-bold uppercase">Estatus</label>
+                                            <div className="font-bold text-base border-b border-slate-300">{reportStudent.status || 'INSCRITO'}</div>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-4 gap-4 mb-4">
+                                        <div>
+                                            <label className="block text-[10px] text-slate-500 font-bold uppercase">CURP</label>
+                                            <div className="font-mono text-sm border-b border-slate-300">{reportStudent.curp || '-'}</div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] text-slate-500 font-bold uppercase">Fecha Nacimiento</label>
+                                            <div className="text-sm border-b border-slate-300">{reportStudent.birthDate || '-'}</div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] text-slate-500 font-bold uppercase">Lugar Nacimiento</label>
+                                            <div className="text-sm border-b border-slate-300">{reportStudent.birthPlace || '-'}</div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] text-slate-500 font-bold uppercase">Sexo</label>
+                                            <div className="text-sm border-b border-slate-300">{reportStudent.sex || '-'}</div>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-4 gap-4">
+                                        <div>
+                                            <label className="block text-[10px] text-slate-500 font-bold uppercase">Grado y Grupo</label>
+                                            <div className="text-sm border-b border-slate-300">{reportStudent.group || schoolConfig.gradeGroup}</div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] text-slate-500 font-bold uppercase">Fecha Alta</label>
+                                            <div className="text-sm border-b border-slate-300">{reportStudent.enrollmentDate || '-'}</div>
+                                        </div>
+                                        <div className="col-span-2">
+                                            <label className="block text-[10px] text-slate-500 font-bold uppercase">Necesidades Educativas</label>
+                                            <div className="text-sm border-b border-slate-300 flex gap-2">
+                                                {reportStudent.usaer && <span className="font-bold text-blue-800">[USAER]</span>}
+                                                {reportStudent.repeater && <span className="font-bold text-red-800">[REPETIDOR]</span>}
+                                                {reportStudent.bap !== 'NINGUNA' && <span>BAP: {reportStudent.bap}</span>}
+                                                {!reportStudent.usaer && !reportStudent.repeater && reportStudent.bap === 'NINGUNA' && <span>SIN OBSERVACIONES</span>}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Contact Info */}
+                                <div className="mb-8 p-4 bg-slate-50 rounded border border-slate-200">
+                                    <div className="grid grid-cols-3 gap-6">
+                                        <div>
+                                            <label className="block text-[10px] text-slate-500 font-bold uppercase">Tutor Legal</label>
+                                            <div className="font-bold text-slate-800">{reportStudent.guardianName}</div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] text-slate-500 font-bold uppercase">Teléfono de Contacto</label>
+                                            <div className="font-bold text-slate-800">{reportStudent.guardianPhone}</div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] text-slate-500 font-bold uppercase">Docente Responsable</label>
+                                            <div className="text-slate-800">
+                                                {(() => {
+                                                    const studentGroupStr = (reportStudent.group || schoolConfig.gradeGroup || '').toUpperCase();
+                                                    const studentGrade = studentGroupStr.match(/(\d+)/)?.[0];
+                                                    const studentLetter = studentGroupStr.match(/[A-F]/)?.[0];
+
+                                                    if (!studentGrade || !studentLetter) return schoolConfig.teacherName;
+
+                                                    const foundTeacher = schoolConfig.staff?.find((s: any) => {
+                                                        const staffGroupStr = (s.group || '').toUpperCase();
+                                                        const staffGrade = staffGroupStr.match(/(\d+)/)?.[0];
+                                                        const staffLetter = staffGroupStr.match(/[A-F]/)?.[0];
+                                                        return staffGrade === studentGrade && staffLetter === studentLetter;
+                                                    });
+
+                                                    return foundTeacher?.name || schoolConfig.teacherName;
+                                                })()}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-6 mt-4 pt-4 border-t border-slate-200">
+                                        <div>
+                                            <label className="block text-[10px] text-slate-500 font-bold uppercase">Domicilio</label>
+                                            <div className="font-bold text-slate-800 text-sm whitespace-normal">{reportStudent.address || 'NO REGISTRADO'}</div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] text-slate-500 font-bold uppercase">Ocupación del Tutor</label>
+                                            <div className="font-bold text-slate-800 text-sm">{reportStudent.guardianOccupation || 'NO REGISTRADO'}</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Stats Row */}
+                                <div className="grid grid-cols-2 gap-8 mb-8">
                                     <div>
-                                        <label className="block text-[10px] text-slate-500 font-bold uppercase">Tutor Legal</label>
-                                        <div className="font-bold text-slate-800">{reportStudent.guardianName}</div>
+                                        <h3 className="text-sm font-bold uppercase text-slate-600 border-b border-slate-200 pb-1 mb-3">Estadística de Asistencia</h3>
+                                        <div className="grid grid-cols-3 gap-2 text-center">
+                                            <div className="bg-green-50 p-2 rounded border border-green-100">
+                                                <div className="text-xl font-bold text-green-700">{reportStudent.attendance ? Object.values(reportStudent.attendance).filter((x: any) => x === 'Presente').length : 0}</div>
+                                                <div className="text-[10px] uppercase font-bold text-green-600">Asistencias</div>
+                                            </div>
+                                            <div className="bg-red-50 p-2 rounded border border-red-100">
+                                                <div className="text-xl font-bold text-red-700">{reportStudent.attendance ? Object.values(reportStudent.attendance).filter((x: any) => x === 'Ausente').length : 0}</div>
+                                                <div className="text-[10px] uppercase font-bold text-red-600">Faltas</div>
+                                            </div>
+                                            <div className="bg-yellow-50 p-2 rounded border border-yellow-100">
+                                                <div className="text-xl font-bold text-yellow-700">{reportStudent.attendance ? Object.values(reportStudent.attendance).filter((x: any) => x === 'Retardo').length : 0}</div>
+                                                <div className="text-[10px] uppercase font-bold text-yellow-600">Retardos</div>
+                                            </div>
+                                        </div>
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] text-slate-500 font-bold uppercase">Teléfono de Contacto</label>
-                                        <div className="font-bold text-slate-800">{reportStudent.guardianPhone}</div>
+                                        <h3 className="text-sm font-bold uppercase text-slate-600 border-b border-slate-200 pb-1 mb-3">Cumplimiento Académico</h3>
+                                        <div className="grid grid-cols-3 gap-2 text-center">
+                                            <div className="bg-slate-50 p-2 rounded border border-slate-200">
+                                                <div className="text-xl font-bold text-indigo-700">
+                                                    {reportStudent.grades && reportStudent.grades.length > 0
+                                                        ? (() => {
+                                                            const sumAvgs = reportStudent.grades.reduce((acc: number, g: any) => {
+                                                                if (typeof g === 'number') return acc + g;
+                                                                const tAvg = (Number(g.lenguajes || 0) + Number(g.saberes || 0) + Number(g.etica || 0) + Number(g.humano || 0)) / 4;
+                                                                return acc + tAvg;
+                                                            }, 0);
+                                                            return (sumAvgs / reportStudent.grades.length).toFixed(1);
+                                                        })()
+                                                        : '-'}
+                                                </div>
+                                                <div className="text-[10px] uppercase font-bold text-slate-500">Promedio</div>
+                                            </div>
+                                            <div className="bg-slate-50 p-2 rounded border border-slate-200">
+                                                <div className="text-xl font-bold text-slate-700">
+                                                    {reportStudent.behaviorPoints > 0 ? '+' : ''}{reportStudent.behaviorPoints}
+                                                </div>
+                                                <div className="text-[10px] uppercase font-bold text-slate-500">Conducta</div>
+                                            </div>
+                                            <div className="bg-slate-50 p-2 rounded border border-slate-200">
+                                                <div className="text-xl font-bold text-blue-700">
+                                                    {reportStudent.totalAssignments > 0
+                                                        ? Math.round((reportStudent.assignmentsCompleted / reportStudent.totalAssignments) * 100)
+                                                        : 0}%
+                                                </div>
+                                                <div className="text-[10px] uppercase font-bold text-slate-500">Tareas</div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <label className="block text-[10px] text-slate-500 font-bold uppercase">Docente Responsable</label>
-                                        <div className="text-slate-800">
+                                </div>
+
+                                {/* Grades Table */}
+                                <div className="mb-8">
+                                    <h3 className="text-sm font-bold uppercase text-slate-600 border-b border-slate-200 pb-1 mb-4">Historial de Evaluaciones</h3>
+                                    <table className="w-full text-sm border-collapse border border-slate-200">
+                                        <thead className="bg-slate-100">
+                                            <tr>
+                                                <th className="border border-slate-200 p-2 text-left">Concepto / Periodo</th>
+                                                <th className="border border-slate-200 p-2 text-center w-32">Calificación</th>
+                                                <th className="border border-slate-200 p-2 text-center w-48">Nivel de Desempeño</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {(!reportStudent.grades || reportStudent.grades.length === 0) ? (
+                                                <tr><td colSpan={3} className="p-4 text-center text-slate-400">Sin calificaciones registradas</td></tr>
+                                            ) : (
+                                                reportStudent.grades.map((grade: any, idx: number) => {
+                                                    let score = 0;
+                                                    if (typeof grade === 'number') {
+                                                        score = grade;
+                                                    } else if (typeof grade === 'string') {
+                                                        score = parseFloat(grade) || 0;
+                                                    } else if (typeof grade === 'object' && grade !== null) {
+                                                        const g = grade as any;
+                                                        score = (Number(g.lenguajes || 0) + Number(g.saberes || 0) + Number(g.etica || 0) + Number(g.humano || 0)) / 4;
+                                                    } else {
+                                                        score = Number(grade) || 0;
+                                                    }
+
+                                                    return (
+                                                        <tr key={idx}>
+                                                            <td className="border border-slate-200 p-2">Evaluación Parcial {idx + 1}</td>
+                                                            <td className="border border-slate-200 p-2 text-center font-bold">{score.toFixed(1)}</td>
+                                                            <td className="border border-slate-200 p-2 text-center text-xs">
+                                                                {(() => {
+                                                                    const val = Number(score);
+                                                                    if (val >= 9) return 'DESTACADO';
+                                                                    if (val >= 8) return 'SATISFACTORIO';
+                                                                    if (val >= 6) return 'SUFICIENTE';
+                                                                    return 'INSUFICIENTE';
+                                                                })()}
+                                                            </td>
+                                                        </tr>
+                                                    )
+                                                })
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                {/* Behavior History */}
+                                <div className="mb-8">
+                                    <h3 className="text-sm font-bold uppercase text-slate-600 border-b border-slate-200 pb-1 mb-4">Historial de Conducta e Incidencias</h3>
+                                    <table className="w-full text-sm border-collapse border border-slate-200">
+                                        <thead className="bg-slate-100">
+                                            <tr>
+                                                <th className="border border-slate-200 p-2 text-left w-32">Fecha</th>
+                                                <th className="border border-slate-200 p-2 text-left w-32">Tipo</th>
+                                                <th className="border border-slate-200 p-2 text-left">Descripción / Observación</th>
+                                                <th className="border border-slate-200 p-2 text-center w-24">Puntos</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {(() => {
+                                                const studentLogs = behaviorLogs.filter((l: any) => l.studentId === reportStudent.id || l.student_id === reportStudent.id).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+                                                if (studentLogs.length === 0) {
+                                                    return (
+                                                        <tr><td colSpan={4} className="p-4 text-center text-slate-400">Sin registro de incidencias o conductas.</td></tr>
+                                                    );
+                                                }
+
+                                                return studentLogs.map((log: any, idx: number) => (
+                                                    <tr key={log.id || idx}>
+                                                        <td className="border border-slate-200 p-2 text-xs">{new Date(log.date).toLocaleDateString()}</td>
+                                                        <td className="border border-slate-200 p-2 text-xs font-semibold">
+                                                            <span className={`px-2 py-0.5 rounded-full text-[10px] border ${log.type === 'POSITIVE' ? 'bg-green-50 text-green-700 border-green-200' :
+                                                                log.type === 'NEGATIVE' ? 'bg-red-50 text-red-700 border-red-200' :
+                                                                    'bg-slate-50 text-slate-600 border-slate-200'
+                                                                }`}>
+                                                                {log.type === 'POSITIVE' ? 'POSITIVO' : log.type === 'NEGATIVE' ? 'NEGATIVO' : 'NEUTRO'}
+                                                            </span>
+                                                        </td>
+                                                        <td className="border border-slate-200 p-2 text-xs text-slate-600">{log.description}</td>
+                                                        <td className={`border border-slate-200 p-2 text-center font-bold ${log.points > 0 ? 'text-green-600' : log.points < 0 ? 'text-red-600' : 'text-slate-400'}`}>
+                                                            {log.points > 0 ? '+' : ''}{log.points}
+                                                        </td>
+                                                    </tr>
+                                                ));
+                                            })()}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                {/* Footer Signatures */}
+                                <div className="mt-auto pt-24 flex justify-between items-end">
+                                    <div className="text-center w-1/3">
+                                        <div className="border-t border-slate-400 pt-2 mb-1"></div>
+                                        <p className="text-sm font-bold">
                                             {(() => {
                                                 const studentGroupStr = (reportStudent.group || schoolConfig.gradeGroup || '').toUpperCase();
+                                                if (!schoolConfig.staff || schoolConfig.staff.length === 0) return schoolConfig.teacherName;
+
                                                 const studentGrade = studentGroupStr.match(/(\d+)/)?.[0];
                                                 const studentLetter = studentGroupStr.match(/[A-F]/)?.[0];
 
                                                 if (!studentGrade || !studentLetter) return schoolConfig.teacherName;
 
-                                                const foundTeacher = schoolConfig.staff?.find((s: any) => {
+                                                const foundTeacher = schoolConfig.staff.find((s: any) => {
                                                     const staffGroupStr = (s.group || '').toUpperCase();
+                                                    if (staffGroupStr.includes('DIREC') || staffGroupStr.includes('ADMIN')) return false;
+
                                                     const staffGrade = staffGroupStr.match(/(\d+)/)?.[0];
                                                     const staffLetter = staffGroupStr.match(/[A-F]/)?.[0];
                                                     return staffGrade === studentGrade && staffLetter === studentLetter;
                                                 });
 
-                                                return foundTeacher?.name || schoolConfig.teacherName;
+                                                return foundTeacher ? foundTeacher.name : schoolConfig.teacherName;
                                             })()}
-                                        </div>
+                                        </p>
+                                        <p className="text-xs text-slate-500">Docente de Grupo</p>
+                                    </div>
+                                    <div className="text-center w-1/3">
+                                        <div className="border-t border-slate-400 pt-2 mb-1"></div>
+                                        <p className="text-sm font-bold">{schoolConfig.directorName || 'Director(a) Escolar'}</p>
+                                        <p className="text-xs text-slate-500">Director(a) de la Escuela</p>
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-2 gap-6 mt-4 pt-4 border-t border-slate-200">
-                                    <div>
-                                        <label className="block text-[10px] text-slate-500 font-bold uppercase">Domicilio</label>
-                                        <div className="font-bold text-slate-800 text-sm whitespace-normal">{reportStudent.address || 'NO REGISTRADO'}</div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-[10px] text-slate-500 font-bold uppercase">Ocupación del Tutor</label>
-                                        <div className="font-bold text-slate-800 text-sm">{reportStudent.guardianOccupation || 'NO REGISTRADO'}</div>
-                                    </div>
+
+                                <div className="mt-8 text-center text-[10px] text-slate-400">
+                                    <p>Documento generado el {new Date().toLocaleDateString()} a las {new Date().toLocaleTimeString()} | ID Sistema: {reportStudent.id}</p>
                                 </div>
+
                             </div>
-
-                            {/* Stats Row */}
-                            <div className="grid grid-cols-2 gap-8 mb-8">
-                                <div>
-                                    <h3 className="text-sm font-bold uppercase text-slate-600 border-b border-slate-200 pb-1 mb-3">Estadística de Asistencia</h3>
-                                    <div className="grid grid-cols-3 gap-2 text-center">
-                                        <div className="bg-green-50 p-2 rounded border border-green-100">
-                                            <div className="text-xl font-bold text-green-700">{reportStudent.attendance ? Object.values(reportStudent.attendance).filter((x: any) => x === 'Presente').length : 0}</div>
-                                            <div className="text-[10px] uppercase font-bold text-green-600">Asistencias</div>
-                                        </div>
-                                        <div className="bg-red-50 p-2 rounded border border-red-100">
-                                            <div className="text-xl font-bold text-red-700">{reportStudent.attendance ? Object.values(reportStudent.attendance).filter((x: any) => x === 'Ausente').length : 0}</div>
-                                            <div className="text-[10px] uppercase font-bold text-red-600">Faltas</div>
-                                        </div>
-                                        <div className="bg-yellow-50 p-2 rounded border border-yellow-100">
-                                            <div className="text-xl font-bold text-yellow-700">{reportStudent.attendance ? Object.values(reportStudent.attendance).filter((x: any) => x === 'Retardo').length : 0}</div>
-                                            <div className="text-[10px] uppercase font-bold text-yellow-600">Retardos</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div>
-                                    <h3 className="text-sm font-bold uppercase text-slate-600 border-b border-slate-200 pb-1 mb-3">Cumplimiento Académico</h3>
-                                    <div className="grid grid-cols-3 gap-2 text-center">
-                                        <div className="bg-slate-50 p-2 rounded border border-slate-200">
-                                            <div className="text-xl font-bold text-indigo-700">
-                                                {reportStudent.grades && reportStudent.grades.length > 0
-                                                    ? (() => {
-                                                        const sumAvgs = reportStudent.grades.reduce((acc: number, g: any) => {
-                                                            if (typeof g === 'number') return acc + g;
-                                                            const tAvg = (Number(g.lenguajes || 0) + Number(g.saberes || 0) + Number(g.etica || 0) + Number(g.humano || 0)) / 4;
-                                                            return acc + tAvg;
-                                                        }, 0);
-                                                        return (sumAvgs / reportStudent.grades.length).toFixed(1);
-                                                    })()
-                                                    : '-'}
-                                            </div>
-                                            <div className="text-[10px] uppercase font-bold text-slate-500">Promedio</div>
-                                        </div>
-                                        <div className="bg-slate-50 p-2 rounded border border-slate-200">
-                                            <div className="text-xl font-bold text-slate-700">
-                                                {reportStudent.behaviorPoints > 0 ? '+' : ''}{reportStudent.behaviorPoints}
-                                            </div>
-                                            <div className="text-[10px] uppercase font-bold text-slate-500">Conducta</div>
-                                        </div>
-                                        <div className="bg-slate-50 p-2 rounded border border-slate-200">
-                                            <div className="text-xl font-bold text-blue-700">
-                                                {reportStudent.totalAssignments > 0
-                                                    ? Math.round((reportStudent.assignmentsCompleted / reportStudent.totalAssignments) * 100)
-                                                    : 0}%
-                                            </div>
-                                            <div className="text-[10px] uppercase font-bold text-slate-500">Tareas</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Grades Table */}
-                            <div className="mb-8">
-                                <h3 className="text-sm font-bold uppercase text-slate-600 border-b border-slate-200 pb-1 mb-4">Historial de Evaluaciones</h3>
-                                <table className="w-full text-sm border-collapse border border-slate-200">
-                                    <thead className="bg-slate-100">
-                                        <tr>
-                                            <th className="border border-slate-200 p-2 text-left">Concepto / Periodo</th>
-                                            <th className="border border-slate-200 p-2 text-center w-32">Calificación</th>
-                                            <th className="border border-slate-200 p-2 text-center w-48">Nivel de Desempeño</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {(!reportStudent.grades || reportStudent.grades.length === 0) ? (
-                                            <tr><td colSpan={3} className="p-4 text-center text-slate-400">Sin calificaciones registradas</td></tr>
-                                        ) : (
-                                            reportStudent.grades.map((grade: any, idx: number) => {
-                                                let score = 0;
-                                                if (typeof grade === 'number') {
-                                                    score = grade;
-                                                } else if (typeof grade === 'string') {
-                                                    score = parseFloat(grade) || 0;
-                                                } else if (typeof grade === 'object' && grade !== null) {
-                                                    const g = grade as any;
-                                                    score = (Number(g.lenguajes || 0) + Number(g.saberes || 0) + Number(g.etica || 0) + Number(g.humano || 0)) / 4;
-                                                } else {
-                                                    score = Number(grade) || 0;
-                                                }
-
-                                                return (
-                                                    <tr key={idx}>
-                                                        <td className="border border-slate-200 p-2">Evaluación Parcial {idx + 1}</td>
-                                                        <td className="border border-slate-200 p-2 text-center font-bold">{score.toFixed(1)}</td>
-                                                        <td className="border border-slate-200 p-2 text-center text-xs">
-                                                            {(() => {
-                                                                const val = Number(score);
-                                                                if (val >= 9) return 'DESTACADO';
-                                                                if (val >= 8) return 'SATISFACTORIO';
-                                                                if (val >= 6) return 'SUFICIENTE';
-                                                                return 'INSUFICIENTE';
-                                                            })()}
-                                                        </td>
-                                                    </tr>
-                                                )
-                                            })
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            {/* Behavior History */}
-                            <div className="mb-8">
-                                <h3 className="text-sm font-bold uppercase text-slate-600 border-b border-slate-200 pb-1 mb-4">Historial de Conducta e Incidencias</h3>
-                                <table className="w-full text-sm border-collapse border border-slate-200">
-                                    <thead className="bg-slate-100">
-                                        <tr>
-                                            <th className="border border-slate-200 p-2 text-left w-32">Fecha</th>
-                                            <th className="border border-slate-200 p-2 text-left w-32">Tipo</th>
-                                            <th className="border border-slate-200 p-2 text-left">Descripción / Observación</th>
-                                            <th className="border border-slate-200 p-2 text-center w-24">Puntos</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {(() => {
-                                            const studentLogs = behaviorLogs.filter((l: any) => l.studentId === reportStudent.id || l.student_id === reportStudent.id).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-                                            if (studentLogs.length === 0) {
-                                                return (
-                                                    <tr><td colSpan={4} className="p-4 text-center text-slate-400">Sin registro de incidencias o conductas.</td></tr>
-                                                );
-                                            }
-
-                                            return studentLogs.map((log: any, idx: number) => (
-                                                <tr key={log.id || idx}>
-                                                    <td className="border border-slate-200 p-2 text-xs">{new Date(log.date).toLocaleDateString()}</td>
-                                                    <td className="border border-slate-200 p-2 text-xs font-semibold">
-                                                        <span className={`px-2 py-0.5 rounded-full text-[10px] border ${log.type === 'POSITIVE' ? 'bg-green-50 text-green-700 border-green-200' :
-                                                            log.type === 'NEGATIVE' ? 'bg-red-50 text-red-700 border-red-200' :
-                                                                'bg-slate-50 text-slate-600 border-slate-200'
-                                                            }`}>
-                                                            {log.type === 'POSITIVE' ? 'POSITIVO' : log.type === 'NEGATIVE' ? 'NEGATIVO' : 'NEUTRO'}
-                                                        </span>
-                                                    </td>
-                                                    <td className="border border-slate-200 p-2 text-xs text-slate-600">{log.description}</td>
-                                                    <td className={`border border-slate-200 p-2 text-center font-bold ${log.points > 0 ? 'text-green-600' : log.points < 0 ? 'text-red-600' : 'text-slate-400'}`}>
-                                                        {log.points > 0 ? '+' : ''}{log.points}
-                                                    </td>
-                                                </tr>
-                                            ));
-                                        })()}
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            {/* Footer Signatures */}
-                            <div className="mt-auto pt-24 flex justify-between items-end">
-                                <div className="text-center w-1/3">
-                                    <div className="border-t border-slate-400 pt-2 mb-1"></div>
-                                    <p className="text-sm font-bold">
-                                        {(() => {
-                                            const studentGroupStr = (reportStudent.group || schoolConfig.gradeGroup || '').toUpperCase();
-                                            if (!schoolConfig.staff || schoolConfig.staff.length === 0) return schoolConfig.teacherName;
-
-                                            const studentGrade = studentGroupStr.match(/(\d+)/)?.[0];
-                                            const studentLetter = studentGroupStr.match(/[A-F]/)?.[0];
-
-                                            if (!studentGrade || !studentLetter) return schoolConfig.teacherName;
-
-                                            const foundTeacher = schoolConfig.staff.find((s: any) => {
-                                                const staffGroupStr = (s.group || '').toUpperCase();
-                                                if (staffGroupStr.includes('DIREC') || staffGroupStr.includes('ADMIN')) return false;
-
-                                                const staffGrade = staffGroupStr.match(/(\d+)/)?.[0];
-                                                const staffLetter = staffGroupStr.match(/[A-F]/)?.[0];
-                                                return staffGrade === studentGrade && staffLetter === studentLetter;
-                                            });
-
-                                            return foundTeacher ? foundTeacher.name : schoolConfig.teacherName;
-                                        })()}
-                                    </p>
-                                    <p className="text-xs text-slate-500">Docente de Grupo</p>
-                                </div>
-                                <div className="text-center w-1/3">
-                                    <div className="border-t border-slate-400 pt-2 mb-1"></div>
-                                    <p className="text-sm font-bold">{schoolConfig.directorName || 'Director(a) Escolar'}</p>
-                                    <p className="text-xs text-slate-500">Director(a) de la Escuela</p>
-                                </div>
-                            </div>
-
-                            <div className="mt-8 text-center text-[10px] text-slate-400">
-                                <p>Documento generado el {new Date().toLocaleDateString()} a las {new Date().toLocaleTimeString()} | ID Sistema: {reportStudent.id}</p>
-                            </div>
-
                         </div>
-                    </div>
-                )}
-            </main>
-        </div>
+                    )
+                }
+            </main >
+        </div >
     );
 };
 
 // --- Helper Components ---
 
-const DirectorNavBtn = ({ active, onClick, icon: Icon, label }: any) => (
-    <button
-        onClick={onClick}
-        className={`flex items-center gap-3 w-full p-3 rounded-xl transition-all duration-200 group ${active
-            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/20 font-bold'
-            : 'text-slate-400 hover:bg-white/5 hover:text-white font-medium'
-            }`}
-    >
-        <Icon size={20} className={active ? 'text-white' : 'text-slate-500 group-hover:text-white'} />
-        {label}
-    </button>
-);
+const DirectorNavBtn = ({ active, onClick, icon: Icon, label }: any) => {
+    const labelText = typeof label === 'string' ? label : (label.props?.children?.[0] || 'Navegación');
+    return (
+        <button
+            onClick={onClick}
+            aria-label={`Ir a ${labelText}`}
+            className={`flex items-center gap-3 w-full p-3 rounded-xl transition-all duration-200 group ${active
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/20 font-bold'
+                : 'text-slate-400 hover:bg-white/5 hover:text-white font-medium'
+                }`}
+        >
+            <Icon size={20} className={active ? 'text-white' : 'text-slate-500 group-hover:text-white'} />
+            {label}
+        </button>
+    );
+};
 
 const StatCard = ({ icon: Icon, color, title, value, subtitle, onClick, badge }: any) => (
     <div
         onClick={onClick}
+        role={onClick ? "button" : "status"}
+        aria-label={onClick ? `Ver detalles de ${title}: ${value}` : `${title}: ${value}`}
+        tabIndex={onClick ? 0 : undefined}
+        onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } } : undefined}
         className={`bg-white p-6 rounded-2xl border border-slate-100 shadow-sm transition-all relative ${onClick ? 'cursor-pointer hover:shadow-lg hover:-translate-y-1' : 'hover:shadow-md'}`}
     >
         {badge && (
@@ -3332,23 +3325,25 @@ const StatCard = ({ icon: Icon, color, title, value, subtitle, onClick, badge }:
             </div>
         )}
         <div className={`w-12 h-12 rounded-xl ${color} flex items-center justify-center text-white shadow-lg mb-4`}>
-            <Icon size={24} />
+            <Icon size={24} aria-hidden="true" />
         </div>
         <h3 className="text-3xl font-bold text-slate-800 mb-1">{value}</h3>
         <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{title}</p>
-        <p className="text-xs text-slate-400">{subtitle}</p>
+        <div className="text-xs text-slate-400">{subtitle}</div>
     </div>
 );
 
 const ShortcutBtn = ({ icon: Icon, title, desc, onClick }: any) => (
     <button
         onClick={onClick}
+        aria-label={`${title}: ${desc}`}
         className="text-left bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all group"
     >
         <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-600 mb-4 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
-            <Icon size={20} />
+            <Icon size={20} aria-hidden="true" />
         </div>
         <h4 className="font-bold text-slate-800">{title}</h4>
         <p className="text-sm text-slate-400 mt-1">{desc}</p>
     </button>
 );
+
