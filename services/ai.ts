@@ -384,3 +384,55 @@ export const generateNEMPlanning = async (context: string, images: string[]): Pr
 
   try { return await generateWithFallback(parts); } catch (e: any) { return `Error: ${e.message}`; }
 };
+
+export const generateHtmlGame = async (topic: string, description: string): Promise<string> => {
+  const prompt = `Actúa como un desarrollador de juegos web experto. Genera un juego HTML5 completo en un solo archivo para niños de 4to grado.
+  TEMA: ${topic}
+  DESCRIPCIÓN: ${description}
+
+  REQUISITOS DE ESTILO (OBLIGATORIO):
+  1. Usa Tailwind CSS via CDN: <script src="https://cdn.tailwindcss.com"></script>
+  2. Fuente 'Quicksand' y 'Fredoka One' de Google Fonts.
+  3. Fondo de pantalla: linear-gradient(135deg, #667eea 0%, #764ba2 100%).
+  4. Contenedor principal: clase 'game-card' con fondo blanco (rgba(255,255,255,0.95)), bordes redondeados (2rem), sombra suave. usa max-width: 500px;
+  5. Botones de opciones: grandes, bordes redondeados, feedback visual al hacer click (colores verde/rojo).
+  6. Iconografía: FontAwesome via CDN.
+  7. Debe ser RESPONSIVE y verse bien en móviles.
+  8. Incluye una animación divertida (ej. rebote) para un personaje o icono.
+
+  LÓGICA DEL JUEGO Y CALIFICACIÓN (CRÍTICO):
+  1. Pantalla de Inicio con título y botón "Jugar".
+  2. Pantalla de Juego con preguntas/desafíos.
+  3. Sistema de Vidas o Tiempo.
+  4. Pantalla de Final:
+     - Muestra el puntaje.
+     - Botón "Jugar de nuevo".
+  5. **IMPORTANTE PARA CALIFICAR:**
+     Cuando el juego termine (ya sea por ganar o perder), DEBES ejecutar AUTOMÁTICAMENTE el siguiente código JavaScript para guardar la calificación en el sistema escolar:
+     \`window.parent.postMessage({ type: 'GAME_COMPLETE', score: PUNTAJE_OBTENIDO, maxScore: PUNTAJE_MAXIMO_POSIBLE }, '*');\`
+     * Asegúrate de calcular el puntaje final sobre 100 si es posible, o envía el puntaje bruto.
+
+  Responde ÚNICAMENTE con el código HTML completo, empezando por <!DOCTYPE html>. No incluyas markdown.`;
+
+  try {
+    const text = await generateWithFallback(prompt);
+    // Cleanup markdown
+    const start = text.indexOf('<!DOCTYPE html>');
+    const end = text.lastIndexOf('</html>');
+
+    if (start !== -1 && end !== -1) {
+      return text.substring(start, end + 7);
+    }
+
+    // Fallback regex
+    const match = text.match(/```html([\s\S]*?)```/) || text.match(/```([\s\S]*?)```/);
+    if (match) {
+      const content = match[1].trim();
+      if (content.startsWith('<!DOCTYPE')) return content;
+    }
+
+    return text.trim();
+  } catch (e: any) {
+    throw new Error(`Game Error: ${e.message}`);
+  }
+};

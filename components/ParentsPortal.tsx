@@ -20,6 +20,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
 
     // Quiz State
     const [activeQuiz, setActiveQuiz] = useState<Assignment | null>(null);
+    const [activeHtmlGame, setActiveHtmlGame] = useState<Assignment | null>(null);
     const [quizAnswers, setQuizAnswers] = useState<Record<string, number>>({});
     const [quizResult, setQuizResult] = useState<{ score: number, passed: boolean } | null>(null);
 
@@ -83,6 +84,11 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
             }
         }
 
+        if (fullAssignment.interactiveData?.type === 'HTML_GAME') {
+            setActiveHtmlGame(fullAssignment);
+            return;
+        }
+
         if (fullAssignment.interactiveData?.type === 'WORKSHEET') {
             setActiveWorksheet(fullAssignment);
 
@@ -113,6 +119,43 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
             setQuizResult(null);
         }
     };
+
+    // HTML Game Listener for POST MESSAGE
+    useEffect(() => {
+        const handleGameMessage = async (event: MessageEvent) => {
+            if (event.data && event.data.type === 'GAME_COMPLETE' && activeHtmlGame && student) {
+                const { score, maxScore = 100 } = event.data;
+                console.log("Game Completed. Score received:", score, "/", maxScore);
+
+                // Mapear a 0-10
+                let finalScore = Math.round((Number(score) / Number(maxScore)) * 10);
+                if (finalScore > 10) finalScore = 10;
+                if (finalScore < 0) finalScore = 0;
+
+                try {
+                    await api.submitAssignment(student.id, activeHtmlGame.id, {
+                        score: finalScore,
+                        type: 'HTML_GAME'
+                    });
+
+                    alert(`¡Juego Completado!\nTu calificación es: ${finalScore}/10`);
+                    setActiveHtmlGame(null); // Close game
+
+                    // Refresh data
+                    const updatedAssignments: any = await api.getAssignments();
+                    if (Array.isArray(updatedAssignments)) setAssignments(updatedAssignments);
+                    else if (updatedAssignments.assignments) setAssignments(updatedAssignments.assignments);
+
+                } catch (e) {
+                    console.error("Error submitting game score", e);
+                    alert("Hubo un error al guardar tu calificación.");
+                }
+            }
+        };
+
+        window.addEventListener('message', handleGameMessage);
+        return () => window.removeEventListener('message', handleGameMessage);
+    }, [activeHtmlGame, student, loginId]);
 
     const handleCompleteWorksheet = async () => {
         if (!activeWorksheet || !student) return;
@@ -1766,6 +1809,23 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                 </div>
             )}
 
+            {activeHtmlGame && activeHtmlGame.interactiveData?.type === 'HTML_GAME' && (
+                <div className="fixed inset-0 z-50 bg-slate-900 flex flex-col items-center justify-center animate-fadeIn">
+                    <div className="w-full h-12 bg-slate-800 flex items-center justify-between px-4 sticky top-0 z-50 shadow-md">
+                        <span className="text-white font-bold text-sm tracking-wide truncate pr-4">{activeHtmlGame.title}</span>
+                        <button onClick={() => setActiveHtmlGame(null)} className="text-white bg-rose-600 hover:bg-rose-700 px-3 py-1 rounded font-bold text-xs shadow-md transition-colors flex items-center gap-1">
+                            <X size={14} /> CERRAR
+                        </button>
+                    </div>
+                    <iframe
+                        srcDoc={activeHtmlGame.interactiveData.htmlContent}
+                        className="w-full flex-1 border-none bg-white"
+                        title="Juego Educativo"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                    />
+                </div>
+            )}
         </div>
     );
 };

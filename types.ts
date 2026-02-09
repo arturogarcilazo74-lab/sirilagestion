@@ -105,9 +105,16 @@ export interface WorksheetData {
   videoUrl?: string;
 }
 
+export interface HtmlGameData {
+  type: 'HTML_GAME';
+  htmlContent: string;
+  gameType?: 'MULTIPLICATION' | 'OTHER';
+}
+
 export type InteractiveData =
   | { type: 'QUIZ'; questions: InteractiveQuestion[]; minScoreToPass?: number; videoUrl?: string; forTeacherOnly?: boolean; }
-  | WorksheetData;
+  | WorksheetData
+  | HtmlGameData;
 
 export interface Assignment {
   id: string;

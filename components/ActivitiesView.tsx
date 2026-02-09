@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react'; // AI Feature Enabled
 import { Student, Assignment, InteractiveQuestion, DraggableItem, InteractiveZone } from '../types';
 import { api } from '../services/api';
-import { CheckCircle, Circle, Plus, Trash2, Calendar, BarChart3, AlertCircle, X, Save, Trophy, TrendingUp, Sparkles, HelpCircle, Eye, EyeOff, Upload, FileText, Image as ImageIcon, Move, Play, BrainCircuit, Settings, Check, MessageCircle } from 'lucide-react';
+import { CheckCircle, Circle, Plus, Trash2, Calendar, BarChart3, AlertCircle, X, Save, Trophy, TrendingUp, Sparkles, HelpCircle, Eye, EyeOff, Upload, FileText, Image as ImageIcon, Move, Play, BrainCircuit, Settings, Check, MessageCircle, Gamepad2 } from 'lucide-react';
 import { sendWhatsAppMessage, getTaskMessage } from '../whatsappUtils';
 
-import { generateInteractiveQuiz, generateInteractiveQuizFromContext, generateWorksheetSVG, generateCompleteWorksheet, autoDetectWorksheetZones, generateNEMPlanning } from '../services/ai';
+import { generateInteractiveQuiz, generateInteractiveQuizFromContext, generateWorksheetSVG, generateCompleteWorksheet, autoDetectWorksheetZones, generateNEMPlanning, generateHtmlGame } from '../services/ai';
 import * as pdfjsLib from 'pdfjs-dist';
 // @ts-ignore
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
@@ -38,12 +38,13 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
   const [targetGroup, setTargetGroup] = useState(defaultTargetGroup); // Default group
 
   // Interactive Quiz State
-  const [activityType, setActivityType] = useState<'TASK' | 'QUIZ' | 'WORKSHEET' | 'PLANNING'>('TASK');
+  const [activityType, setActivityType] = useState<'TASK' | 'QUIZ' | 'WORKSHEET' | 'PLANNING' | 'HTML_GAME'>('TASK');
   const [isGenerating, setIsGenerating] = useState(false);
   const [questions, setQuestions] = useState<InteractiveQuestion[]>([]);
   // NEM Plan State
   const [nemPlanResult, setNemPlanResult] = useState('');
   const [aiContextText, setAiContextText] = useState('');
+  const [htmlGameContent, setHtmlGameContent] = useState('');
   const [curQuestion, setCurQuestion] = useState('');
   const [curOptions, setCurOptions] = useState(['', '', '']);
   const [curCorrect, setCurCorrect] = useState(0);
@@ -230,6 +231,16 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
           newAssignment.type = 'TASK';
         }
         newAssignment.description = nemPlanResult; // Save the plan as description in both cases
+      } else if (activityType === 'HTML_GAME') {
+        if (!htmlGameContent) {
+          alert("Debes generar el juego antes de guardar.");
+          return;
+        }
+        newAssignment.interactiveData = {
+          type: 'HTML_GAME',
+          htmlContent: htmlGameContent,
+          gameType: 'OTHER'
+        };
       }
 
       onAddAssignment(newAssignment);
@@ -356,7 +367,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                 {/* 1. Activity Type Selection - Responsive Grid */}
                 <section>
                   <label className="block text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">1. Tipo de Actividad</label>
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
                     <button
                       type="button"
                       onClick={() => setActivityType('PLANNING')}
@@ -419,6 +430,22 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                       <p className="hidden md:block text-sm text-slate-500 leading-snug">Exámen IA.</p>
                       {activityType === 'QUIZ' && <div className="absolute top-2 right-2 md:top-4 md:right-4 text-purple-500"><CheckCircle size={16} fill="currentColor" className="text-white md:w-5 md:h-5" /></div>}
                     </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setActivityType('HTML_GAME')}
+                      className={`relative p-3 md:p-6 rounded-2xl border-2 text-left transition-all group overflow-hidden ${activityType === 'HTML_GAME'
+                        ? 'border-orange-500 bg-orange-50 shadow-md transform scale-[1.02]'
+                        : 'border-slate-100 bg-white hover:border-orange-200 hover:shadow-sm'
+                        }`}
+                    >
+                      <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center mb-2 md:mb-4 transition-colors ${activityType === 'HTML_GAME' ? 'bg-orange-500 text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-orange-100 group-hover:text-orange-500'}`}>
+                        <Gamepad2 size={18} className="md:w-6 md:h-6" />
+                      </div>
+                      <h4 className={`font-bold text-sm md:text-lg mb-1 leading-tight ${activityType === 'HTML_GAME' ? 'text-orange-900' : 'text-slate-700'}`}>Juego</h4>
+                      <p className="hidden md:block text-sm text-slate-500 leading-snug">Juego Lúdico.</p>
+                      {activityType === 'HTML_GAME' && <div className="absolute top-2 right-2 md:top-4 md:right-4 text-orange-500"><CheckCircle size={16} fill="currentColor" className="text-white md:w-5 md:h-5" /></div>}
+                    </button>
                   </div>
                 </section>
 
@@ -480,7 +507,9 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                       3. Editor de Contenido - {
                         activityType === 'WORKSHEET' ? 'Ficha Interactiva' :
                           activityType === 'QUIZ' ? 'Cuestionario' :
-                            'Planeación Didáctica NEM'
+                            activityType === 'QUIZ' ? 'Cuestionario' :
+                              activityType === 'HTML_GAME' ? 'Juego Lúdico (HTML5)' :
+                                'Planeación Didáctica NEM'
                       }
                     </label>
 
@@ -1013,6 +1042,72 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                       </div>
                     )}
 
+
+
+                    {/* HTML GAME EDITOR UI */}
+                    {activityType === 'HTML_GAME' && (
+                      <div className="space-y-6">
+                        <div className="bg-gradient-to-br from-orange-50 to-white p-6 rounded-2xl border-2 border-orange-100 shadow-sm">
+                          <h4 className="font-bold text-orange-800 flex items-center gap-2 mb-4">
+                            <Gamepad2 size={24} />
+                            Generador de Juegos Educativos
+                          </h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-4">
+                              <div>
+                                <label className="block text-sm font-bold text-orange-700 mb-1">Tema del Juego</label>
+                                <input
+                                  className="w-full p-3 border border-orange-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none"
+                                  placeholder="Ej. Tablas de Multiplicar, Capitales de México..."
+                                  value={aiWorksheetTopic}
+                                  onChange={e => setAiWorksheetTopic(e.target.value)}
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-bold text-orange-700 mb-1">Descripción / Reglas</label>
+                                <textarea
+                                  className="w-full p-3 border border-orange-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none h-32"
+                                  placeholder="Describe cómo quieres que sea el juego. Ej: 'Un juego donde un robot tiene que saltar si respondes bien la multiplicación del 7. Estilo colorido.'"
+                                  value={aiContextText}
+                                  onChange={e => setAiContextText(e.target.value)}
+                                />
+                              </div>
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  if (!aiWorksheetTopic) return alert("Escribe un tema");
+                                  setIsGenerating(true);
+                                  try {
+                                    const html = await generateHtmlGame(aiWorksheetTopic, aiContextText);
+                                    setHtmlGameContent(html);
+                                    if (!newTitle) setNewTitle(`Juego: ${aiWorksheetTopic}`);
+                                  } catch (e: any) { alert(e.message); } finally { setIsGenerating(false); }
+                                }}
+                                disabled={isGenerating}
+                                className="w-full py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-bold shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                              >
+                                {isGenerating ? 'Creando Juego...' : 'Generar Juego (IA)'}
+                              </button>
+                            </div>
+
+                            <div className="bg-slate-900 rounded-xl overflow-hidden border-4 border-slate-800 relative aspect-video shadow-inner flex items-center justify-center">
+                              {htmlGameContent ? (
+                                <iframe
+                                  srcDoc={htmlGameContent}
+                                  className="w-full h-full border-none bg-white"
+                                  title="Game Preview"
+                                />
+                              ) : (
+                                <div className="text-center text-slate-500">
+                                  <Gamepad2 size={48} className="mx-auto mb-2 opacity-50" />
+                                  <p>Vista previa del juego</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     {/* QUIZ EDITOR UI */}
                     {activityType === 'QUIZ' && (
