@@ -428,9 +428,16 @@ export const useAppStore = () => {
 
         setStudents(prev => prev.map(s => {
             if (s.id === studentId) {
+                const newAttendance = { ...s.attendance };
+                if (status === AttendanceStatus.NONE) {
+                    delete newAttendance[targetDate];
+                } else {
+                    newAttendance[targetDate] = status;
+                }
+
                 updatedStudent = {
                     ...s,
-                    attendance: { ...s.attendance, [targetDate]: status }
+                    attendance: newAttendance
                 };
                 return updatedStudent;
             }

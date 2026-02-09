@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react'; // AI Feature Enabled
 import { Student, Assignment, InteractiveQuestion, DraggableItem, InteractiveZone } from '../types';
 import { api } from '../services/api';
-import { CheckCircle, Circle, Plus, Trash2, Calendar, BarChart3, AlertCircle, X, Save, Trophy, TrendingUp, Sparkles, HelpCircle, Eye, EyeOff, Upload, FileText, Image as ImageIcon, Move, Play, BrainCircuit, Settings, Check } from 'lucide-react';
+import { CheckCircle, Circle, Plus, Trash2, Calendar, BarChart3, AlertCircle, X, Save, Trophy, TrendingUp, Sparkles, HelpCircle, Eye, EyeOff, Upload, FileText, Image as ImageIcon, Move, Play, BrainCircuit, Settings, Check, MessageCircle } from 'lucide-react';
+import { sendWhatsAppMessage, getTaskMessage } from '../whatsappUtils';
 
 import { generateInteractiveQuiz, generateInteractiveQuizFromContext, generateWorksheetSVG, generateCompleteWorksheet, autoDetectWorksheetZones, generateNEMPlanning } from '../services/ai';
 import * as pdfjsLib from 'pdfjs-dist';
@@ -328,17 +329,17 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
 
       {/* Add Assignment Modal - Rich Aesthetics Redesign */}
       {isAdding && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fadeIn">
-          <div className="bg-white rounded-3xl w-full max-w-4xl max-h-[90vh] shadow-2xl overflow-hidden flex flex-col animate-slideUp">
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4 bg-slate-900/60 backdrop-blur-md animate-fadeIn">
+          <div className="bg-white rounded-t-3xl md:rounded-3xl w-full max-w-4xl max-h-[90vh] shadow-2xl overflow-hidden flex flex-col animate-slideUp">
 
             {/* Modal Header */}
-            <div className="bg-slate-50/50 px-8 py-6 border-b border-slate-100 flex justify-between items-center backdrop-blur-sm sticky top-0 z-10">
+            <div className="bg-slate-50/50 px-6 py-4 md:px-8 md:py-6 border-b border-slate-100 flex justify-between items-center backdrop-blur-sm sticky top-0 z-10 shrink-0">
               <div>
-                <h3 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                <h3 className="text-xl md:text-2xl font-bold text-slate-800 flex items-center gap-2">
                   <Sparkles className="text-indigo-500" size={24} />
-                  Crear Nueva Actividad
+                  Crear Actividad
                 </h3>
-                <p className="text-slate-500 text-sm">Selecciona el tipo de actividad y configura sus detalles</p>
+                <p className="text-slate-500 text-xs md:text-sm hidden md:block">Selecciona el tipo de actividad y configura sus detalles</p>
               </div>
               <button
                 onClick={() => setIsAdding(false)}
@@ -349,74 +350,74 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar space-y-8 bg-white">
-              <form id="activityForm" onSubmit={handleSubmit} className="space-y-8">
+            <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar space-y-6 md:space-y-8 bg-white">
+              <form id="activityForm" onSubmit={handleSubmit} className="space-y-6 md:space-y-8">
 
-                {/* 1. Activity Type Selection - Big Cards */}
+                {/* 1. Activity Type Selection - Responsive Grid */}
                 <section>
                   <label className="block text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">1. Tipo de Actividad</label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
                     <button
                       type="button"
                       onClick={() => setActivityType('PLANNING')}
-                      className={`relative p-6 rounded-2xl border-2 text-left transition-all group overflow-hidden ${activityType === 'PLANNING'
+                      className={`relative p-3 md:p-6 rounded-2xl border-2 text-left transition-all group overflow-hidden ${activityType === 'PLANNING'
                         ? 'border-emerald-500 bg-emerald-50 shadow-md transform scale-[1.02]'
                         : 'border-slate-100 bg-white hover:border-emerald-200 hover:shadow-sm'
                         }`}
                     >
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 transition-colors ${activityType === 'PLANNING' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-emerald-100 group-hover:text-emerald-600'}`}>
-                        <Sparkles size={24} />
+                      <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center mb-2 md:mb-4 transition-colors ${activityType === 'PLANNING' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-emerald-100 group-hover:text-emerald-600'}`}>
+                        <Sparkles size={18} className="md:w-6 md:h-6" />
                       </div>
-                      <h4 className={`font-bold text-lg mb-1 ${activityType === 'PLANNING' ? 'text-emerald-900' : 'text-slate-700'}`}>Agente NEM</h4>
-                      <p className="text-xs text-slate-500 leading-snug">Generador de Planeaciones, Proyectos y Adecuaciones (IA).</p>
-                      {activityType === 'PLANNING' && <div className="absolute top-4 right-4 text-emerald-500"><CheckCircle size={20} fill="currentColor" className="text-white" /></div>}
+                      <h4 className={`font-bold text-sm md:text-lg mb-1 leading-tight ${activityType === 'PLANNING' ? 'text-emerald-900' : 'text-slate-700'}`}>Agente NEM</h4>
+                      <p className="hidden md:block text-xs text-slate-500 leading-snug">Generador de Planeaciones (IA).</p>
+                      {activityType === 'PLANNING' && <div className="absolute top-2 right-2 md:top-4 md:right-4 text-emerald-500"><CheckCircle size={16} fill="currentColor" className="text-white md:w-5 md:h-5" /></div>}
                     </button>
                     <button
                       type="button"
                       onClick={() => setActivityType('TASK')}
-                      className={`relative p-6 rounded-2xl border-2 text-left transition-all group overflow-hidden ${activityType === 'TASK'
+                      className={`relative p-3 md:p-6 rounded-2xl border-2 text-left transition-all group overflow-hidden ${activityType === 'TASK'
                         ? 'border-indigo-600 bg-indigo-50 shadow-md transform scale-[1.02]'
                         : 'border-slate-100 bg-white hover:border-indigo-200 hover:shadow-sm'
                         }`}
                     >
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 transition-colors ${activityType === 'TASK' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-indigo-100 group-hover:text-indigo-600'}`}>
-                        <CheckCircle size={24} />
+                      <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center mb-2 md:mb-4 transition-colors ${activityType === 'TASK' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-indigo-100 group-hover:text-indigo-600'}`}>
+                        <CheckCircle size={18} className="md:w-6 md:h-6" />
                       </div>
-                      <h4 className={`font-bold text-lg mb-1 ${activityType === 'TASK' ? 'text-indigo-900' : 'text-slate-700'}`}>Tarea Simple</h4>
-                      <p className="text-sm text-slate-500 leading-snug">Tarea estándar para marcar completado (ej. libro, maqueta).</p>
-                      {activityType === 'TASK' && <div className="absolute top-4 right-4 text-indigo-600"><CheckCircle size={20} fill="currentColor" className="text-white" /></div>}
+                      <h4 className={`font-bold text-sm md:text-lg mb-1 leading-tight ${activityType === 'TASK' ? 'text-indigo-900' : 'text-slate-700'}`}>Tarea Simple</h4>
+                      <p className="hidden md:block text-sm text-slate-500 leading-snug">Tarea estándar.</p>
+                      {activityType === 'TASK' && <div className="absolute top-2 right-2 md:top-4 md:right-4 text-indigo-600"><CheckCircle size={16} fill="currentColor" className="text-white md:w-5 md:h-5" /></div>}
                     </button>
 
                     <button
                       type="button"
                       onClick={() => setActivityType('WORKSHEET')}
-                      className={`relative p-6 rounded-2xl border-2 text-left transition-all group overflow-hidden ${activityType === 'WORKSHEET'
+                      className={`relative p-3 md:p-6 rounded-2xl border-2 text-left transition-all group overflow-hidden ${activityType === 'WORKSHEET'
                         ? 'border-pink-500 bg-pink-50 shadow-md transform scale-[1.02]'
                         : 'border-slate-100 bg-white hover:border-pink-200 hover:shadow-sm'
                         }`}
                     >
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 transition-colors ${activityType === 'WORKSHEET' ? 'bg-pink-500 text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-pink-100 group-hover:text-pink-500'}`}>
-                        <FileText size={24} />
+                      <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center mb-2 md:mb-4 transition-colors ${activityType === 'WORKSHEET' ? 'bg-pink-500 text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-pink-100 group-hover:text-pink-500'}`}>
+                        <FileText size={18} className="md:w-6 md:h-6" />
                       </div>
-                      <h4 className={`font-bold text-lg mb-1 ${activityType === 'WORKSHEET' ? 'text-pink-900' : 'text-slate-700'}`}>Ficha Interactiva</h4>
-                      <p className="text-sm text-slate-500 leading-snug">Sube una imagen o PDF y añade zonas para escribir o arrastrar.</p>
-                      {activityType === 'WORKSHEET' && <div className="absolute top-4 right-4 text-pink-500"><CheckCircle size={20} fill="currentColor" className="text-white" /></div>}
+                      <h4 className={`font-bold text-sm md:text-lg mb-1 leading-tight ${activityType === 'WORKSHEET' ? 'text-pink-900' : 'text-slate-700'}`}>Ficha Interactiva</h4>
+                      <p className="hidden md:block text-sm text-slate-500 leading-snug">Imagen con zonas.</p>
+                      {activityType === 'WORKSHEET' && <div className="absolute top-2 right-2 md:top-4 md:right-4 text-pink-500"><CheckCircle size={16} fill="currentColor" className="text-white md:w-5 md:h-5" /></div>}
                     </button>
 
                     <button
                       type="button"
                       onClick={() => setActivityType('QUIZ')}
-                      className={`relative p-6 rounded-2xl border-2 text-left transition-all group overflow-hidden ${activityType === 'QUIZ'
+                      className={`relative p-3 md:p-6 rounded-2xl border-2 text-left transition-all group overflow-hidden ${activityType === 'QUIZ'
                         ? 'border-purple-500 bg-purple-50 shadow-md transform scale-[1.02]'
                         : 'border-slate-100 bg-white hover:border-purple-200 hover:shadow-sm'
                         }`}
                     >
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 transition-colors ${activityType === 'QUIZ' ? 'bg-purple-500 text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-purple-100 group-hover:text-purple-500'}`}>
-                        <BrainCircuit size={24} />
+                      <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center mb-2 md:mb-4 transition-colors ${activityType === 'QUIZ' ? 'bg-purple-500 text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-purple-100 group-hover:text-purple-500'}`}>
+                        <BrainCircuit size={18} className="md:w-6 md:h-6" />
                       </div>
-                      <h4 className={`font-bold text-lg mb-1 ${activityType === 'QUIZ' ? 'text-purple-900' : 'text-slate-700'}`}>Cuestionario IA</h4>
-                      <p className="text-sm text-slate-500 leading-snug">Exámen de opción múltiple autocalificable generado por IA.</p>
-                      {activityType === 'QUIZ' && <div className="absolute top-4 right-4 text-purple-500"><CheckCircle size={20} fill="currentColor" className="text-white" /></div>}
+                      <h4 className={`font-bold text-sm md:text-lg mb-1 leading-tight ${activityType === 'QUIZ' ? 'text-purple-900' : 'text-slate-700'}`}>Cuestionario</h4>
+                      <p className="hidden md:block text-sm text-slate-500 leading-snug">Exámen IA.</p>
+                      {activityType === 'QUIZ' && <div className="absolute top-2 right-2 md:top-4 md:right-4 text-purple-500"><CheckCircle size={16} fill="currentColor" className="text-white md:w-5 md:h-5" /></div>}
                     </button>
                   </div>
                 </section>
@@ -424,7 +425,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                 {/* 2. Basic Information */}
                 <section className="animate-fadeIn">
                   <label className="block text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">2. Configuración General</label>
-                  <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-slate-50 p-4 md:p-6 rounded-2xl border border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-slate-700">Título de la Actividad</label>
                       <input
@@ -487,7 +488,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                     {activityType === 'PLANNING' && (
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                         <div className="space-y-6">
-                          <div className="bg-gradient-to-br from-emerald-50 to-white p-6 rounded-3xl border border-emerald-100 shadow-sm">
+                          <div className="bg-gradient-to-br from-emerald-50 to-white p-4 md:p-6 rounded-3xl border border-emerald-100 shadow-sm">
                             <h4 className="font-bold text-emerald-800 flex items-center gap-2 mb-4">
                               <Sparkles size={20} />
                               Contexto del Proyecto / Libro
@@ -495,7 +496,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
 
                             <div className="mb-4">
                               <label className="block text-xs font-bold text-emerald-600 uppercase mb-2">Opción A: Subir PDF / Imagen (Libro de Texto)</label>
-                              <div className="bg-white border-2 border-dashed border-emerald-200 rounded-xl p-6 text-center cursor-pointer hover:bg-emerald-50 hover:border-emerald-400 transition-colors relative">
+                              <div className="bg-white border-2 border-dashed border-emerald-200 rounded-xl p-4 md:p-6 text-center cursor-pointer hover:bg-emerald-50 hover:border-emerald-400 transition-colors relative">
                                 <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" accept=".pdf,image/*" title="Subir página del libro o PDF" onChange={async (e) => {
                                   const file = e.target.files?.[0];
                                   if (file) {
@@ -575,7 +576,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                         </div>
 
                         {/* RESULT COLUMN */}
-                        <div className="flex flex-col h-[600px]">
+                        <div className="flex flex-col h-[500px] md:h-[600px]">
                           <div className="flex justify-between items-center mb-2">
                             <h4 className="font-bold text-slate-700 text-sm uppercase">Resultado del Agente</h4>
                             {nemPlanResult && (
@@ -588,7 +589,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                               </button>
                             )}
                           </div>
-                          <div className="flex-1 bg-slate-50 rounded-xl border border-slate-200 p-6 overflow-y-auto custom-scrollbar prose prose-sm max-w-none">
+                          <div className="flex-1 bg-slate-50 rounded-xl border border-slate-200 p-4 md:p-6 overflow-y-auto custom-scrollbar prose prose-sm max-w-none">
                             {nemPlanResult ? (
                               <div className="whitespace-pre-wrap font-medium text-slate-700">
                                 {nemPlanResult}
@@ -769,18 +770,18 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                           </div>
                         ) : (
                           /* B. Editor Interface */
-                          <div className="flex flex-col lg:flex-row gap-6 h-[85vh]">
+                          <div className="flex flex-col lg:flex-row gap-6 h-[85vh] md:h-[75vh]">
                             {/* Toolbar & Canvas */}
-                            <div className="flex-1 flex flex-col gap-2">
-                              <div className="bg-slate-800 text-white p-2 rounded-xl flex items-center gap-2 shadow-lg">
+                            <div className="flex-1 flex flex-col gap-2 relative">
+                              <div className="bg-slate-800 text-white p-2 rounded-xl flex items-center gap-2 shadow-lg sticky top-0 z-20">
                                 <div className="flex items-center gap-1 bg-slate-700/50 p-1 rounded-lg">
                                   <button type="button" onClick={() => setEditorTool('SELECT')} className={`p-2 rounded ${editorTool === 'SELECT' ? 'bg-indigo-500' : 'hover:bg-white/10'}`} title="Mover / Seleccionar" aria-label="Herramienta Seleccionar"><Move size={18} /></button>
                                   <button type="button" onClick={() => setEditorTool('DRAW')} className={`p-2 rounded ${editorTool === 'DRAW' ? 'bg-indigo-500 text-white' : 'hover:bg-white/10 text-emerald-400'}`} title="Dibujar Zona" aria-label="Herramienta Dibujar"><Plus size={18} /></button>
                                 </div>
-                                <div className="px-3 text-xs text-slate-400 border-l border-white/20">
-                                  {interactiveZones.length} zonas activas
+                                <div className="px-3 text-xs text-slate-400 border-l border-white/20 whitespace-nowrap">
+                                  {interactiveZones.length} zonas
                                 </div>
-                                <button type="button" onClick={() => setWorksheetImage('')} className="ml-auto text-xs text-red-300 hover:text-red-100 px-3 py-1.5 hover:bg-red-500/20 rounded">Cambiar Imagen</button>
+                                <button type="button" onClick={() => setWorksheetImage('')} className="ml-auto text-xs text-red-300 hover:text-red-100 px-3 py-1.5 hover:bg-red-500/20 rounded">Cambiar</button>
                               </div>
 
                               <div className="flex-1 overflow-auto bg-slate-200 rounded-xl border-2 border-slate-300 custom-scrollbar">
@@ -848,11 +849,11 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                                   )}
                                 </div>
                               </div>
-                              <p className="text-[10px] text-slate-400 text-center"><span className="font-bold">Tip:</span> Dibuja recuadros sobre los espacios en blanco de la ficha.</p>
+                              <p className="text-[10px] text-slate-400 text-center md:hidden"><span className="font-bold">Tip:</span> Arrastra con dos dedos para mover la imagen si es necesario (en móvil puede ser complejo dibujar).</p>
                             </div>
 
                             {/* Sidebar Config */}
-                            <div className="w-full lg:w-80 flex flex-col gap-4 h-full overflow-hidden">
+                            <div className="w-full lg:w-80 flex flex-col gap-4 h-auto lg:h-full overflow-y-auto pb-20 lg:pb-0">
                               {/* GLOBAL AUTO-DETECT ACTION (Canva Style) */}
                               <button
                                 type="button"
@@ -1087,17 +1088,18 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
             </div>
 
             {/* Footer Actions */}
-            <div className="bg-white p-6 border-t border-slate-100 flex justify-end gap-3 z-10">
+            {/* Footer Actions - Sticky Bottom on Mobile */}
+            <div className="bg-white p-4 md:p-6 border-t border-slate-100 flex justify-end gap-3 z-10 shrink-0 sticky bottom-0 md:relative">
               <button
                 onClick={() => setIsAdding(false)}
-                className="px-6 py-3 text-slate-500 font-bold hover:bg-slate-50 rounded-xl transition-colors"
+                className="px-4 md:px-6 py-3 text-slate-500 font-bold hover:bg-slate-50 rounded-xl transition-colors text-sm md:text-base"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleSubmit} // Trigger form submit
                 type="button"
-                className={`px-8 py-3 rounded-xl font-bold text-white shadow-lg transition-all transform active:scale-95 flex items-center gap-2 ${activityType === 'TASK' ? 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200' :
+                className={`flex-1 md:flex-none px-6 md:px-8 py-3 rounded-xl font-bold text-white shadow-lg transition-all transform active:scale-95 flex items-center justify-center gap-2 text-sm md:text-base ${activityType === 'TASK' ? 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200' :
                   activityType === 'WORKSHEET' ? 'bg-pink-600 hover:bg-pink-700 shadow-pink-200' :
                     activityType === 'PLANNING' ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200' :
                       'bg-purple-600 hover:bg-purple-700 shadow-purple-200'
@@ -1129,15 +1131,28 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
             <table className="w-full text-left border-collapse min-w-[800px]">
               <thead className="bg-slate-50/90 backdrop-blur-sm sticky top-0 z-20 shadow-sm">
                 <tr>
-                  <th className="p-4 font-bold text-slate-600 sticky left-0 bg-slate-50 z-30 w-64 border-r border-slate-200 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">Estudiante</th>
-                  <th className="p-4 font-bold text-slate-600 w-48 bg-slate-50 z-20 text-center">Progreso</th>
+                  <th className="p-4 font-bold text-slate-600 sticky left-0 bg-slate-50 z-30 w-48 md:w-64 border-r border-slate-200 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">Estudiante</th>
+                  <th className="p-4 font-bold text-slate-600 w-32 md:w-48 bg-slate-50 z-20 text-center">Progreso</th>
                   {assignments.map(assignment => (
                     <th key={assignment.id} className="p-4 font-medium text-slate-600 min-w-[180px] border-l border-slate-200 relative group bg-slate-50">
                       <div className="flex justify-between items-start gap-2">
                         <span>{assignment.title}</span>
-                        <button onClick={() => onDeleteAssignment(assignment.id)} className="text-slate-300 hover:text-red-500 transition-colors" aria-label="Eliminar actividad">
-                          <Trash2 size={14} />
-                        </button>
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => {
+                              const msg = getTaskMessage(assignment.title, new Date(assignment.dueDate).toLocaleDateString(), assignment.description);
+                              const encodedMsg = encodeURIComponent(msg);
+                              window.open(`https://wa.me/?text=${encodedMsg}`, '_blank');
+                            }}
+                            className="text-green-500 hover:text-green-600 p-0.5"
+                            title="Compartir por WhatsApp"
+                          >
+                            <MessageCircle size={14} />
+                          </button>
+                          <button onClick={() => onDeleteAssignment(assignment.id)} className="text-slate-300 hover:text-red-500 transition-colors" aria-label="Eliminar actividad">
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </div>
                       <div className="text-[10px] text-slate-400 font-normal mt-1 flex items-center gap-1">
                         <Calendar size={10} />

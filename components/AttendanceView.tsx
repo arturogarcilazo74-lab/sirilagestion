@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Student, AttendanceStatus } from '../types';
-import { QrCode, CheckCircle, XCircle, Users, Clock, AlertTriangle, Search, Calendar } from 'lucide-react';
+import { QrCode, CheckCircle, XCircle, Users, Clock, AlertTriangle, Search, Calendar, Eraser, MessageCircle } from 'lucide-react';
+import { sendWhatsAppMessage, getAttendanceMessage } from '../whatsappUtils';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 
 interface AttendanceViewProps {
@@ -273,6 +274,20 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({ students, onUpda
                           >
                             <XCircle size={18} />
                           </button>
+                          <button
+                            onClick={() => onUpdateAttendance(student.id, AttendanceStatus.NONE, selectedDate)}
+                            className={`p-2 rounded-lg transition-all hover:bg-slate-100 text-slate-400 hover:text-slate-600`}
+                            title="Borrar Registro (Reiniciar)"
+                          >
+                            <Eraser size={18} />
+                          </button>
+                          <button
+                            onClick={() => sendWhatsAppMessage(student.guardianPhone, getAttendanceMessage(student.name, status as string, selectedDate))}
+                            className="p-2 rounded-lg bg-green-50 text-green-600 hover:bg-green-600 hover:text-white transition-all shadow-sm"
+                            title="Notificar por WhatsApp"
+                          >
+                            <MessageCircle size={18} />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -310,29 +325,46 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({ students, onUpda
                     </span>
                   </div>
 
-                  <div className="flex gap-2">
+                  <div className="grid grid-cols-4 gap-2">
                     <button
                       onClick={() => onUpdateAttendance(student.id, AttendanceStatus.PRESENT, selectedDate)}
-                      className={`flex-1 py-3 rounded-xl flex items-center justify-center gap-2 font-bold transition-all text-sm
+                      className={`py-3 rounded-xl flex items-center justify-center gap-2 font-bold transition-all text-sm
                         ${status === AttendanceStatus.PRESENT ? 'bg-green-500 text-white shadow-md ring-2 ring-green-200' : 'bg-green-50 text-green-600 border border-green-200'}`}
+                      title="Asistencia"
                     >
-                      <CheckCircle size={18} /> Asistir
+                      <CheckCircle size={18} />
                     </button>
                     <button
                       onClick={() => onUpdateAttendance(student.id, AttendanceStatus.LATE, selectedDate)}
-                      className={`flex-1 py-3 rounded-xl flex items-center justify-center gap-2 font-bold transition-all text-sm
+                      className={`py-3 rounded-xl flex items-center justify-center gap-2 font-bold transition-all text-sm
                         ${status === AttendanceStatus.LATE ? 'bg-yellow-500 text-white shadow-md ring-2 ring-yellow-200' : 'bg-yellow-50 text-yellow-600 border border-yellow-200'}`}
+                      title="Retardo"
                     >
-                      <Clock size={18} /> Retardo
+                      <Clock size={18} />
                     </button>
                     <button
                       onClick={() => onUpdateAttendance(student.id, AttendanceStatus.ABSENT, selectedDate)}
-                      className={`flex-1 py-3 rounded-xl flex items-center justify-center gap-2 font-bold transition-all text-sm
+                      className={`py-3 rounded-xl flex items-center justify-center gap-2 font-bold transition-all text-sm
                         ${status === AttendanceStatus.ABSENT ? 'bg-red-500 text-white shadow-md ring-2 ring-red-200' : 'bg-red-50 text-red-600 border border-red-200'}`}
+                      title="Falta"
                     >
-                      <XCircle size={18} /> Falta
+                      <XCircle size={18} />
+                    </button>
+                    <button
+                      onClick={() => onUpdateAttendance(student.id, AttendanceStatus.NONE, selectedDate)}
+                      className={`py-3 rounded-xl flex items-center justify-center gap-2 font-bold transition-all text-sm bg-slate-100 text-slate-500 border border-slate-200`}
+                      title="Borrar"
+                    >
+                      <Eraser size={18} />
                     </button>
                   </div>
+                  <button
+                    onClick={() => sendWhatsAppMessage(student.guardianPhone, getAttendanceMessage(student.name, status as string, selectedDate))}
+                    className="w-full py-2.5 bg-green-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-green-100 animate-fadeIn"
+                  >
+                    <MessageCircle size={18} />
+                    Notificar a Padres
+                  </button>
                 </div>
               );
             })}

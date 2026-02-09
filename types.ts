@@ -3,7 +3,8 @@ export enum AttendanceStatus {
   PRESENT = 'Presente',
   ABSENT = 'Ausente',
   LATE = 'Retardo',
-  EXCUSED = 'Justificado'
+  EXCUSED = 'Justificado',
+  NONE = 'Ninguno'
 }
 
 export interface Student {

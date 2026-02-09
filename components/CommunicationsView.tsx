@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { Student, Notification } from '../types';
 import { Send, Users, AlertTriangle, Info, Calendar, History, Trash2, CheckCircle, Search, MessageCircle, User } from 'lucide-react';
+import { sendWhatsAppMessage, getEventMessage, getChatReplyMessage, getStaffNoticeMessage } from '../whatsappUtils';
 
 interface CommunicationsViewProps {
     students: Student[];
@@ -129,6 +130,23 @@ export const CommunicationsView: React.FC<CommunicationsViewProps> = ({ students
 
             alert('Notificación enviada con éxito');
             loadHistory();
+
+            // AUTOMATIC WHATSAPP TRIGGER
+            // If it's a specific student, send to them. If it's "All", we can only do traditional for now (wa.me doesn't support broadcast)
+            if (targetStudentId) {
+                const student = students.find(s => s.id === targetStudentId);
+                if (student) {
+                    let waMsg = '';
+                    if (type === 'EVENT') {
+                        waMsg = getEventMessage(title, new Date().toLocaleDateString(), message);
+                    } else if (targetStudentId.startsWith('STAFF_')) {
+                        waMsg = getStaffNoticeMessage(title, message);
+                    } else {
+                        waMsg = `*${title.toUpperCase()}*\n\n${message}`;
+                    }
+                    sendWhatsAppMessage(student.guardianPhone, waMsg);
+                }
+            }
         } catch (error) {
             console.error(error);
             alert('Error al enviar');
@@ -148,6 +166,23 @@ export const CommunicationsView: React.FC<CommunicationsViewProps> = ({ students
         try {
             // We reuse api.sendParentMessage but with the STAFF ID
             await api.sendParentMessage(threadId, replyText, senderRole);
+
+            // AUTOMATIC WHATSAPP TRIGGER for Chat
+            if (threadId.startsWith('STAFF_')) {
+                // To Director/Staff
+                const staffId = threadId.replace('STAFF_', '');
+                const staff = staffList.find(s => s.id === staffId);
+                if (staff?.phone) {
+                    sendWhatsAppMessage(staff.phone, getStaffNoticeMessage("Respuesta de Chat", replyText));
+                }
+            } else {
+                // To Parent
+                const parent = students.find(s => s.id === threadId);
+                if (parent?.guardianPhone) {
+                    sendWhatsAppMessage(parent.guardianPhone, getChatReplyMessage(senderRole, replyText));
+                }
+            }
+
             setReplyText('');
             loadAllMessages();
         } catch (e) { console.error(e); }
@@ -407,13 +442,31 @@ export const CommunicationsView: React.FC<CommunicationsViewProps> = ({ students
                                     />
                                 </div>
 
-                                <button
-                                    onClick={handleSend}
-                                    disabled={isSending}
-                                    className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-lg shadow-indigo-200 transition-all active:scale-95 disabled:opacity-70 flex items-center justify-center gap-2"
-                                >
-                                    {isSending ? 'Enviando...' : <><Send size={18} /> Enviar Notificación</>}
-                                </button>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={handleSend}
+                                        disabled={isSending}
+                                        className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-lg shadow-indigo-200 transition-all active:scale-95 disabled:opacity-70 flex items-center justify-center gap-2"
+                                    >
+                                        {isSending ? 'Enviando...' : <><Send size={18} /> Enviar</>}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            if (!message.trim()) { alert("Escribe un mensaje primero."); return; }
+                                            if (targetStudentId) {
+                                                const student = students.find(s => s.id === targetStudentId);
+                                                if (student) sendWhatsAppMessage(student.guardianPhone, `*${title}*\n\n${message}`);
+                                            } else {
+                                                alert("Para enviar por WhatsApp debe seleccionar un alumno específico o copiar el mensaje manualmente.");
+                                            }
+                                        }}
+                                        className="p-3 bg-green-600 hover:bg-green-700 text-white rounded-xl shadow-lg shadow-green-100 transition-all active:scale-95 flex items-center justify-center"
+                                        title="Enviar por WhatsApp"
+                                    >
+                                        <MessageCircle size={20} />
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -447,23 +500,37 @@ export const CommunicationsView: React.FC<CommunicationsViewProps> = ({ students
                                                     </span>
                                                     <span className="text-xs text-slate-400">• {new Date(notif.date).toLocaleDateString()} {new Date(notif.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                                 </div>
-                                                <button
-                                                    onClick={async (e) => {
-                                                        e.stopPropagation();
-                                                        if (confirm('¿Eliminar esta notificación?')) {
-                                                            try {
-                                                                await api.deleteNotification(notif.id);
-                                                                loadHistory();
-                                                            } catch (e) {
-                                                                console.error(e);
+                                                <div className="flex items-center gap-1">
+                                                    {notif.studentId && (
+                                                        <button
+                                                            onClick={() => {
+                                                                const student = students.find(s => s.id === notif.studentId);
+                                                                if (student) sendWhatsAppMessage(student.guardianPhone, `*${notif.title}*\n\n${notif.message}`);
+                                                            }}
+                                                            className="text-slate-300 hover:text-green-500 transition-colors p-1"
+                                                            title="Reenviar por WhatsApp"
+                                                        >
+                                                            <MessageCircle size={16} />
+                                                        </button>
+                                                    )}
+                                                    <button
+                                                        onClick={async (e) => {
+                                                            e.stopPropagation();
+                                                            if (confirm('¿Eliminar esta notificación?')) {
+                                                                try {
+                                                                    await api.deleteNotification(notif.id);
+                                                                    loadHistory();
+                                                                } catch (e) {
+                                                                    console.error(e);
+                                                                }
                                                             }
-                                                        }
-                                                    }}
-                                                    className="text-slate-300 hover:text-red-500 transition-colors p-1"
-                                                    title="Eliminar notificación"
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
+                                                        }}
+                                                        className="text-slate-300 hover:text-red-500 transition-colors p-1"
+                                                        title="Eliminar notificación"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </div>
                                             </div>
 
                                             <h4 className="font-bold text-slate-800 mb-1">{notif.title}</h4>

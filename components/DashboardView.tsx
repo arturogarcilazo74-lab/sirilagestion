@@ -3,7 +3,8 @@ import React, { useEffect, useState } from 'react';
 import { Student, BehaviorLog, SchoolEvent, Assignment, ViewState, StaffTask, StaffMember } from '../types';
 import { generateRiskPlan, analyzeClassPerformance } from '../services/ai';
 import { api } from '../services/api';
-import { Sparkles, TrendingUp, Users, AlertCircle, History, X, Phone, User, CheckCircle, Calendar as CalendarIcon, BookOpen, Clock, Download, ClipboardList, ThumbsUp, ThumbsDown, ChevronLeft, ChevronRight, Plus, Edit2, Trash2, Save, MoreHorizontal, ArrowRight, Send, Megaphone, AlertTriangle, CheckSquare } from 'lucide-react';
+import { Sparkles, TrendingUp, Users, AlertCircle, History, X, Phone, User, CheckCircle, Calendar as CalendarIcon, BookOpen, Clock, Download, ClipboardList, ThumbsUp, ThumbsDown, ChevronLeft, ChevronRight, Plus, Edit2, Trash2, Save, MoreHorizontal, ArrowRight, Send, Megaphone, AlertTriangle, CheckSquare, MessageCircle } from 'lucide-react';
+import { sendWhatsAppMessage, getEventMessage } from '../whatsappUtils';
 
 interface DashboardProps {
   students: Student[];
@@ -659,6 +660,18 @@ export const DashboardView: React.FC<DashboardProps> = ({
                         <div className="flex justify-between items-start">
                           <h4 className="font-bold text-slate-800 line-clamp-1">{evt.title}</h4>
                           <div className="flex opacity-0 group-hover:opacity-100 transition-opacity gap-1">
+                            <button
+                              onClick={() => {
+                                const msg = getEventMessage(evt.title, new Date(evt.date).toLocaleDateString(), evt.description);
+                                // For general events, we open WhatsApp without a phone so the user can choose a group or contact
+                                const encodedMsg = encodeURIComponent(msg);
+                                window.open(`https://wa.me/?text=${encodedMsg}`, '_blank');
+                              }}
+                              className="text-green-500 hover:bg-green-50 p-1 rounded"
+                              title="Compartir en WhatsApp"
+                            >
+                              <MessageCircle size={14} />
+                            </button>
                             <button onClick={() => openEventModal(evt)} className="text-blue-500 hover:bg-blue-50 p-1 rounded"><Edit2 size={14} /></button>
                             <button onClick={() => onDeleteEvent && onDeleteEvent(evt.id)} className="text-red-500 hover:bg-red-50 p-1 rounded"><Trash2 size={14} /></button>
                           </div>
@@ -1305,6 +1318,20 @@ export const DashboardView: React.FC<DashboardProps> = ({
                 >
                   <Save size={18} />
                   Guardar
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    // Logic to save first then share
+                    handleSaveEvent(e as any);
+                    const msg = getEventMessage(eventFormData.title, new Date(eventFormData.date).toLocaleDateString(), eventFormData.description);
+                    const encodedMsg = encodeURIComponent(msg);
+                    window.open(`https://wa.me/?text=${encodedMsg}`, '_blank');
+                  }}
+                  className="p-2.5 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition-colors shadow-lg shadow-green-100 flex items-center justify-center"
+                  title="Guardar y Compartir en WhatsApp"
+                >
+                  <MessageCircle size={18} />
                 </button>
               </div>
             </form>

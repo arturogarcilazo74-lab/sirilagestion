@@ -37,17 +37,26 @@ const addToQueue = (endpoint: string, method: string, body: any) => {
             queue.shift();
         }
 
-        queue.push({ endpoint, method, body, timestamp: Date.now() });
+        // AUTO-CORRECTION: Ensure we strictly store relative paths for new items
+        // This prevents the 'double prefix' bug from happening in the future
+        let safeEndpoint = endpoint;
+        if (safeEndpoint.startsWith('http')) {
+            // Strip domain
+            safeEndpoint = safeEndpoint.replace(/^https?:\/\/[^\/]+/, '');
+        }
+        if (safeEndpoint.startsWith('/api')) {
+            // Strip /api prefix if present (we add it back dynamically)
+            safeEndpoint = safeEndpoint.substring(4);
+        }
+
+        queue.push({ endpoint: safeEndpoint, method, body, timestamp: Date.now() });
         localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
-        console.log(`Action queued for offline sync: ${method} ${endpoint}`);
+        console.log(`Action queued for offline sync: ${method} ${safeEndpoint}`);
     } catch (e) {
         console.error("CRITICAL: Failed to add to offline queue (Quota exceeded?)", e);
-        // If we can't even add to queue, the device is completely full.
-        // We try to clear some cache to make room for user actions (which are more important)
         try {
-            localStorage.removeItem('SIRILA_CACHE_STUDENTS'); // Clear largest cache
+            localStorage.removeItem('SIRILA_CACHE_STUDENTS');
             localStorage.removeItem('SIRILA_CACHE_BOOKS');
-            console.log("Attempted to free space by clearing non-essential caches.");
         } catch (inner) { }
     }
 };
@@ -62,29 +71,63 @@ export const api = {
     // Sync the queue when connection is restored
     processQueue: async () => {
         const queue = JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY) || '[]');
-        if (queue.length === 0) return;
+        if (queue.length === 0) return 0;
 
         console.log(`Processing ${queue.length} queued offline actions...`);
         const remainingQueue = [];
+        const currentBase = GET_BASE_URL();
 
         for (const item of queue) {
             try {
-                // Ensure we use the latest API_URL in case it changed
-                const currentBase = GET_BASE_URL();
-                // If the item.endpoint was absolute (contained http), we might need to update it
-                // but usually it's better to store relative paths in the queue
-                const endpoint = item.endpoint.includes('/api') ?
-                    item.endpoint.substring(item.endpoint.indexOf('/api')) :
-                    item.endpoint;
+                // ROBUST URL RECONSTRUCTION
+                // We need to handle legacy items that might have absolute URLs or '/api' prefixes
+                let relativePath = item.endpoint;
 
-                const res = await fetch(`${currentBase}${endpoint}`, {
+                // 1. Strip Domain if present
+                if (relativePath.startsWith('http')) {
+                    relativePath = relativePath.replace(/^https?:\/\/[^\/]+/, '');
+                }
+
+                // 2. Strip '/api' prefix if present
+                // This ensures we have a clean path like '/assignments' or '/students'
+                if (relativePath.startsWith('/api')) {
+                    relativePath = relativePath.substring(4);
+                }
+
+                // 3. Ensure it starts with /
+                if (!relativePath.startsWith('/')) {
+                    relativePath = '/' + relativePath;
+                }
+
+                // 4. Construct final URL
+                // currentBase is usually '/api' or 'http://localhost:3001/api'
+                // relativePath is '/assignments'
+                // Result: '/api/assignments' -> CORRECT
+                const finalUrl = `${currentBase}${relativePath}`;
+
+                const res = await fetch(finalUrl, {
                     method: item.method,
                     headers: { 'Content-Type': 'application/json' },
                     body: item.body ? JSON.stringify(item.body) : null
                 });
-                if (!res.ok) throw new Error(`Server error: ${res.status}`);
+
+                if (!res.ok) {
+                    // Special Handling for 404 (Resource not found)
+                    // If we try to delete something that doesn't exist, we should probably just drop it
+                    if (res.status === 404 && item.method === 'DELETE') {
+                        console.warn(`Dropping 404 DELETE item: ${item.endpoint}`);
+                        continue; // Don't add to remainingQueue
+                    }
+                    // Special Handling for 409 (Conflict/Duplicate)
+                    if (res.status === 409) {
+                        console.warn(`Dropping 409 Conflict item: ${item.endpoint}`);
+                        continue;
+                    }
+
+                    throw new Error(`Server error: ${res.status}`);
+                }
             } catch (e) {
-                console.error(`Failed to sync item:`, item, e);
+                console.error(`Failed to sync item: ${item.endpoint}`, e);
                 remainingQueue.push(item);
             }
         }
@@ -195,7 +238,7 @@ export const api = {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(assignment)
             });
         } catch (e) {
-            addToQueue(`${API_URL}/assignments`, 'POST', assignment);
+            addToQueue(`/assignments`, 'POST', assignment);
         }
     },
 
@@ -204,7 +247,7 @@ export const api = {
             const res = await fetch(`${API_URL}/assignments/${id}`, { method: 'DELETE' });
             if (!res.ok) throw new Error(`Status ${res.status}`);
         } catch (e) {
-            addToQueue(`${API_URL}/assignments/${id}`, 'DELETE', null);
+            addToQueue(`/assignments/${id}`, 'DELETE', null);
         }
     },
 
@@ -214,7 +257,7 @@ export const api = {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(event)
             });
         } catch (e) {
-            addToQueue(`${API_URL}/events`, 'POST', event);
+            addToQueue(`/events`, 'POST', event);
         }
     },
 
@@ -222,7 +265,7 @@ export const api = {
         try {
             await fetch(`${API_URL}/events/${id}`, { method: 'DELETE' });
         } catch (e) {
-            addToQueue(`${API_URL}/events/${id}`, 'DELETE', null);
+            addToQueue(`/events/${id}`, 'DELETE', null);
         }
     },
 
@@ -232,7 +275,7 @@ export const api = {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(log)
             });
         } catch (e) {
-            addToQueue(`${API_URL}/behavior`, 'POST', log);
+            addToQueue(`/behavior`, 'POST', log);
         }
     },
 
@@ -240,7 +283,7 @@ export const api = {
         try {
             await fetch(`${API_URL}/behavior/${id}`, { method: 'DELETE' });
         } catch (e) {
-            addToQueue(`${API_URL}/behavior/${id}`, 'DELETE', null);
+            addToQueue(`/behavior/${id}`, 'DELETE', null);
         }
     },
 
@@ -256,7 +299,7 @@ export const api = {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(event)
             });
         } catch (e) {
-            addToQueue(`${API_URL}/finance`, 'POST', event);
+            addToQueue(`/finance`, 'POST', event);
         }
     },
 
@@ -264,7 +307,7 @@ export const api = {
         try {
             await fetch(`${API_URL}/finance/${id}`, { method: 'DELETE' });
         } catch (e) {
-            addToQueue(`${API_URL}/finance/${id}`, 'DELETE', null);
+            addToQueue(`/finance/${id}`, 'DELETE', null);
         }
     },
 
@@ -274,7 +317,7 @@ export const api = {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(config)
             });
         } catch (e) {
-            addToQueue(`${API_URL}/config`, 'POST', config);
+            addToQueue(`/config`, 'POST', config);
         }
     },
 
@@ -309,7 +352,7 @@ export const api = {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(notification)
             });
         } catch (e) {
-            addToQueue(`${API_URL}/notifications`, 'POST', notification);
+            addToQueue(`/notifications`, 'POST', notification);
         }
     },
 
@@ -317,7 +360,7 @@ export const api = {
         try {
             await fetch(`${API_URL}/notifications/${id}/read`, { method: 'PUT' });
         } catch (e) {
-            addToQueue(`${API_URL}/notifications/${id}/read`, 'PUT', null);
+            addToQueue(`/notifications/${id}/read`, 'PUT', null);
         }
     },
 
@@ -325,7 +368,7 @@ export const api = {
         try {
             await fetch(`${API_URL}/notifications/${id}`, { method: 'DELETE' });
         } catch (e) {
-            addToQueue(`${API_URL}/notifications/${id}`, 'DELETE', null);
+            addToQueue(`/notifications/${id}`, 'DELETE', null);
         }
     },
 
@@ -336,7 +379,7 @@ export const api = {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(task)
             });
         } catch (e) {
-            addToQueue(`${API_URL}/staff-tasks`, 'POST', task);
+            addToQueue(`/staff-tasks`, 'POST', task);
         }
     },
 
@@ -344,7 +387,7 @@ export const api = {
         try {
             await fetch(`${API_URL}/staff-tasks/${id}`, { method: 'DELETE' });
         } catch (e) {
-            addToQueue(`${API_URL}/staff-tasks/${id}`, 'DELETE', null);
+            addToQueue(`/staff-tasks/${id}`, 'DELETE', null);
         }
     },
 
@@ -359,7 +402,7 @@ export const api = {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ studentId, message, sender })
             });
         } catch (e) {
-            addToQueue(`${API_URL}/parent/messages`, 'POST', { studentId, message, sender });
+            addToQueue(`/parent/messages`, 'POST', { studentId, message, sender });
         }
     },
 
@@ -374,7 +417,7 @@ export const api = {
                 method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ studentId })
             });
         } catch (e) {
-            addToQueue(`${API_URL}/parent/messages/read`, 'PUT', { studentId });
+            addToQueue(`/parent/messages/read`, 'PUT', { studentId });
         }
     },
 
@@ -382,7 +425,7 @@ export const api = {
         try {
             await fetch(`${API_URL}/parent/messages/${studentId}`, { method: 'DELETE' });
         } catch (e) {
-            addToQueue(`${API_URL}/parent/messages/${studentId}`, 'DELETE', null);
+            addToQueue(`/parent/messages/${studentId}`, 'DELETE', null);
         }
     },
 
@@ -418,4 +461,3 @@ export const api = {
         return await res.json();
     }
 };
-
