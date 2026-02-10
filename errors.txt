@@ -1,0 +1,11 @@
+components/ActivitiesView.tsx(94,132): error TS2339: Property 'questions' does not exist on type 'InteractiveData'.
+  Property 'questions' does not exist on type 'WorksheetData'.
+components/ActivitiesView.tsx(596,29): error TS2367: This comparison appears to be unintentional because the types '"HTML_GAME" | "PLANNING"' and '"QUIZ"' have no overlap.
+components/LibraryView.tsx(167,134): error TS2322: Type '{ className: string; size: number; "aria-hidden": "true"; title: string; }' is not assignable to type 'IntrinsicAttributes & LucideProps'.
+  Property 'title' does not exist on type 'IntrinsicAttributes & LucideProps'.
+components/ParentsPortal.tsx(69,136): error TS2339: Property 'imageUrl' does not exist on type 'InteractiveData'.
+  Property 'imageUrl' does not exist on type 'HtmlGameData'.
+components/ParentsPortal.tsx(69,176): error TS2339: Property 'questions' does not exist on type 'InteractiveData'.
+  Property 'questions' does not exist on type 'WorksheetData'.
+components/ParentsPortal.tsx(136,31): error TS2339: Property 'submitAssignment' does not exist on type '{ processQueue: () => Promise<number>; clearQueue: () => void; getQueueLength: () => any; setServerUrl: (url: string) => void; checkStatus: () => Promise<any>; syncAll: (data: { students: Student[]; ... 5 more ...; books: Book[]; }) => Promise<...>; ... 29 more ...; getAssignmentById: (id: string) => Promise<...>; }'.
+components/Sidebar.tsx(144,123): error TS2367: This comparison appears to be unintentional because the types '"LANDING" | "DASHBOARD" | "ATTENDANCE" | "STUDENTS" | "TOOLS" | "BEHAVIOR" | "ACTIVITIES" | "HOMEWORK_QR" | "FINANCE" | "DOCUMENTS" | "SETTINGS" | "PARENTS_PORTAL" | "COMMUNICATIONS" | "DIRECTOR" | "LIBRARY" | "LITERACY"' and '"USAER"' have no overlap.

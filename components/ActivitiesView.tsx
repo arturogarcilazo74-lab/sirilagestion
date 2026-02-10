@@ -61,6 +61,11 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
   const [draggableItems, setDraggableItems] = useState<DraggableItem[]>([]);
   const [newDraggableText, setNewDraggableText] = useState('');
 
+  // Simple Activity Extra Data
+  const [newInstructions, setNewInstructions] = useState('');
+  const [newExternalLinks, setNewExternalLinks] = useState<string[]>([]);
+  const [currentLinkInput, setCurrentLinkInput] = useState('');
+
   // New AI Worksheet State
   const [aiWorksheetType, setAiWorksheetType] = useState<string>('');
   const [aiWorksheetTopic, setAiWorksheetTopic] = useState('');
@@ -86,7 +91,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
     let fullAssignment = assignment;
 
     // Lazy load full data if missing or stripped (Optimized Load Support)
-    const isStripped = assignment.interactiveData && (assignment.interactiveData as any).hasContent && !assignment.interactiveData.questions;
+    const isStripped = assignment.interactiveData && (assignment.interactiveData as any).hasContent && !(assignment.interactiveData as any).questions;
 
     if (isStripped) {
       try {
@@ -187,7 +192,9 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
         dueDate: newDate,
         type: activityType === 'TASK' ? 'TASK' : 'INTERACTIVE',
         isVisibleInParentsPortal: isVisibleInParentsPortal,
-        targetGroup: targetGroup.trim().toUpperCase() || 'GLOBAL'
+        targetGroup: targetGroup.trim().toUpperCase() || 'GLOBAL',
+        instructions: (activityType === 'TASK' && newInstructions.trim()) ? newInstructions.trim() : undefined,
+        externalLinks: (activityType === 'TASK' && newExternalLinks.length > 0) ? newExternalLinks : undefined
       };
 
       if (activityType === 'QUIZ') {
@@ -256,7 +263,11 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
       setAiWorksheetType('');
       setImageError(false);
       setInteractiveZones([]);
+      setInteractiveZones([]);
       setEditorTool('SELECT');
+      setNewInstructions('');
+      setNewExternalLinks([]);
+      setCurrentLinkInput('');
     }
   };
 
@@ -500,6 +511,81 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                   </div>
                 </section>
 
+                {/* 2.5 Simple Activity Details */}
+                {activityType === 'TASK' && (
+                  <section className="animate-fadeIn">
+                    <label className="block text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">2.5 Detalles de la Tarea</label>
+                    <div className="bg-slate-50 p-4 md:p-6 rounded-2xl border border-slate-100 space-y-4">
+
+                      {/* Instructions */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-bold text-slate-700">Instrucciones (Opcional)</label>
+                        <textarea
+                          placeholder="Escribe una pequeña instrucción para el alumno..."
+                          value={newInstructions}
+                          onChange={(e) => setNewInstructions(e.target.value)}
+                          className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium h-24 resize-none"
+                        />
+                      </div>
+
+                      {/* Links */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-bold text-slate-700">Enlaces / Videos (Opcional)</label>
+                        <div className="flex gap-2">
+                          <input
+                            type="url"
+                            placeholder="Ej. https://youtube.com/..."
+                            value={currentLinkInput}
+                            onChange={(e) => setCurrentLinkInput(e.target.value)}
+                            className="flex-1 p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                if (currentLinkInput.trim()) {
+                                  setNewExternalLinks([...newExternalLinks, currentLinkInput.trim()]);
+                                  setCurrentLinkInput('');
+                                }
+                              }
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (currentLinkInput.trim()) {
+                                setNewExternalLinks([...newExternalLinks, currentLinkInput.trim()]);
+                                setCurrentLinkInput('');
+                              }
+                            }}
+                            className="bg-indigo-600 text-white px-4 rounded-xl font-bold hover:bg-indigo-700"
+                          >
+                            <Plus size={20} />
+                          </button>
+                        </div>
+
+                        {/* Link List */}
+                        {newExternalLinks.length > 0 && (
+                          <div className="mt-2 space-y-2">
+                            {newExternalLinks.map((link, idx) => (
+                              <div key={idx} className="flex items-center justify-between bg-white p-2 rounded-lg border border-slate-200 text-sm">
+                                <a href={link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate max-w-[80%] flex items-center gap-1">
+                                  <Play size={12} /> {link}
+                                </a>
+                                <button
+                                  type="button"
+                                  onClick={() => setNewExternalLinks(newExternalLinks.filter((_, i) => i !== idx))}
+                                  className="text-red-400 hover:text-red-500 p-1"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </section>
+                )}
+
                 {/* 3. Specific Configuration */}
                 {activityType !== 'TASK' && (
                   <section className="animate-slideUp">
@@ -507,9 +593,8 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                       3. Editor de Contenido - {
                         activityType === 'WORKSHEET' ? 'Ficha Interactiva' :
                           activityType === 'QUIZ' ? 'Cuestionario' :
-                            activityType === 'QUIZ' ? 'Cuestionario' :
-                              activityType === 'HTML_GAME' ? 'Juego Lúdico (HTML5)' :
-                                'Planeación Didáctica NEM'
+                            activityType === 'HTML_GAME' ? 'Juego Lúdico (HTML5)' :
+                              'Planeación Didáctica NEM'
                       }
                     </label>
 
@@ -1207,8 +1292,8 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
               </button>
             </div>
 
-          </div>
-        </div>
+          </div >
+        </div >
       )}
 
       {/* Tracking Table / Matrix */}

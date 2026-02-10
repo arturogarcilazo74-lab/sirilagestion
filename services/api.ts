@@ -459,5 +459,33 @@ export const api = {
         const res = await fetch(`${API_URL}/assignments/${id}`);
         if (!res.ok) throw new Error('Failed to fetch assignment details');
         return await res.json();
+    },
+
+    submitAssignment: async (studentId: string, assignmentId: string, result: { score: number, type: string }) => {
+        // 1. Fetch current full state (inefficient but safe fallback)
+        const state = await api.checkStatus();
+        const student = state.students.find((s: Student) => s.id === studentId);
+        if (!student) throw new Error("Student not found");
+
+        // 2. Update student record
+        const updatedStudent = { ...student };
+
+        // Ensure arrays init
+        if (!updatedStudent.completedAssignmentIds) updatedStudent.completedAssignmentIds = [];
+        if (!updatedStudent.assignmentResults) updatedStudent.assignmentResults = {};
+        if (!updatedStudent.grades) updatedStudent.grades = [];
+
+        // Add if not present
+        if (!updatedStudent.completedAssignmentIds.includes(assignmentId)) {
+            updatedStudent.completedAssignmentIds.push(assignmentId);
+            updatedStudent.assignmentsCompleted = (updatedStudent.assignmentsCompleted || 0) + 1;
+        }
+
+        // Update score
+        updatedStudent.assignmentResults[assignmentId] = result.score;
+
+        // 3. Save back
+        await api.saveStudent(updatedStudent);
+        return updatedStudent;
     }
 };

@@ -66,7 +66,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
         let fullAssignment = assignment;
 
         // Lazy load full data if missing or stripped (Optimized Load Support)
-        const isStripped = assignment.interactiveData && (assignment.interactiveData as any).hasContent && !assignment.interactiveData.imageUrl && !assignment.interactiveData.questions;
+        const isStripped = assignment.interactiveData && (assignment.interactiveData as any).hasContent && !(assignment.interactiveData as any).imageUrl && !(assignment.interactiveData as any).questions;
 
         if (!assignment.interactiveData || isStripped) {
             try {
@@ -1011,6 +1011,30 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                                         Vence: {new Date(assign.dueDate).toLocaleDateString()}
                                                         {assign.description && <span className="ml-2 opacity-70">- {assign.description}</span>}
                                                     </p>
+
+                                                    {assign.instructions && (
+                                                        <div className="bg-slate-50 p-3 rounded-lg text-xs text-slate-600 mb-3 border border-slate-100">
+                                                            <strong className="block text-slate-700 mb-1">Instrucciones:</strong>
+                                                            {assign.instructions}
+                                                        </div>
+                                                    )}
+
+                                                    {assign.externalLinks && assign.externalLinks.length > 0 && (
+                                                        <div className="space-y-2 mb-3">
+                                                            {assign.externalLinks.map((link, i) => (
+                                                                <a
+                                                                    key={i}
+                                                                    href={link}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="flex items-center gap-2 p-2 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-bold hover:bg-indigo-100 transition-colors border border-indigo-100/50"
+                                                                >
+                                                                    <Play size={12} fill="currentColor" />
+                                                                    Ver Recurso {assign.externalLinks && assign.externalLinks.length > 1 ? i + 1 : ''}
+                                                                </a>
+                                                            ))}
+                                                        </div>
+                                                    )}
 
                                                     {isInteractive && (
                                                         <button
