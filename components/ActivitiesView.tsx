@@ -240,7 +240,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
         newAssignment.description = nemPlanResult; // Save the plan as description in both cases
       } else if (activityType === 'HTML_GAME') {
         if (!htmlGameContent) {
-          alert("Debes generar el juego antes de guardar.");
+          alert("Debes generar o subir el juego antes de guardar.");
           return;
         }
         newAssignment.interactiveData = {
@@ -1173,6 +1173,35 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                               >
                                 {isGenerating ? 'Creando Juego...' : 'Generar Juego (IA)'}
                               </button>
+
+                              <div className="relative pt-4 border-t border-orange-100">
+                                <label className="block text-[10px] font-bold text-orange-400 uppercase tracking-widest mb-2 text-center">Opcional: Subir Juego Propio</label>
+                                <div className="relative group">
+                                  <input
+                                    type="file"
+                                    accept=".html"
+                                    className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                                    onChange={(e) => {
+                                      const file = e.target.files?.[0];
+                                      if (file) {
+                                        const reader = new FileReader();
+                                        reader.onload = (ev) => {
+                                          const content = ev.target?.result as string;
+                                          setHtmlGameContent(content);
+                                          if (!newTitle) setNewTitle(file.name.replace('.html', ''));
+                                          alert("¡Archivo HTML cargado correctamente!");
+                                        };
+                                        reader.readAsText(file);
+                                      }
+                                    }}
+                                  />
+                                  <div className="bg-white border-2 border-dashed border-orange-200 rounded-xl p-4 text-center group-hover:border-orange-400 group-hover:bg-orange-50 transition-all flex flex-col items-center gap-1">
+                                    <Upload className="text-orange-400" size={20} />
+                                    <span className="text-sm font-bold text-orange-600">Subir archivo .html</span>
+                                    <p className="text-[10px] text-orange-400">Selecciona un archivo interactivo</p>
+                                  </div>
+                                </div>
+                              </div>
                             </div>
 
                             <div className="bg-slate-900 rounded-xl overflow-hidden border-4 border-slate-800 relative aspect-video shadow-inner flex items-center justify-center">
@@ -1380,6 +1409,15 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                                   if (assignment.assignmentType === 'NEM_EVALUATION' && !isCompleted) {
                                     // Open Grading Modal if it's a teacher evaluation and not yet completed
                                     handleOpenGrading(assignment, student.id);
+                                  } else if (isCompleted && assignment.type === 'INTERACTIVE') {
+                                    // Allow manual score override for interactive activities
+                                    const newScore = prompt(`Actualizar calificación para "${assignment.title}" (0-10):`, score?.toString() || "10");
+                                    if (newScore !== null) {
+                                      const s = parseInt(newScore);
+                                      if (!isNaN(s) && s >= 0 && s <= 10) {
+                                        onToggleAssignment(student.id, assignment.id, s);
+                                      }
+                                    }
                                   } else {
                                     // Standard toggle behavior
                                     onToggleAssignment(student.id, assignment.id);
