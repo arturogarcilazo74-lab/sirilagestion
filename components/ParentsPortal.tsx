@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { Student, SchoolEvent, Notification, Assignment, DraggableItem, InteractiveZone, BehaviorLog } from '../types';
-import { Bell, Calendar as CalendarIcon, LogOut, MessageCircle, User, CheckCircle, Smartphone, Send, Play, Trophy, HelpCircle, X, Check, AlertCircle, BookOpen, Circle, Move, Trash2, LayoutDashboard } from 'lucide-react';
+import { Bell, Calendar as CalendarIcon, LogOut, MessageCircle, User, CheckCircle, Smartphone, Send, Play, Trophy, HelpCircle, X, Check, AlertCircle, BookOpen, Circle, Move, Trash2, LayoutDashboard, Medal, Star, Award } from 'lucide-react';
 
 interface ParentsPortalProps {
     onBack: () => void;
@@ -47,6 +47,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
     // New Detail State
     const [behaviorLogs, setBehaviorLogs] = useState<BehaviorLog[]>([]);
     const [activeDetail, setActiveDetail] = useState<'GRADES' | 'ATTENDANCE' | 'BEHAVIOR' | null>(null);
+    const [honorRoll, setHonorRoll] = useState<any[]>([]);
 
     // Load Assignments on Login
     useEffect(() => {
@@ -580,11 +581,23 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
 
                 // Fetch Behavior Logs
                 api.getStudentBehaviorLogs(res.student.id).then(logs => setBehaviorLogs(logs)).catch(err => console.error(err));
+
+                // Fetch Honor Roll
+                loadHonorRoll();
             }
         } catch (err: any) {
             setError(err.message || 'Error al iniciar sesión');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const loadHonorRoll = async () => {
+        try {
+            const hr = await api.getHonorRoll();
+            setHonorRoll(hr);
+        } catch (e) {
+            console.error("Failed to load honor roll", e);
         }
     };
 
@@ -595,6 +608,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
         const interval = setInterval(() => {
             loadMessages(student.id);
             loadNotifications(student.id);
+            loadHonorRoll();
         }, 10000);
 
         return () => clearInterval(interval);
@@ -923,6 +937,81 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                 <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">Puntos</span>
                             </div>
                         </div>
+
+                        {/* HONOR ROLL SECTION - ONLY IF STUDENT IS IN IT */}
+                        {(() => {
+                            const studentRank = honorRoll.findIndex(h => h.id === student?.id) + 1;
+                            if (studentRank === 0) return null;
+
+                            return (
+                                <div className="bg-gradient-to-br from-indigo-600 to-purple-700 p-6 rounded-[2rem] text-white shadow-xl relative overflow-hidden animate-bounce-subtle">
+                                    <div className="absolute top-0 right-0 p-4 opacity-20 transform translate-x-4 -translate-y-4">
+                                        <Trophy size={100} />
+                                    </div>
+
+                                    <div className="relative z-10">
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <div className="bg-white/20 p-2 rounded-xl backdrop-blur-md">
+                                                <Award className="text-yellow-300" size={24} />
+                                            </div>
+                                            <div>
+                                                <h3 className="font-black text-lg tracking-tight uppercase">¡Cuadro de Honor!</h3>
+                                                <p className="text-xs text-indigo-100 font-medium opacity-90">Estás entre los mejores de la escuela</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-white/10 backdrop-blur-lg border border-white/10 rounded-2xl p-4 mt-4 flex items-center justify-between">
+                                            <div className="flex items-center gap-4">
+                                                <div className="relative">
+                                                    <img
+                                                        src={student?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(student?.name || '')}&background=random`}
+                                                        className="w-12 h-12 rounded-full border-2 border-yellow-400 shadow-lg"
+                                                        alt="You"
+                                                    />
+                                                    <div className="absolute -bottom-1 -right-1 bg-yellow-400 text-indigo-900 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black border-2 border-indigo-600">
+                                                        {studentRank}
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <p className="font-bold text-sm">Tu Lugar actual</p>
+                                                    <p className="text-xs text-indigo-100">Basado en puntos de conducta</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="text-right">
+                                                <div className="flex items-center justify-end gap-1 text-yellow-300">
+                                                    <Star size={12} fill="currentColor" />
+                                                    <span className="text-xl font-black">{student?.behaviorPoints || 0}</span>
+                                                </div>
+                                                <p className="text-[10px] uppercase font-bold tracking-widest text-indigo-200">Puntos</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-4 flex gap-2 overflow-x-auto pb-2 custom-scrollbar-white">
+                                            {honorRoll.slice(0, 5).map((h, idx) => (
+                                                <div key={h.id} className={`flex-shrink-0 flex items-center gap-2 p-2 rounded-xl border ${h.id === student?.id ? 'bg-white text-indigo-600 border-white' : 'bg-white/5 border-white/10 text-white/80'}`}>
+                                                    <span className="text-[10px] font-black w-3">{idx + 1}</span>
+                                                    <img
+                                                        src={h.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(h.name)}&background=random`}
+                                                        className="w-6 h-6 rounded-full"
+                                                        alt=""
+                                                    />
+                                                    <span className="text-[10px] font-bold truncate max-w-[60px]">{h.id === student?.id ? 'Tú' : h.name.split(' ')[0]}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        <div className="mt-4 text-center">
+                                            <p className="text-[11px] font-bold italic text-indigo-50">
+                                                {studentRank === 1 ? "¡Eres el mejor! Sigue así, campeón." :
+                                                    studentRank <= 3 ? "¡Increíble! Estás en el podio de honor." :
+                                                        "¡Excelente trabajo! Sigue esforzándote para subir más."}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })()}
 
                         {/* Recent Events Preview */}
                         <div>

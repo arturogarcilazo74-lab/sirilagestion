@@ -65,6 +65,35 @@ body {
     animation: float 6s ease-in-out infinite;
 }
 
+@keyframes bounce-subtle {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-3px);
+    }
+}
+
+.animate-bounce-subtle {
+    animation: bounce-subtle 3s ease-in-out infinite;
+}
+
+.custom-scrollbar-white::-webkit-scrollbar {
+    height: 4px;
+}
+
+.custom-scrollbar-white::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.custom-scrollbar-white::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 10px;
+}
+
 @media print {
 
     /* Nuclear Option: Hide BODY but keep it flow-root */

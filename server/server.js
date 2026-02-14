@@ -236,6 +236,44 @@ app.get('/api/students/avatars', async (req, res) => {
     }
 });
 
+// NEW: Endpoint to fetch Honor Roll (Top performers by behavior points)
+app.get('/api/honor-roll', async (req, res) => {
+    try {
+        if (!useMySQL) {
+            const data = readJSON();
+            const honorRoll = [...data.students]
+                .sort((a, b) => (b.behaviorPoints || 0) - (a.behaviorPoints || 0))
+                .slice(0, 10) // Top 10
+                .map(s => ({ id: s.id, name: s.name, avatar: s.avatar, behaviorPoints: s.behaviorPoints || 0 }));
+            res.json(honorRoll);
+            return;
+        }
+
+        const pool = getPool();
+        const [rows] = await pool.query('SELECT id, name, avatar, behavior_points, data_json FROM students ORDER BY behavior_points DESC LIMIT 10');
+
+        const honorRoll = rows.map(r => {
+            let avatar = r.avatar;
+            if ((!avatar || avatar === "PENDING_LOAD") && r.data_json) {
+                try {
+                    const parsed = typeof r.data_json === 'string' ? JSON.parse(r.data_json) : (r.data_json || {});
+                    avatar = parsed.avatar;
+                } catch (e) { }
+            }
+            return {
+                id: r.id,
+                name: r.name,
+                avatar: (avatar && avatar.length > 100) ? avatar : "",
+                behaviorPoints: r.behavior_points || 0
+            };
+        });
+        res.json(honorRoll);
+    } catch (error) {
+        console.error("Honor Roll fetch error:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // NEW: Endpoint to fetch specific assignment data (interactive worksheets)
 app.get('/api/assignments/:id', async (req, res) => {
     try {

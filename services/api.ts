@@ -322,6 +322,12 @@ export const api = {
     },
 
     // --- PARENT PORTAL ---
+    getHonorRoll: async () => {
+        const res = await fetch(`${API_URL}/honor-roll`);
+        if (!res.ok) throw new Error('Failed to fetch honor roll');
+        return await res.json();
+    },
+
     parentLogin: async (loginId: string) => {
         const res = await fetch(`${API_URL}/parent/login`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ loginId })
