@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { Student, SchoolConfig, BehaviorLog } from '../types';
+import { Student, SchoolConfig, BehaviorLog, Assignment } from '../types';
 import { generateReportCard, generateBehaviorReport, generateStudentCredentials } from '../services/pdfGenerator';
-import { Plus, Search, Edit2, Trash2, X, Save, User, Phone, Image as ImageIcon, QrCode, Download, FileText, Printer, Building2, Calendar, MapPin, Hash, GraduationCap, AlertCircle, Upload, FileSpreadsheet, Cake, CheckCircle, FileDown, Users, RectangleHorizontal, PieChart } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, X, Save, User, Phone, Image as ImageIcon, QrCode, Download, FileText, Printer, Building2, Calendar, MapPin, Hash, GraduationCap, AlertCircle, Upload, FileSpreadsheet, Cake, CheckCircle, FileDown, Users, RectangleHorizontal, PieChart, CheckCircle2, Circle } from 'lucide-react';
 import { GroupAnalysisModal } from './GroupAnalysisModal';
 
 interface StudentsViewProps {
@@ -12,6 +12,7 @@ interface StudentsViewProps {
   onImport?: (students: Partial<Student>[]) => void;
   config: SchoolConfig;
   logs: BehaviorLog[];
+  assignments?: Assignment[];
   readOnly?: boolean;
 }
 
@@ -36,7 +37,7 @@ const INITIAL_FORM_DATA: Omit<Student, 'id' | 'attendance' | 'behaviorPoints' | 
   guardianOccupation: ''
 };
 
-export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onEdit, onDelete, onImport, config, logs, readOnly }) => {
+export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onEdit, onDelete, onImport, config, logs, assignments = [], readOnly }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAnalysisOpen, setIsAnalysisOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -1529,6 +1530,51 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
                     )}
                   </tbody>
                 </table>
+              </div>
+
+              {/* Assignments Tracking */}
+              <div className="mb-8">
+                <h3 className="text-sm font-bold uppercase text-slate-600 border-b border-slate-200 pb-1 mb-4">Seguimiento de Actividades y Tareas</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <h4 className="text-[10px] font-bold text-orange-600 uppercase tracking-wider mb-3 flex items-center gap-1">
+                      <div className="w-1.5 h-1.5 rounded-full bg-orange-500"></div>
+                      Pendientes
+                    </h4>
+                    <div className="space-y-2">
+                      {assignments.filter(a => !reportStudent.completedAssignmentIds?.includes(a.id)).length === 0 ? (
+                        <div className="text-[10px] text-slate-400 text-center py-2 italic">Sin pendientes</div>
+                      ) : (
+                        assignments.filter(a => !reportStudent.completedAssignmentIds?.includes(a.id)).map(a => (
+                          <div key={a.id} className="flex justify-between items-center bg-white p-2 rounded-lg border border-slate-100">
+                            <span className="text-[10px] font-bold text-slate-700 truncate">{a.title}</span>
+                            <span className="text-[9px] text-slate-400">{new Date(a.dueDate).toLocaleDateString()}</span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <h4 className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider mb-3 flex items-center gap-1">
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+                      Completadas
+                    </h4>
+                    <div className="space-y-2">
+                      {assignments.filter(a => reportStudent.completedAssignmentIds?.includes(a.id)).length === 0 ? (
+                        <div className="text-[10px] text-slate-400 text-center py-2 italic font-medium">Sin entregas</div>
+                      ) : (
+                        assignments.filter(a => reportStudent.completedAssignmentIds?.includes(a.id)).map(a => (
+                          <div key={a.id} className="flex justify-between items-center bg-white p-2 rounded-lg border border-emerald-100">
+                            <span className="text-[10px] font-bold text-slate-700 truncate">{a.title}</span>
+                            {reportStudent.assignmentResults?.[a.id] !== undefined && (
+                              <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-1 rounded">{reportStudent.assignmentResults[a.id]}</span>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Behavior History */}

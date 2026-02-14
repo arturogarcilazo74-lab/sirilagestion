@@ -292,6 +292,7 @@ const App: React.FC = () => {
                 onImport={(data) => store.handleImportStudents(data, currentUser?.group)}
                 config={store.schoolConfig}
                 logs={visibleLogs}
+                assignments={visibleAssignments}
               />
             );
           })()}

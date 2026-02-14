@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'; // AI Feature Enabled
 import { Student, Assignment, InteractiveQuestion, DraggableItem, InteractiveZone } from '../types';
 import { api } from '../services/api';
-import { CheckCircle, Circle, Plus, Trash2, Calendar, BarChart3, AlertCircle, X, Save, Trophy, TrendingUp, Sparkles, HelpCircle, Eye, EyeOff, Upload, FileText, Image as ImageIcon, Move, Play, BrainCircuit, Settings, Check, MessageCircle, Gamepad2 } from 'lucide-react';
+import { CheckCircle, Circle, Plus, Trash2, Calendar, BarChart3, AlertCircle, X, Save, Trophy, TrendingUp, Sparkles, HelpCircle, Eye, EyeOff, Upload, FileText, Image as ImageIcon, Move, Play, BrainCircuit, Settings, Check, MessageCircle, Gamepad2, ChevronDown, ChevronUp, Users } from 'lucide-react';
 import { sendWhatsAppMessage, getTaskMessage } from '../whatsappUtils';
 
 import { generateInteractiveQuiz, generateInteractiveQuizFromContext, generateWorksheetSVG, generateCompleteWorksheet, autoDetectWorksheetZones, generateNEMPlanning, generateHtmlGame } from '../services/ai';
@@ -86,6 +86,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
   const [gradingAssignment, setGradingAssignment] = useState<Assignment | null>(null);
   const [gradingStudentId, setGradingStudentId] = useState<string | null>(null);
   const [gradingScores, setGradingScores] = useState<Record<string, number>>({});
+  const [expandedStudentId, setExpandedStudentId] = useState<string | null>(null);
 
   const handleOpenGrading = async (assignment: Assignment, studentId: string) => {
     let fullAssignment = assignment;
@@ -1326,7 +1327,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
       )}
 
       {/* Tracking Table / Matrix */}
-      <div className="glass-card rounded-2xl flex-1 flex flex-col overflow-hidden max-w-[85vw] md:max-w-full">
+      <div className="glass-card rounded-2xl flex-1 flex flex-col overflow-hidden w-full md:max-w-full">
         {assignments.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-slate-400">
             <div className="p-6 bg-slate-50 rounded-full mb-4">
@@ -1336,117 +1337,198 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
             <p className="text-sm mt-2">Crea una nueva actividad para comenzar el seguimiento.</p>
           </div>
         ) : (
-          <div className="flex-1 overflow-x-auto custom-scrollbar relative">
-            <table className="w-full text-left border-collapse min-w-[800px]">
-              <thead className="bg-slate-50/90 backdrop-blur-sm sticky top-0 z-20 shadow-sm">
-                <tr>
-                  <th className="p-4 font-bold text-slate-600 sticky left-0 bg-slate-50 z-30 w-48 md:w-64 border-r border-slate-200 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">Estudiante</th>
-                  <th className="p-4 font-bold text-slate-600 w-32 md:w-48 bg-slate-50 z-20 text-center">Progreso</th>
-                  {assignments.map(assignment => (
-                    <th key={assignment.id} className="p-4 font-medium text-slate-600 min-w-[180px] border-l border-slate-200 relative group bg-slate-50">
-                      <div className="flex justify-between items-start gap-2">
-                        <span>{assignment.title}</span>
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            onClick={() => {
-                              const msg = getTaskMessage(assignment.title, new Date(assignment.dueDate).toLocaleDateString(), assignment.description);
-                              const encodedMsg = encodeURIComponent(msg);
-                              window.open(`https://wa.me/?text=${encodedMsg}`, '_blank');
-                            }}
-                            className="text-green-500 hover:text-green-600 p-0.5"
-                            title="Compartir por WhatsApp"
-                          >
-                            <MessageCircle size={14} />
-                          </button>
-                          <button onClick={() => onDeleteAssignment(assignment.id)} className="text-slate-300 hover:text-red-500 transition-colors" aria-label="Eliminar actividad">
-                            <Trash2 size={14} />
-                          </button>
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block flex-1 overflow-x-auto custom-scrollbar relative">
+              <table className="w-full text-left border-collapse min-w-[800px]">
+                <thead className="bg-slate-50/90 backdrop-blur-sm sticky top-0 z-20 shadow-sm">
+                  <tr>
+                    <th className="p-4 font-bold text-slate-600 sticky left-0 bg-slate-50 z-30 w-48 md:w-64 border-r border-slate-200 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">Estudiante</th>
+                    <th className="p-4 font-bold text-slate-600 w-32 md:w-48 bg-slate-50 z-20 text-center">Progreso</th>
+                    {assignments.map(assignment => (
+                      <th key={assignment.id} className="p-4 font-medium text-slate-600 min-w-[180px] border-l border-slate-200 relative group bg-slate-50">
+                        <div className="flex justify-between items-start gap-2">
+                          <span>{assignment.title}</span>
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={() => {
+                                const msg = getTaskMessage(assignment.title, new Date(assignment.dueDate).toLocaleDateString(), assignment.description);
+                                const encodedMsg = encodeURIComponent(msg);
+                                window.open(`https://wa.me/?text=${encodedMsg}`, '_blank');
+                              }}
+                              className="text-green-500 hover:text-green-600 p-0.5"
+                              title="Compartir por WhatsApp"
+                            >
+                              <MessageCircle size={14} />
+                            </button>
+                            <button onClick={() => onDeleteAssignment(assignment.id)} className="text-slate-300 hover:text-red-500 transition-colors" aria-label="Eliminar actividad">
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                      <div className="text-[10px] text-slate-400 font-normal mt-1 flex items-center gap-1">
-                        <Calendar size={10} />
-                        {new Date(assignment.dueDate).toLocaleDateString()}
-                      </div>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {students.map(student => {
-                  const completedCount = assignments.filter(a => student.completedAssignmentIds?.includes(a.id)).length;
-                  const progress = Math.round((completedCount / assignments.length) * 100);
+                        <div className="text-[10px] text-slate-400 font-normal mt-1 flex items-center gap-1">
+                          <Calendar size={10} />
+                          {new Date(assignment.dueDate).toLocaleDateString()}
+                        </div>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {students.map(student => {
+                    const completedCount = assignments.filter(a => student.completedAssignmentIds?.includes(a.id)).length;
+                    const progress = Math.round((completedCount / assignments.length) * 100);
 
-                  return (
-                    <tr key={student.id} className="hover:bg-slate-50 transition-colors group">
-                      <td className="p-4 sticky left-0 bg-white group-hover:bg-slate-50 z-10 border-r border-slate-100 font-medium text-slate-700 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
-                        <div className="flex items-center gap-3">
-                          <img
-                            src={student.avatar === "PENDING_LOAD" ? `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random` : (student.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random`)}
-                            alt={student.name}
-                            className="w-8 h-8 rounded-full object-cover shadow-sm bg-slate-200"
-                          />
-                          {student.name}
-                        </div>
-                      </td>
-                      <td className="p-4 bg-white group-hover:bg-slate-50 z-0">
-                        <div className="w-full bg-slate-100 rounded-full h-2 mb-1 overflow-hidden">
-                          {/* eslint-disable-next-line */}
-                          <div
-                            className={`h-full rounded-full transition-all duration-500 ${progress === 100 ? 'bg-emerald-500' : 'bg-indigo-500'}`}
-                            style={{ width: `${progress}%` }}
-                          />
-                        </div>
-                        <div className="text-xs text-slate-400 text-center font-bold">{progress}%</div>
-                      </td>
-                      {assignments.map(assignment => {
-                        const isCompleted = student.completedAssignmentIds?.includes(assignment.id);
-                        const score = student.assignmentResults?.[assignment.id];
-                        return (
-                          <td key={`${student.id}-${assignment.id}`} className="p-4 border-l border-slate-100 text-center">
-                            <div className="flex flex-col items-center gap-1">
-                              <button
-                                onClick={() => {
-                                  if (assignment.assignmentType === 'NEM_EVALUATION' && !isCompleted) {
-                                    // Open Grading Modal if it's a teacher evaluation and not yet completed
-                                    handleOpenGrading(assignment, student.id);
-                                  } else if (isCompleted && assignment.type === 'INTERACTIVE') {
-                                    // Allow manual score override for interactive activities
-                                    const newScore = prompt(`Actualizar calificación para "${assignment.title}" (0-10):`, score?.toString() || "10");
-                                    if (newScore !== null) {
-                                      const s = parseInt(newScore);
-                                      if (!isNaN(s) && s >= 0 && s <= 10) {
-                                        onToggleAssignment(student.id, assignment.id, s);
+                    return (
+                      <tr key={student.id} className="hover:bg-slate-50 transition-colors group">
+                        <td className="p-4 sticky left-0 bg-white group-hover:bg-slate-50 z-10 border-r border-slate-100 font-medium text-slate-700 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
+                          <div className="flex items-center gap-3">
+                            <img
+                              src={student.avatar === "PENDING_LOAD" ? `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random` : (student.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random`)}
+                              alt={student.name}
+                              className="w-8 h-8 rounded-full object-cover shadow-sm bg-slate-200"
+                            />
+                            {student.name}
+                          </div>
+                        </td>
+                        <td className="p-4 bg-white group-hover:bg-slate-50 z-0">
+                          <div className="w-full bg-slate-100 rounded-full h-2 mb-1 overflow-hidden">
+                            {/* eslint-disable-next-line */}
+                            <div
+                              className={`h-full rounded-full transition-all duration-500 ${progress === 100 ? 'bg-emerald-500' : 'bg-indigo-500'}`}
+                              style={{ width: `${progress}%` }}
+                            />
+                          </div>
+                          <div className="text-xs text-slate-400 text-center font-bold">{progress}%</div>
+                        </td>
+                        {assignments.map(assignment => {
+                          const isCompleted = student.completedAssignmentIds?.includes(assignment.id);
+                          const score = student.assignmentResults?.[assignment.id];
+                          return (
+                            <td key={`${student.id}-${assignment.id}`} className="p-4 border-l border-slate-100 text-center">
+                              <div className="flex flex-col items-center gap-1">
+                                <button
+                                  onClick={() => {
+                                    if (assignment.assignmentType === 'NEM_EVALUATION' && !isCompleted) {
+                                      // Open Grading Modal if it's a teacher evaluation and not yet completed
+                                      handleOpenGrading(assignment, student.id);
+                                    } else if (isCompleted && assignment.type === 'INTERACTIVE') {
+                                      // Allow manual score override for interactive activities
+                                      const newScore = prompt(`Actualizar calificación para "${assignment.title}" (0-10):`, score?.toString() || "10");
+                                      if (newScore !== null) {
+                                        const s = parseInt(newScore);
+                                        if (!isNaN(s) && s >= 0 && s <= 10) {
+                                          onToggleAssignment(student.id, assignment.id, s);
+                                        }
                                       }
+                                    } else {
+                                      // Standard toggle behavior
+                                      onToggleAssignment(student.id, assignment.id);
                                     }
-                                  } else {
-                                    // Standard toggle behavior
-                                    onToggleAssignment(student.id, assignment.id);
-                                  }
-                                }}
-                                className={`transition-all duration-300 hover:scale-110 active:scale-95 p-2 rounded-full ${isCompleted ? 'text-emerald-500 bg-emerald-50' : 'text-slate-200 hover:text-slate-400 hover:bg-slate-100'
-                                  }`}
-                              >
-                                {isCompleted ? (
-                                  <CheckCircle className="w-6 h-6 fill-emerald-500 text-white" />
-                                ) : (
-                                  <Circle className="w-6 h-6" strokeWidth={2.5} />
+                                  }}
+                                  className={`transition-all duration-300 hover:scale-110 active:scale-95 p-2 rounded-full ${isCompleted ? 'text-emerald-500 bg-emerald-50' : 'text-slate-200 hover:text-slate-400 hover:bg-slate-100'
+                                    }`}
+                                >
+                                  {isCompleted ? (
+                                    <CheckCircle className="w-6 h-6 fill-emerald-500 text-white" />
+                                  ) : (
+                                    <Circle className="w-6 h-6" strokeWidth={2.5} />
+                                  )}
+                                </button>
+                                {isCompleted && score !== undefined && (
+                                  <span className={`text-[10px] font-bold px-1 rounded ${score >= 6 ? 'bg-indigo-50 text-indigo-600' : 'bg-red-50 text-red-600'}`}>
+                                    {score}/10
+                                  </span>
                                 )}
-                              </button>
-                              {isCompleted && score !== undefined && (
-                                <span className={`text-[10px] font-bold px-1 rounded ${score >= 6 ? 'bg-indigo-50 text-indigo-600' : 'bg-red-50 text-red-600'}`}>
-                                  {score}/10
-                                </span>
-                              )}
+                              </div>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Cards View */}
+            <div className="md:hidden flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50">
+              <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-2">
+                <Users size={14} /> Seguimiento por Alumno
+              </h3>
+              {students.map(student => {
+                const completedCount = assignments.filter(a => student.completedAssignmentIds?.includes(a.id)).length;
+                const progress = Math.round((completedCount / assignments.length) * 100);
+                const isExpanded = expandedStudentId === student.id;
+
+                return (
+                  <div key={student.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden transition-all">
+                    <div
+                      onClick={() => setExpandedStudentId(isExpanded ? null : student.id)}
+                      className="p-4 flex items-center justify-between cursor-pointer active:bg-slate-50"
+                    >
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={student.avatar === "PENDING_LOAD" ? `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random` : (student.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random`)}
+                          alt={student.name}
+                          className="w-10 h-10 rounded-full object-cover border border-slate-100"
+                        />
+                        <div>
+                          <h4 className="font-bold text-slate-800 text-sm line-clamp-1">{student.name}</h4>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <div className="w-20 bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                              <div
+                                className={`h-full rounded-full ${progress === 100 ? 'bg-emerald-500' : 'bg-indigo-500'}`}
+                                style={{ width: `${progress}%` }}
+                              />
                             </div>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                            <span className="text-[10px] font-bold text-slate-400">{progress}%</span>
+                          </div>
+                        </div>
+                      </div>
+                      {isExpanded ? <ChevronUp size={20} className="text-slate-400" /> : <ChevronDown size={20} className="text-slate-400" />}
+                    </div>
+
+                    {isExpanded && (
+                      <div className="px-4 pb-4 space-y-2 border-t border-slate-50 pt-4 bg-slate-50/30">
+                        <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Detalle de Actividades</h5>
+                        <div className="space-y-2">
+                          {assignments.map(assignment => {
+                            const isCompleted = student.completedAssignmentIds?.includes(assignment.id);
+                            const score = student.assignmentResults?.[assignment.id];
+                            return (
+                              <div
+                                key={assignment.id}
+                                onClick={() => onToggleAssignment(student.id, assignment.id)}
+                                className={`flex items-center justify-between p-3 rounded-xl border transition-all active:scale-[0.98] ${isCompleted ? 'bg-emerald-50 border-emerald-100' : 'bg-white border-slate-100'}`}
+                              >
+                                <div className="flex items-center gap-3">
+                                  {isCompleted ? (
+                                    <CheckCircle size={20} className="text-emerald-500 fill-emerald-50" />
+                                  ) : (
+                                    <Circle size={20} className="text-slate-200" />
+                                  )}
+                                  <div>
+                                    <p className={`text-xs font-bold ${isCompleted ? 'text-emerald-700' : 'text-slate-600'}`}>{assignment.title}</p>
+                                    <p className="text-[9px] text-slate-400">Vence: {new Date(assignment.dueDate).toLocaleDateString()}</p>
+                                  </div>
+                                </div>
+                                {isCompleted && score !== undefined && (
+                                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${score >= 6 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                                    {score}/10
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </>
         )}
       </div>
       {/* GRADING MODAL FOR NEM EVALUATIONS */}
