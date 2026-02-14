@@ -561,7 +561,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
     const [newMessage, setNewMessage] = useState('');
     const [loading, setLoading] = useState(false);
     const [sendingMsg, setSendingMsg] = useState(false);
-    const [currentTab, setCurrentTab] = useState<'HOME' | 'ACTIVITIES' | 'CALENDAR' | 'MESSAGES'>('HOME');
+    const [currentTab, setCurrentTab] = useState<'HOME' | 'ACTIVITIES' | 'CALENDAR' | 'MESSAGES' | 'PROFILE'>('HOME');
 
 
     const handleLogin = async (e: React.FormEvent) => {
@@ -845,9 +845,21 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                     </button>
                 </div>
 
-                <div className="relative z-10 flex gap-4 p-4 bg-white/10 backdrop-blur-md rounded-2xl border border-white/10">
-                    <img src={student?.avatar} alt="Avatar" className="w-16 h-16 rounded-full border-2 border-white object-cover" />
-                    <div>
+                <div
+                    onClick={() => setCurrentTab('PROFILE')}
+                    className="relative z-10 flex gap-4 p-4 bg-white/10 backdrop-blur-md rounded-2xl border border-white/10 cursor-pointer hover:bg-white/20 transition-all group"
+                >
+                    <div className="relative">
+                        <img
+                            src={student?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(student?.name || 'Alumno')}&background=random`}
+                            alt="Avatar"
+                            className="w-16 h-16 rounded-full border-2 border-white object-cover"
+                        />
+                        <div className="absolute -bottom-1 -right-1 bg-white text-indigo-600 rounded-full p-1 shadow-md opacity-0 group-hover:opacity-100 transition-opacity">
+                            <User size={12} />
+                        </div>
+                    </div>
+                    <div className="flex-1">
                         <div className="flex gap-2 mb-1">
                             <span className="px-2 py-0.5 bg-white/20 rounded-md text-[10px] font-bold tracking-wider uppercase">
                                 {student?.status}
@@ -1280,6 +1292,138 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                     </div>
                 )}
 
+                {currentTab === 'PROFILE' && (
+                    <div className="animate-fadeIn pb-24 space-y-6 px-1">
+                        <div className="flex justify-between items-center">
+                            <h3 className="font-bold text-slate-800 flex items-center gap-2 text-xl">
+                                <User size={24} className="text-indigo-500" />
+                                Ficha Técnica del Alumno
+                            </h3>
+                        </div>
+
+                        {/* Top Info Card */}
+                        <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col items-center text-center">
+                            <div className="relative mb-4">
+                                <img
+                                    src={student?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(student?.name || 'Alumno')}&background=random`}
+                                    className="w-32 h-32 rounded-full border-4 border-indigo-50 shadow-xl object-cover"
+                                    alt="Profile"
+                                />
+                                <div className="absolute bottom-0 right-0 bg-indigo-600 text-white p-2 rounded-full shadow-lg border-4 border-white">
+                                    <Star size={16} fill="currentColor" />
+                                </div>
+                            </div>
+                            <h2 className="text-2xl font-black text-slate-800 tracking-tight">{student?.name}</h2>
+                            <p className="text-slate-500 font-medium flex items-center gap-2 mt-1">
+                                <Smartphone size={14} className="text-slate-400" />
+                                ID: {student?.id}
+                            </p>
+
+                            <div className="flex gap-2 mt-4">
+                                <span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-xs font-bold uppercase tracking-wider">
+                                    {student?.group || 'Sin Grupo'}
+                                </span>
+                                <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${student?.status === 'INSCRITO' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
+                                    {student?.status}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Data Sections */}
+                        <div className="space-y-4">
+                            {/* Section 1: Personal Data */}
+                            <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
+                                <h4 className="text-xs font-black uppercase tracking-widest text-indigo-600 mb-4 flex items-center gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-600"></div>
+                                    Datos Personales
+                                </h4>
+                                <div className="space-y-4">
+                                    <div className="flex justify-between items-center pb-3 border-b border-slate-50">
+                                        <span className="text-xs font-bold text-slate-400 uppercase tracking-tighter">CURP</span>
+                                        <span className="text-sm font-bold text-slate-800">{student?.curp || '-'}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center pb-3 border-b border-slate-50">
+                                        <span className="text-xs font-bold text-slate-400 uppercase tracking-tighter">Género</span>
+                                        <span className="text-sm font-bold text-slate-800">{student?.sex || '-'}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center pb-3 border-b border-slate-50">
+                                        <span className="text-xs font-bold text-slate-400 uppercase tracking-tighter">Fecha Nac.</span>
+                                        <span className="text-sm font-bold text-slate-800">{student?.birthDate ? new Date(student.birthDate).toLocaleDateString() : '-'}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-xs font-bold text-slate-400 uppercase tracking-tighter">Lugar Nac.</span>
+                                        <span className="text-sm font-bold text-slate-800">{student?.birthPlace || '-'}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Section 2: Support and Observations */}
+                            <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
+                                <h4 className="text-xs font-black uppercase tracking-widest text-purple-600 mb-4 flex items-center gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-purple-600"></div>
+                                    Apoyos y Observaciones
+                                </h4>
+                                <div className="space-y-4">
+                                    <div className="flex justify-between items-center pb-3 border-b border-slate-50">
+                                        <span className="text-xs font-bold text-slate-400 uppercase tracking-tighter">BAP (Aprendizaje)</span>
+                                        <span className={`text-sm font-bold ${student?.bap && student.bap !== 'NINGUNA' ? 'text-purple-600' : 'text-slate-800'}`}>
+                                            {student?.bap || 'Ninguna'}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between items-center pb-3 border-b border-slate-50">
+                                        <span className="text-xs font-bold text-slate-400 uppercase tracking-tighter">Repetidor</span>
+                                        <span className="text-sm font-bold text-slate-800">{student?.repeater ? 'Sí' : 'No'}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-xs font-bold text-slate-400 uppercase tracking-tighter">USAER</span>
+                                        <span className="text-sm font-bold text-slate-800">{student?.usaer ? 'Sí' : 'No'}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Section 3: Guardian Info */}
+                            <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
+                                <h4 className="text-xs font-black uppercase tracking-widest text-emerald-600 mb-4 flex items-center gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-600"></div>
+                                    Información del Tutor
+                                </h4>
+                                <div className="space-y-4">
+                                    <div className="flex justify-between items-center pb-3 border-b border-slate-50">
+                                        <span className="text-xs font-bold text-slate-400 uppercase tracking-tighter">Nombre Tutor</span>
+                                        <span className="text-sm font-bold text-slate-800">{student?.guardianName || '-'}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center pb-3 border-b border-slate-50">
+                                        <span className="text-xs font-bold text-slate-400 uppercase tracking-tighter">Teléfono</span>
+                                        <span className="text-sm font-bold text-slate-800">{student?.guardianPhone || '-'}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-xs font-bold text-slate-400 uppercase tracking-tighter">Ocupación</span>
+                                        <span className="text-sm font-bold text-slate-800">{student?.guardianOccupation || '-'}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Section 4: Address */}
+                            <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
+                                <h4 className="text-xs font-black uppercase tracking-widest text-slate-600 mb-4 flex items-center gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-slate-600"></div>
+                                    Domicilio
+                                </h4>
+                                <p className="text-sm font-medium text-slate-700 leading-relaxed">
+                                    {student?.address || 'No registrado'}
+                                </p>
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={handleLogout}
+                            className="w-full py-4 bg-red-50 text-red-600 font-bold rounded-2xl flex items-center justify-center gap-2 hover:bg-red-100 transition-colors"
+                        >
+                            <LogOut size={20} />
+                            Desconectar Cuenta
+                        </button>
+                    </div>
+                )}
             </div>
 
             {/* BOTTOM NAVIGATION BAR */}
@@ -1299,6 +1443,10 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                 <button onClick={() => setCurrentTab('MESSAGES')} className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all w-16 ${currentTab === 'MESSAGES' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}>
                     <div className={`p-1 rounded-full ${currentTab === 'MESSAGES' ? 'bg-indigo-100' : ''}`}><MessageCircle size={20} /></div>
                     <span className="text-[10px] font-bold">Chat</span>
+                </button>
+                <button onClick={() => setCurrentTab('PROFILE')} className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all w-16 ${currentTab === 'PROFILE' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}>
+                    <div className={`p-1 rounded-full ${currentTab === 'PROFILE' ? 'bg-indigo-100' : ''}`}><User size={20} /></div>
+                    <span className="text-[10px] font-bold">Perfil</span>
                 </button>
             </div>
 

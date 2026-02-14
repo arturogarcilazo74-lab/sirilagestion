@@ -778,6 +778,7 @@ app.post('/api/parent/login', async (req, res) => {
                 id: student.id,
                 name: student.name,
                 curp: student.curp,
+                avatar: student.avatar || parsed.avatar,
                 // Ensure critical arrays/objects exist
                 attendance: parsed.attendance || {},
                 completedAssignmentIds: Array.isArray(parsed.completedAssignmentIds) ? parsed.completedAssignmentIds : [],
