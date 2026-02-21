@@ -513,8 +513,9 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
         if (activeQuiz.interactiveData.type !== 'QUIZ') return;
 
         let correctCount = 0;
-        activeQuiz.interactiveData.questions.forEach(q => {
-            if (quizAnswers[q.id] === q.correctIndex) {
+        activeQuiz.interactiveData.questions.forEach((q, idx) => {
+            const answerId = q.id || `q-${idx}`;
+            if (quizAnswers[answerId] === q.correctIndex) {
                 correctCount++;
             }
         });
@@ -1596,23 +1597,23 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                             ) : (
                                 <>
                                     {activeQuiz.interactiveData.questions.map((q, idx) => (
-                                        <div key={q.id} className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                                        <div key={q.id || idx} className="bg-slate-50 p-4 rounded-xl border border-slate-100">
                                             <h4 className="font-bold text-slate-800 mb-4 flex gap-3">
                                                 <span className="bg-purple-100 text-purple-700 w-6 h-6 rounded flex items-center justify-center text-xs flex-shrink-0 mt-0.5">{idx + 1}</span>
                                                 {q.text}
                                             </h4>
                                             <div className="space-y-2 pl-9">
                                                 {q.options.map((opt, i) => (
-                                                    <label key={i} className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${quizAnswers[q.id] === i ? 'bg-purple-50 border-purple-300 ring-1 ring-purple-300' : 'bg-white border-slate-200 hover:border-purple-200'}`}>
-                                                        <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${quizAnswers[q.id] === i ? 'border-purple-600 bg-purple-600' : 'border-slate-300'}`}>
-                                                            {quizAnswers[q.id] === i && <div className="w-2 h-2 bg-white rounded-full" />}
+                                                    <label key={i} className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${quizAnswers[q.id || `q-${idx}`] === i ? 'bg-purple-50 border-purple-300 ring-1 ring-purple-300' : 'bg-white border-slate-200 hover:border-purple-200'}`}>
+                                                        <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${quizAnswers[q.id || `q-${idx}`] === i ? 'border-purple-600 bg-purple-600' : 'border-slate-300'}`}>
+                                                            {quizAnswers[q.id || `q-${idx}`] === i && <div className="w-2 h-2 bg-white rounded-full" />}
                                                         </div>
                                                         <input
                                                             type="radio"
-                                                            name={`q-${q.id}`}
+                                                            name={`q-${q.id || idx}`}
                                                             className="hidden"
-                                                            checked={quizAnswers[q.id] === i}
-                                                            onChange={() => handleAnswer(q.id, i)}
+                                                            checked={quizAnswers[q.id || `q-${idx}`] === i}
+                                                            onChange={() => handleAnswer(q.id || `q-${idx}`, i)}
                                                         />
                                                         <span className="text-sm text-slate-700 font-medium">{opt}</span>
                                                     </label>

@@ -83,7 +83,16 @@ export const ExamGeneratorView: React.FC<ExamGeneratorViewProps> = ({ assignment
         try {
             const allTopics = selectedTopics.join(", ");
             const jsonQuestions = await generateInteractiveQuiz(allTopics, reactivesPerSubject * selectedTopics.length);
-            const questions = JSON.parse(jsonQuestions);
+            const rawQuestions = JSON.parse(jsonQuestions);
+
+            // Ensure each question has a unique ID and required fields
+            const questions = rawQuestions.map((q: any, idx: number) => ({
+                id: q.id || `q-${Date.now()}-${idx}`,
+                text: q.text || q.question || '',
+                options: q.options || [],
+                correctIndex: q.correctIndex !== undefined ? q.correctIndex : 0,
+                points: q.points || 1
+            }));
 
             const newExam: Assignment = {
                 id: `exam-${Date.now()}`,
