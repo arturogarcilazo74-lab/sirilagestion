@@ -22,6 +22,7 @@ import { USAERView } from './components/USAERView';
 import { LandingView } from './components/LandingView';
 import { LibraryView } from './components/LibraryView';
 import { LiteracyView } from './components/LiteracyView';
+import { ExamGeneratorView } from './components/ExamGeneratorView';
 
 const App: React.FC = () => {
   // Initialize View based on URL mainly for independent Parents Portal access
@@ -422,6 +423,12 @@ const App: React.FC = () => {
             <LiteracyView
               students={store.students}
               onBack={() => setCurrentView('LANDING')}
+            />
+          )}
+
+          {currentView === 'EXAM_GENERATOR' && (
+            <ExamGeneratorView
+              assignments={visibleAssignments}
             />
           )}
 

@@ -190,7 +190,7 @@ export interface Notification {
   type: 'INFO' | 'ALERT' | 'EVENT';
 }
 
-export type ViewState = 'LANDING' | 'DASHBOARD' | 'ATTENDANCE' | 'STUDENTS' | 'TOOLS' | 'BEHAVIOR' | 'ACTIVITIES' | 'HOMEWORK_QR' | 'FINANCE' | 'DOCUMENTS' | 'SETTINGS' | 'PARENTS_PORTAL' | 'COMMUNICATIONS' | 'DIRECTOR' | 'USAER' | 'LIBRARY' | 'LITERACY';
+export type ViewState = 'LANDING' | 'DASHBOARD' | 'ATTENDANCE' | 'STUDENTS' | 'TOOLS' | 'BEHAVIOR' | 'ACTIVITIES' | 'HOMEWORK_QR' | 'FINANCE' | 'DOCUMENTS' | 'SETTINGS' | 'PARENTS_PORTAL' | 'COMMUNICATIONS' | 'DIRECTOR' | 'USAER' | 'LIBRARY' | 'LITERACY' | 'EXAM_GENERATOR';
 
 export interface StaffTask {
   id: string;

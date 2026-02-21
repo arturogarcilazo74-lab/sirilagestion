@@ -140,8 +140,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, s
                         </button>
 
                         <button
+                            onClick={() => setCurrentView('EXAM_GENERATOR')}
+                            className={`flex items-center gap-3 w-full p-3 rounded-xl transition-all duration-300 group ${currentView === 'EXAM_GENERATOR' ? 'bg-indigo-600 shadow-[0_0_20px_rgba(79,70,229,0.5)] text-white' : 'text-slate-400 hover:bg-white/10 hover:text-white'}`}
+                        >
+                            <FileText size={20} />
+                            <span className="font-medium">Generador Exámenes</span>
+                        </button>
+
+                        <button
                             onClick={() => setCurrentView('USAER')}
-                            className={`flex items-center gap-3 w-full p-3 rounded-xl transition-all duration-300 group ${currentView === 'USAER' ? 'bg-indigo-600 shadow-[0_0_20px_rgba(79,70,229,0.5)] text-white' : 'text-slate-400 hover:bg-white/10 hover:text-white'}`}
+                            className={`flex items-center gap-3 w-full p-3 rounded-xl transition-all duration-300 group ${(currentView as any) === 'USAER' ? 'bg-indigo-600 shadow-[0_0_20px_rgba(79,70,229,0.5)] text-white' : 'text-slate-400 hover:bg-white/10 hover:text-white'}`}
                         >
                             <BookCheck size={20} />
                             <span className="font-medium">Módulo USAER</span>
@@ -149,7 +157,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, s
 
                         <button
                             onClick={() => setCurrentView('COMMUNICATIONS')}
-                            className={`flex items-center gap-3 w-full p-3 rounded-xl transition-all duration-300 group relative ${currentView === 'COMMUNICATIONS' ? 'bg-indigo-600 shadow-[0_0_20px_rgba(79,70,229,0.5)] text-white' : 'text-slate-400 hover:bg-white/10 hover:text-white'}`}
+                            className={`flex items-center gap-3 w-full p-3 rounded-xl transition-all duration-300 group relative ${(currentView as any) === 'COMMUNICATIONS' ? 'bg-indigo-600 shadow-[0_0_20px_rgba(79,70,229,0.5)] text-white' : 'text-slate-400 hover:bg-white/10 hover:text-white'}`}
                         >
                             <MessageSquare size={20} />
                             <span className="font-medium">Comunicaciones</span>

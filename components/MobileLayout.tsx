@@ -74,6 +74,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({
                         <NavItem view="DOCUMENTS" icon={FileText} label="Documentos IA" currentView={currentView} onClick={handleNavClick} />
                         <NavItem view="LIBRARY" icon={Library} label="Biblioteca" currentView={currentView} onClick={handleNavClick} />
                         <NavItem view="LITERACY" icon={GraduationCap} label="Regularización" currentView={currentView} onClick={handleNavClick} />
+                        <NavItem view="EXAM_GENERATOR" icon={FileText} label="Generador Exámenes" currentView={currentView} onClick={handleNavClick} />
                         <NavItem view="USAER" icon={BookCheck} label="Módulo USAER" currentView={currentView} onClick={handleNavClick} />
                         <NavItem view="COMMUNICATIONS" icon={MessageSquare} label="Comunicaciones" currentView={currentView} onClick={handleNavClick} badge={unreadCount} />
 
