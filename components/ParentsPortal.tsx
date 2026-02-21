@@ -64,6 +64,17 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
     }, [isLoggedIn]);
 
     const handleStartQuiz = async (assignment: Assignment) => {
+        // --- ATTEMPT LIMIT CHECK ---
+        const attemptsMade = student?.assignmentAttempts?.[assignment.id] || 0;
+        const maxAllowed = assignment.maxAttempts || 1;
+
+        const isCompleted = student?.completedAssignmentIds?.includes(assignment.id);
+
+        if (!isCompleted && attemptsMade >= maxAllowed) {
+            alert(`Has alcanzado el límite de intentos para esta actividad (${maxAllowed}). Contacta a tu maestro si necesitas más oportunidades.`);
+            return;
+        }
+
         let fullAssignment = assignment;
 
         // Lazy load full data if missing or stripped (Optimized Load Support)
@@ -372,11 +383,13 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
             // 3. Mark as complete (Only if passed or if no minScore requirement, but typically we want pass)
             const newCompleted = passed ? [...new Set([...(student.completedAssignmentIds || []), activeWorksheet.id])] : (student.completedAssignmentIds || []);
             const newResults = { ...(student.assignmentResults || {}), [activeWorksheet.id]: score };
+            const newAttempts = { ...(student.assignmentAttempts || {}), [activeWorksheet.id]: (student.assignmentAttempts?.[activeWorksheet.id] || 0) + 1 };
 
             const updatedStudent = {
                 ...student,
                 completedAssignmentIds: newCompleted,
                 assignmentResults: newResults,
+                assignmentAttempts: newAttempts,
                 assignmentsCompleted: newCompleted.length
             };
             setStudent(updatedStudent);
@@ -528,6 +541,8 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
             alert("⚠️ Tu entrega está fuera de fecha. Tu calificación vale el 60% de la nota original.");
         }
 
+        const newAttempts = { ...(student.assignmentAttempts || {}), [activeQuiz.id]: (student.assignmentAttempts?.[activeQuiz.id] || 0) + 1 };
+
         if (passed) {
             // Update Student
             const newCompleted = [...new Set([...(student.completedAssignmentIds || []), activeQuiz.id])];
@@ -537,6 +552,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                 ...student,
                 completedAssignmentIds: newCompleted,
                 assignmentResults: newResults,
+                assignmentAttempts: newAttempts,
                 assignmentsCompleted: newCompleted.length
             };
 
@@ -551,10 +567,17 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
             // If failed, still save result but don't mark as complete? 
             // Better to save result so teacher sees it.
             const newResults = { ...(student.assignmentResults || {}), [activeQuiz.id]: score };
-            const updatedStudent = { ...student, assignmentResults: newResults };
+            const updatedStudent = { ...student, assignmentResults: newResults, assignmentAttempts: newAttempts };
             setStudent(updatedStudent);
             await api.saveStudent(updatedStudent);
-            alert(`No has alcanzado el puntaje mínimo (${minPass}/10). Puedes intentarlo de nuevo.`);
+
+            const attemptsLeft = (activeQuiz.maxAttempts || 1) - newAttempts[activeQuiz.id];
+            if (attemptsLeft > 0) {
+                alert(`No has alcanzado el puntaje mínimo (${minPass}/10). Te quedan ${attemptsLeft} intentos.`);
+            } else {
+                alert(`No has alcanzado el puntaje mínimo y has agotado tus intentos.`);
+                setActiveQuiz(null);
+            }
         }
     };
     const [messages, setMessages] = useState<any[]>([]);
@@ -1138,12 +1161,22 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                                     )}
 
                                                     {isInteractive && (
-                                                        <button
-                                                            onClick={() => handleStartQuiz(assign)}
-                                                            className="w-full py-2 bg-purple-600 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-2 hover:bg-purple-700 transition-colors shadow-md shadow-purple-200"
-                                                        >
-                                                            <Play size={14} fill="currentColor" /> Comenzar Actividad
-                                                        </button>
+                                                        <div className="space-y-2">
+                                                            <button
+                                                                onClick={() => handleStartQuiz(assign)}
+                                                                className="w-full py-2 bg-purple-600 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-2 hover:bg-purple-700 transition-colors shadow-md shadow-purple-200"
+                                                            >
+                                                                <Play size={14} fill="currentColor" /> Comenzar Actividad
+                                                            </button>
+                                                            <div className="flex justify-between items-center px-1">
+                                                                <span className="text-[10px] text-slate-400 font-medium">
+                                                                    Intentos: {student?.assignmentAttempts?.[assign.id] || 0} / {assign.maxAttempts || 1}
+                                                                </span>
+                                                                {assign.maxAttempts && (student?.assignmentAttempts?.[assign.id] || 0) >= assign.maxAttempts && (
+                                                                    <span className="text-[10px] text-red-500 font-bold">Sin intentos</span>
+                                                                )}
+                                                            </div>
+                                                        </div>
                                                     )}
                                                 </div>
                                             );

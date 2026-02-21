@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Assignment } from '../types';
-import { generateExam } from '../services/ai';
-import { FileText, Sparkles, Plus, Trash2, Printer, Download, BookOpen, CheckCircle, ChevronRight, AlertCircle, Loader2 } from 'lucide-react';
+import { generateExam, generateInteractiveQuiz } from '../services/ai';
+import { api } from '../services/api';
+import { FileText, Sparkles, Plus, Trash2, Printer, Download, BookOpen, CheckCircle, ChevronRight, AlertCircle, Loader2, Send } from 'lucide-react';
 
 interface ExamGeneratorViewProps {
     assignments: Assignment[];
@@ -13,8 +14,10 @@ export const ExamGeneratorView: React.FC<ExamGeneratorViewProps> = ({ assignment
     const [newTopic, setNewTopic] = useState('');
     const [examType, setExamType] = useState<'EXAM' | 'GUIDE'>('EXAM');
     const [reactivesPerSubject, setReactivesPerSubject] = useState(10);
+    const [maxAttempts, setMaxAttempts] = useState(1);
     const [generatedContent, setGeneratedContent] = useState<string | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [isSending, setIsSending] = useState(false);
 
     // Extract unique topics from assignments
     // We'll use assignment titles as topics
@@ -67,6 +70,56 @@ export const ExamGeneratorView: React.FC<ExamGeneratorViewProps> = ({ assignment
             setGeneratedContent("Hubo un error al generar el contenido. Por favor intenta de nuevo.");
         } finally {
             setIsGenerating(false);
+        }
+    };
+
+    const handleSendToPortal = async () => {
+        if (selectedTopics.length === 0) {
+            alert("Selecciona temas para el examen interactivo.");
+            return;
+        }
+
+        setIsSending(true);
+        try {
+            const allTopics = selectedTopics.join(", ");
+            const jsonQuestions = await generateInteractiveQuiz(allTopics, reactivesPerSubject * selectedTopics.length);
+            const questions = JSON.parse(jsonQuestions);
+
+            const newExam: Assignment = {
+                id: `exam-${Date.now()}`,
+                title: `Examen: ${selectedTopics.slice(0, 2).join(', ')}${selectedTopics.length > 2 ? '...' : ''}`,
+                dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 1 week default
+                completedStudentIds: [],
+                type: 'INTERACTIVE',
+                interactiveData: {
+                    type: 'QUIZ',
+                    questions: questions,
+                    minScoreToPass: 6
+                },
+                isVisibleInParentsPortal: true,
+                maxAttempts: maxAttempts,
+                instructions: "Responde cuidadosamente cada pregunta. Tienes un límite de intentos configurado por tu maestro.",
+                assignmentType: 'NEM_EVALUATION'
+            };
+
+            await api.saveAssignment(newExam);
+
+            // Send notification to all parents
+            await api.saveNotification({
+                id: `notif-exam-${Date.now()}`,
+                title: "Nuevo Examen Disponible",
+                message: `Se ha publicado un nuevo examen interactivo: ${newExam.title}.`,
+                date: new Date().toISOString(),
+                isRead: false,
+                type: 'ALERT'
+            });
+
+            alert("¡Examen enviado con éxito al Portal de Padres!");
+        } catch (error) {
+            console.error("Error sending to portal:", error);
+            alert("Hubo un error al crear el examen interactivo.");
+        } finally {
+            setIsSending(false);
         }
     };
 
@@ -216,30 +269,59 @@ export const ExamGeneratorView: React.FC<ExamGeneratorViewProps> = ({ assignment
                             </div>
                         </div>
 
-                        <div className="mt-8 pt-6 border-t border-slate-100">
-                            <label htmlFor="reactives-range" className="block text-sm font-bold text-slate-700 mb-2">Reactivos por tema</label>
-                            <div className="flex items-center gap-4 bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                                <input
-                                    id="reactives-range"
-                                    type="range"
-                                    min="5"
-                                    max="20"
-                                    value={reactivesPerSubject}
-                                    onChange={(e) => setReactivesPerSubject(Number(e.target.value))}
-                                    className="flex-1 accent-indigo-600"
-                                />
-                                <span className="w-10 text-center font-black text-indigo-600">{reactivesPerSubject}</span>
+                        <div className="mt-8 pt-6 border-t border-slate-100 space-y-4">
+                            <div>
+                                <label htmlFor="reactives-range" className="block text-sm font-bold text-slate-700 mb-2">Reactivos por tema</label>
+                                <div className="flex items-center gap-4 bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                                    <input
+                                        id="reactives-range"
+                                        type="range"
+                                        min="5"
+                                        max="20"
+                                        value={reactivesPerSubject}
+                                        onChange={(e) => setReactivesPerSubject(Number(e.target.value))}
+                                        className="flex-1 accent-indigo-600"
+                                    />
+                                    <span className="w-10 text-center font-black text-indigo-600">{reactivesPerSubject}</span>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label htmlFor="attempts-range" className="block text-sm font-bold text-slate-700 mb-2">Intentos permitidos (Portal)</label>
+                                <div className="flex items-center gap-4 bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                                    <input
+                                        id="attempts-range"
+                                        type="range"
+                                        min="1"
+                                        max="10"
+                                        value={maxAttempts}
+                                        onChange={(e) => setMaxAttempts(Number(e.target.value))}
+                                        className="flex-1 accent-emerald-600"
+                                    />
+                                    <span className="w-10 text-center font-black text-emerald-600">{maxAttempts}</span>
+                                </div>
                             </div>
                         </div>
 
-                        <button
-                            onClick={handleGenerate}
-                            disabled={isGenerating || selectedTopics.length === 0}
-                            className="w-full mt-6 py-4 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-2xl font-bold flex items-center justify-center gap-3 shadow-lg shadow-indigo-200 hover:shadow-xl transition-all active:scale-95 disabled:opacity-50 group"
-                        >
-                            {isGenerating ? <Loader2 size={24} className="animate-spin" /> : <Sparkles size={24} className="group-hover:rotate-12 transition-transform" />}
-                            {isGenerating ? 'Generando...' : `Generar ${examType === 'EXAM' ? 'Examen' : 'Guía'}`}
-                        </button>
+                        <div className="grid grid-cols-1 gap-3 mt-6">
+                            <button
+                                onClick={handleGenerate}
+                                disabled={isGenerating || isSending || selectedTopics.length === 0}
+                                className="w-full py-4 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-2xl font-bold flex items-center justify-center gap-3 shadow-lg shadow-indigo-200 hover:shadow-xl transition-all active:scale-95 disabled:opacity-50 group"
+                            >
+                                {isGenerating ? <Loader2 size={24} className="animate-spin" /> : <Sparkles size={24} className="group-hover:rotate-12 transition-transform" />}
+                                {isGenerating ? 'Generando...' : `Generar ${examType === 'EXAM' ? 'Examen' : 'Guía'}`}
+                            </button>
+
+                            <button
+                                onClick={handleSendToPortal}
+                                disabled={isGenerating || isSending || selectedTopics.length === 0}
+                                className="w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-2xl font-bold flex items-center justify-center gap-3 shadow-lg shadow-emerald-200 hover:shadow-xl transition-all active:scale-95 disabled:opacity-50 group"
+                            >
+                                {isSending ? <Loader2 size={24} className="animate-spin" /> : <Send size={24} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />}
+                                {isSending ? 'Enviando...' : 'Enviar al Portal de Padres'}
+                            </button>
+                        </div>
                     </section>
                 </div>
 
@@ -247,7 +329,7 @@ export const ExamGeneratorView: React.FC<ExamGeneratorViewProps> = ({ assignment
                 <div className="lg:col-span-8 flex flex-col min-h-[600px]">
                     <div className="flex justify-between items-center mb-4">
                         <h3 className="font-bold text-slate-700 flex items-center gap-2">
-                            Vista Previa
+                            Vista Previa (Para Imprimir)
                             {generatedContent && (
                                 <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded text-[10px] uppercase tracking-wider">Listo</span>
                             )}
@@ -293,13 +375,19 @@ export const ExamGeneratorView: React.FC<ExamGeneratorViewProps> = ({ assignment
                                 <h4 className="text-xl font-bold text-slate-700 mb-2">Diseñando tu {examType === 'EXAM' ? 'Examen' : 'Guía'}</h4>
                                 <p className="max-w-md">Nuestra IA está analizando los temas seleccionados y redactando reactivos acordes al grado escolar...</p>
                             </div>
+                        ) : isSending ? (
+                            <div className="flex-1 flex flex-col items-center justify-center p-12 text-center text-slate-400">
+                                <Loader2 size={64} className="animate-spin text-emerald-300 mb-6" />
+                                <h4 className="text-xl font-bold text-slate-700 mb-2">Creando Versión Interactiva</h4>
+                                <p className="max-w-md">Estamos preparando las preguntas, opciones y claves de respuesta para que los alumnos puedan responder en el Portal de Padres...</p>
+                            </div>
                         ) : (
                             <div className="flex-1 flex flex-col items-center justify-center p-12 text-center text-slate-400 border-2 border-dashed border-slate-100 m-4 rounded-2xl">
                                 <div className="bg-slate-50 p-6 rounded-full mb-6">
                                     <Sparkles size={64} className="opacity-20" />
                                 </div>
                                 <h4 className="text-xl font-bold text-slate-700 mb-2">No se ha generado contenido</h4>
-                                <p className="max-w-md">Selecciona los temas en el panel de la izquierda y presiona el botón de generar para comenzar.</p>
+                                <p className="max-w-md">Selecciona los temas en el panel de la izquierda y presiona "Generar" para la versión impresa o "Enviar al Portal" para la versión interactiva.</p>
                             </div>
                         )}
                     </div>

@@ -38,6 +38,7 @@ export interface Student {
   assignmentsCompleted: number;
   completedAssignmentIds: string[]; // List of IDs of completed assignments
   assignmentResults?: Record<string, number>; // assignmentId -> score (0-10)
+  assignmentAttempts?: Record<string, number>; // assignmentId -> number of attempts made
   totalAssignments: number;
   participationCount: number;
   grades: TrimesterGrade[]; // Array of exactly 3 trimesters (indices 0, 1, 2)
@@ -129,6 +130,7 @@ export interface Assignment {
   assignmentType?: 'STANDARD' | 'NEM_EVALUATION'; // To distinguish normal quizzes from teacher-only evaluations
   instructions?: string; // NEW: Optional instructions for the activity
   externalLinks?: string[]; // NEW: Optional links to videos or other pages
+  maxAttempts?: number; // NEW: Maximum number of times a student can take this activity
 }
 
 export interface FinanceEvent {
