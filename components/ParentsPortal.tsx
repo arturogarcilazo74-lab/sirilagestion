@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { Student, SchoolEvent, Notification, Assignment, DraggableItem, InteractiveZone, BehaviorLog } from '../types';
-import { Bell, Calendar as CalendarIcon, LogOut, MessageCircle, User, CheckCircle, Smartphone, Send, Play, Trophy, HelpCircle, X, Check, AlertCircle, BookOpen, Circle, Move, Trash2, LayoutDashboard, Medal, Star, Award } from 'lucide-react';
+import { Bell, Calendar as CalendarIcon, LogOut, MessageCircle, User, CheckCircle, Smartphone, Send, Play, Trophy, HelpCircle, X, Check, AlertCircle, BookOpen, Circle, Move, Trash2, LayoutDashboard, Medal, Star, Award, Users, ChevronRight } from 'lucide-react';
 
 interface ParentsPortalProps {
     onBack: () => void;
@@ -13,6 +13,8 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
     const [loginId, setLoginId] = useState('');
     const [error, setError] = useState('');
     const [student, setStudent] = useState<Student | null>(null);
+    const [studentsToSelect, setStudentsToSelect] = useState<Student[] | null>(null);
+    const [hasMultipleStudents, setHasMultipleStudents] = useState(false);
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [events, setEvents] = useState<SchoolEvent[]>([]);
     const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -587,26 +589,44 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
     const [currentTab, setCurrentTab] = useState<'HOME' | 'ACTIVITIES' | 'CALENDAR' | 'MESSAGES' | 'PROFILE'>('HOME');
 
 
+    const completeLogin = (selStudent: Student, multiple: boolean = false) => {
+        setStudent(selStudent);
+        setIsLoggedIn(true);
+        setStudentsToSelect(null);
+        setHasMultipleStudents(multiple);
+
+        // Load data
+        loadNotifications(selStudent.id);
+        loadEvents();
+        loadMessages(selStudent.id);
+        loadAssignments(selStudent); // Fetch assignments with context
+
+        // Fetch Behavior Logs
+        api.getStudentBehaviorLogs(selStudent.id).then(logs => setBehaviorLogs(logs)).catch(err => console.error(err));
+
+        // Fetch Honor Roll
+        loadHonorRoll();
+    };
+
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
+        const trimmedId = loginId.trim().toUpperCase();
+        if (!trimmedId) {
+            setError('Por favor ingresa tu CURP o ID de estudiante.');
+            return;
+        }
+
         setLoading(true);
         setError('');
         try {
-            const res = await api.parentLogin(loginId.trim().toUpperCase());
-            if (res.success && res.student) {
-                setStudent(res.student);
-                setIsLoggedIn(true);
-                // Load data
-                loadNotifications(res.student.id);
-                loadEvents();
-                loadMessages(res.student.id);
-                loadAssignments(res.student); // Fetch assignments with context
-
-                // Fetch Behavior Logs
-                api.getStudentBehaviorLogs(res.student.id).then(logs => setBehaviorLogs(logs)).catch(err => console.error(err));
-
-                // Fetch Honor Roll
-                loadHonorRoll();
+            const res = await api.parentLogin(trimmedId);
+            if (res.success) {
+                if (res.multiple && res.students) {
+                    setStudentsToSelect(res.students);
+                    setHasMultipleStudents(true);
+                } else if (res.student) {
+                    completeLogin(res.student, false);
+                }
             }
         } catch (err: any) {
             setError(err.message || 'Error al iniciar sesión');
@@ -624,6 +644,16 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
         }
     };
 
+    const refreshStudentData = async () => {
+        if (!loginId || !isLoggedIn) return;
+        try {
+            const res = await api.parentLogin(loginId.trim().toUpperCase());
+            if (res.success && res.student) {
+                setStudent(res.student);
+            }
+        } catch (e) { console.error("Refresh failed", e); }
+    };
+
     // Polling for new messages and notifications
     useEffect(() => {
         if (!isLoggedIn || !student) return;
@@ -632,10 +662,12 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
             loadMessages(student.id);
             loadNotifications(student.id);
             loadHonorRoll();
-        }, 10000);
+            refreshStudentData(); // Keep progress in sync
+            loadAssignments();   // Check for new tasks
+        }, 15000);
 
         return () => clearInterval(interval);
-    }, [isLoggedIn, student]);
+    }, [isLoggedIn, student, loginId]);
 
     const loadNotifications = async (studentId: string) => {
         try {
@@ -674,59 +706,24 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
 
         try {
             const allAssignments = await api.getAssignments();
-
-            // Filter by Student Group
-            console.log("Filtering Assignments for Student:", targetStudent.name, "Group:", targetStudent.group);
-
             const filtered = allAssignments.filter((a: Assignment) => {
-                // Explicit GLOBAL
                 if (a.targetGroup === 'GLOBAL') return true;
+                const sGroupRaw = (targetStudent.group || '').toUpperCase().trim();
+                const sGrade = sGroupRaw.match(/(\d+)/)?.[0];
+                const sLetter = sGroupRaw.match(/[A-F]/)?.[0];
 
-                // Student Group normalized
-                // STRICT MODE: If student has no group, they generally shouldn't see group-restricted tasks
-                // unless the task is also "No Group".
-                const sGroupRaw = targetStudent.group || ''; // No default '4 A'
-                const sGroup = sGroupRaw.toUpperCase().trim();
-                const sGrade = sGroup.match(/(\d+)/)?.[0];
-                const sLetter = sGroup.match(/[A-F]/)?.[0];
+                const aGroupRaw = (a.targetGroup || '4 A').toUpperCase().trim();
+                const aGrade = aGroupRaw.match(/(\d+)/)?.[0];
+                const aLetter = aGroupRaw.match(/[A-F]/)?.[0];
 
-                // Assignment Group normalized.
-                // Legacy support: If undefined, assume '4 A' (Main Group) or whatever legacy default is needed.
-                // NOTE: If we want strict "No Group" -> "No Group", remove default. 
-                // But typically legacy data = main group.
-                const aGroupRaw = a.targetGroup || '4 A';
-                const aGroup = aGroupRaw.toUpperCase().trim();
-                const aGrade = aGroup.match(/(\d+)/)?.[0];
-                const aLetter = aGroup.match(/[A-F]/)?.[0];
-
-                let match = false;
-
-                // 1. Precise Match (Grade + Letter)
                 if (sGrade && sLetter && aGrade && aLetter) {
-                    match = (sGrade === aGrade && sLetter === aLetter);
+                    return sGrade === aGrade && sLetter === aLetter;
                 }
-                // 2. Grade Match only (Target is broad, e.g. "4")
-                else if (aGrade && !aLetter && sGrade) {
-                    match = (sGrade === aGrade);
+                if (aGrade && !aLetter && sGrade) {
+                    return sGrade === aGrade;
                 }
-                // 3. Fallback String Match (e.g. "4A" vs "4A" or "PRIMERO" vs "PRIMERO")
-                else {
-                    match = (sGroup === aGroup);
-                }
-
-                // Debug specific mismatch
-                if (a.title.toLowerCase().includes('verbos')) {
-                    console.log(`[DEBUG FILTER] T:${a.title}`);
-                    const dbgRaw = a.targetGroup; // capture raw
-                    console.log(`  RawTarget: "${dbgRaw}"`);
-                    console.log(`  Processed -> aGroup:"${aGroup}" (G:${aGrade} L:${aLetter})`);
-                    console.log(`  Student -> sGroup:"${sGroup}" (G:${sGrade} L:${sLetter})`);
-                    console.log(`  MATCH: ${match}`);
-                }
-
-                return match;
+                return sGroupRaw === aGroupRaw;
             });
-
             setAssignments(filtered);
         } catch (e) { console.error(e); }
     };
@@ -756,6 +753,24 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
         }
     };
 
+    const handleSwitchStudent = async () => {
+        const trimmedId = loginId.trim().toUpperCase();
+        if (!trimmedId) return;
+        setLoading(true);
+        try {
+            const res = await api.parentLogin(trimmedId);
+            if (res.success && res.multiple) {
+                setStudentsToSelect(res.students);
+                setIsLoggedIn(false);
+                setStudent(null);
+            }
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleLogout = () => {
         setIsLoggedIn(false);
         setStudent(null);
@@ -764,6 +779,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
         setNotifications([]);
         setMessages([]);
         setAssignments([]);
+        setHasMultipleStudents(false);
     };
 
     // Derived Calculations
@@ -781,46 +797,81 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                     </button>
                 )}
 
-                <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl relative z-10 animate-fadeIn">
+                <div className="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl relative z-10 animate-fadeIn max-h-[90vh] overflow-y-auto custom-scrollbar">
                     <div className="text-center mb-8">
                         <div className="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4 text-indigo-600">
-                            <User size={40} />
+                            {studentsToSelect ? <Users size={40} /> : <User size={40} />}
                         </div>
-                        <h1 className="text-2xl font-bold text-slate-800">Portal para Padres</h1>
-                        <p className="text-slate-500">Consulta la actividad escolar de tu hijo</p>
+                        <h1 className="text-2xl font-bold text-slate-800">
+                            {studentsToSelect ? 'Selecciona a tu hijo(a)' : 'Portal para Padres'}
+                        </h1>
+                        <p className="text-slate-500">
+                            {studentsToSelect ? 'Hemos encontrado varios alumnos vinculados' : 'Consulta la actividad escolar de tu hijo'}
+                        </p>
                     </div>
 
-                    <form onSubmit={handleLogin} className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-bold text-slate-700 mb-1">CURP o ID del Estudiante</label>
-                            <input
-                                type="text"
-                                value={loginId}
-                                onChange={e => setLoginId(e.target.value)}
-                                className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium text-slate-900"
-                                placeholder="Ingresa la clave..."
-                            />
+                    {studentsToSelect ? (
+                        <div className="space-y-3 max-h-[50vh] overflow-y-auto px-2 py-1 custom-scrollbar">
+                            {studentsToSelect.map(s => (
+                                <button
+                                    key={s.id}
+                                    onClick={() => completeLogin(s)}
+                                    className="w-full flex items-center gap-4 p-4 bg-slate-50 border border-slate-100 rounded-2xl hover:bg-indigo-50 hover:border-indigo-100 transition-all text-left group"
+                                >
+                                    <img
+                                        src={s.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=random`}
+                                        className="w-12 h-12 rounded-full border-2 border-white object-cover"
+                                        alt=""
+                                    />
+                                    <div className="flex-1">
+                                        <p className="font-bold text-slate-800 group-hover:text-indigo-600 truncate">{s.name}</p>
+                                        <p className="text-xs text-slate-500">{s.group || 'Sin Grupo'}</p>
+                                    </div>
+                                    <ChevronRight size={18} className="text-slate-400 group-hover:text-indigo-600" />
+                                </button>
+                            ))}
+                            <button
+                                onClick={() => setStudentsToSelect(null)}
+                                className="w-full py-3 text-slate-400 font-bold text-sm hover:text-slate-600 transition-colors mt-2"
+                            >
+                                Regresar al login
+                            </button>
                         </div>
-
-                        {error && (
-                            <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg font-medium flex items-center gap-2">
-                                <CheckCircle size={16} className="text-red-500" />
-                                {error}
+                    ) : (
+                        <form onSubmit={handleLogin} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-1">CURP, ID o Teléfono</label>
+                                <input
+                                    type="text"
+                                    value={loginId}
+                                    onChange={e => setLoginId(e.target.value)}
+                                    className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium text-slate-900"
+                                    placeholder="Ingresa los datos..."
+                                />
                             </div>
-                        )}
 
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 active:scale-95 disabled:opacity-70"
-                        >
-                            {loading ? 'Verificando...' : 'Ingresar'}
-                        </button>
-                    </form>
+                            {error && (
+                                <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg font-medium flex items-center gap-2">
+                                    <CheckCircle size={16} className="text-red-500" />
+                                    {error}
+                                </div>
+                            )}
 
-                    <p className="text-center text-xs text-slate-400 mt-6">
-                        Si no conoces tu ID, contacta al docente.
-                    </p>
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 active:scale-95 disabled:opacity-70"
+                            >
+                                {loading ? 'Verificando...' : 'Ingresar'}
+                            </button>
+                        </form>
+                    )}
+
+                    {!studentsToSelect && (
+                        <p className="text-center text-xs text-slate-400 mt-6">
+                            Si eres padre de varios alumnos, usa tu número de teléfono registrado.
+                        </p>
+                    )}
                 </div>
             </div>
         );
@@ -850,9 +901,9 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
     });
 
     return (
-        <div className="min-h-screen bg-slate-50 font-sans pb-28"> {/* Adjusted padding for bottom nav */}
+        <div className="h-full overflow-y-auto overscroll-contain bg-slate-50 font-sans pb-28"> {/* Adjusted padding for bottom nav */}
             {/* Header Mobile App Style */}
-            <div className="bg-indigo-600 text-white p-6 pb-12 rounded-b-[2.5rem] shadow-xl relative overflow-hidden">
+            <div className="bg-indigo-600 text-white p-4 md:p-6 pb-6 md:pb-12 rounded-b-[2rem] md:rounded-b-[2.5rem] shadow-xl relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-10 bg-white/5 rounded-full blur-3xl w-64 h-64 -mr-16 -mt-16 pointer-events-none"></div>
 
                 <div className="relative z-10 flex justify-between items-start mb-6">
@@ -863,9 +914,16 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                             {student?.group && <span className="text-xs bg-white/20 px-2 py-1 rounded-lg font-normal tracking-wider border border-white/10">{student.group}</span>}
                         </h1>
                     </div>
-                    <button onClick={handleLogout} className="bg-white/20 p-2 rounded-full hover:bg-white/30 transition-colors">
-                        <LogOut size={20} />
-                    </button>
+                    <div className="flex items-center gap-2">
+                        {hasMultipleStudents && (
+                            <button onClick={handleSwitchStudent} className="bg-white/20 p-2 rounded-full hover:bg-white/30 transition-colors" title="Cambiar Alumno">
+                                <Users size={20} />
+                            </button>
+                        )}
+                        <button onClick={handleLogout} className="bg-white/20 p-2 rounded-full hover:bg-white/30 transition-colors" title="Cerrar Sesión">
+                            <LogOut size={20} />
+                        </button>
+                    </div>
                 </div>
 
                 <div
@@ -1269,8 +1327,8 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                 )}
 
                 {currentTab === 'MESSAGES' && (
-                    <div className="animate-fadeIn pb-24 max-w-3xl mx-auto space-y-4">
-                        <div className="bg-white rounded-2xl h-[60vh] flex flex-col border border-slate-200 shadow-sm overflow-hidden">
+                    <div className="animate-fadeIn pb-24 max-w-3xl mx-auto space-y-4 px-1">
+                        <div className="bg-white rounded-2xl h-[calc(100vh-320px)] md:h-[60vh] flex flex-col border border-slate-200 shadow-sm overflow-hidden">
                             <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-white z-10 relative">
                                 <h3 className="font-bold text-slate-800 flex items-center gap-2">
                                     <MessageCircle className="text-indigo-600" />

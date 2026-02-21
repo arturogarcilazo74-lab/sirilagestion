@@ -745,49 +745,53 @@ app.put('/api/notifications/:id/read', async (req, res) => {
 app.post('/api/parent/login', async (req, res) => {
     let { loginId } = req.body;
     loginId = (loginId || '').trim();
+    if (!loginId) {
+        return res.status(400).json({ success: false, message: 'El ID de acceso es obligatorio.' });
+    }
     const loginIdUpper = loginId.toUpperCase();
     console.log(`[Parent Login] Attempt for: "${loginId}" (Upper: "${loginIdUpper}")`);
 
     try {
         const pool = getPool();
-        // Try exact match, uppercase match (common for CURP), or ID match
-        const [rows] = await pool.query('SELECT * FROM students WHERE curp = ? OR curp = ? OR id = ?', [loginId, loginIdUpper, loginId]);
+        // Search by CURP, ID, or Phone Number
+        const [rows] = await pool.query(
+            'SELECT * FROM students WHERE curp = ? OR curp = ? OR id = ? OR guardian_phone = ?',
+            [loginId, loginIdUpper, loginId, loginId]
+        );
 
         if (rows.length > 0) {
-            const student = rows[0];
-
-            // Robust JSON parsing
-            let parsed = student.data_json;
-            if (typeof parsed === 'string') {
-                try {
-                    parsed = JSON.parse(parsed);
-                    // Double parse check (sometimes it gets double encoded)
-                    if (typeof parsed === 'string') parsed = JSON.parse(parsed);
-                } catch (e) {
-                    console.error('JSON Parse error for student:', student.id, e);
-                    parsed = {};
+            const students = rows.map(student => {
+                let parsed = student.data_json;
+                if (typeof parsed === 'string') {
+                    try {
+                        parsed = JSON.parse(parsed);
+                        if (typeof parsed === 'string') parsed = JSON.parse(parsed);
+                    } catch (e) { parsed = {}; }
                 }
-            } else if (!parsed) {
-                parsed = {};
+                if (!parsed || typeof parsed !== 'object') parsed = {};
+
+                return {
+                    ...parsed,
+                    id: student.id,
+                    name: student.name,
+                    curp: student.curp,
+                    group: student.group || parsed.group,
+                    avatar: student.avatar || parsed.avatar,
+                    attendance: parsed.attendance || {},
+                    completedAssignmentIds: Array.isArray(parsed.completedAssignmentIds) ? parsed.completedAssignmentIds : [],
+                    behaviorPoints: student.behavior_points !== undefined ? student.behavior_points : (parsed.behaviorPoints || 0)
+                };
+            });
+
+            // If only one student, return directly as before for backward compatibility
+            // If multiple, return the list for selection
+            if (students.length === 1) {
+                res.json({ success: true, student: students[0] });
+            } else {
+                res.json({ success: true, multiple: true, students });
             }
-            if (!parsed || typeof parsed !== 'object') parsed = {};
-
-            // Merge and ensure defaults
-            const finalStudent = {
-                ...parsed,
-                id: student.id,
-                name: student.name,
-                curp: student.curp,
-                avatar: student.avatar || parsed.avatar,
-                // Ensure critical arrays/objects exist
-                attendance: parsed.attendance || {},
-                completedAssignmentIds: Array.isArray(parsed.completedAssignmentIds) ? parsed.completedAssignmentIds : [],
-                behaviorPoints: student.behavior_points !== undefined ? student.behavior_points : (parsed.behaviorPoints || 0)
-            };
-
-            res.json({ success: true, student: finalStudent });
         } else {
-            res.status(401).json({ success: false, message: 'No se encontró un alumno con esa CURP o ID.' });
+            res.status(401).json({ success: false, message: 'No se encontraron alumnos vinculados a este identificador.' });
         }
     } catch (error) {
         console.error(error);

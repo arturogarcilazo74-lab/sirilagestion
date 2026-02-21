@@ -246,7 +246,7 @@ const App: React.FC = () => {
         />
       )}
 
-      {currentView !== 'USAER' && currentView !== 'LIBRARY' && currentView !== 'LITERACY' && (
+      {currentView !== 'USAER' && currentView !== 'LIBRARY' && currentView !== 'LITERACY' && currentView !== 'PARENTS_PORTAL' && (
         <MobileLayout
           currentView={currentView}
           setCurrentView={setCurrentView}
@@ -259,8 +259,8 @@ const App: React.FC = () => {
       )}
 
       {/* Main Content */}
-      <main className={`flex-1 print:p-0 print:overflow-visible ${(currentView === 'USAER' || currentView === 'LIBRARY' || currentView === 'LITERACY' || currentView === 'BEHAVIOR') ? 'h-screen overflow-hidden' : 'overflow-y-auto p-4 md:p-8 pt-20 md:pt-8'}`}>
-        <div className={`${(currentView === 'USAER' || currentView === 'LIBRARY' || currentView === 'LITERACY' || currentView === 'BEHAVIOR') ? 'h-full flex flex-col' : 'max-w-7xl mx-auto'} print:max-w-none`}>
+      <main className={`flex-1 print:p-0 print:overflow-visible ${(currentView === 'USAER' || currentView === 'LIBRARY' || currentView === 'LITERACY' || currentView === 'BEHAVIOR' || currentView === 'PARENTS_PORTAL') ? 'h-screen overflow-hidden' : 'overflow-y-auto p-4 md:p-8 pt-20 md:pt-8'}`}>
+        <div className={`${(currentView === 'USAER' || currentView === 'LIBRARY' || currentView === 'LITERACY' || currentView === 'BEHAVIOR' || currentView === 'PARENTS_PORTAL') ? 'h-full flex flex-col' : 'max-w-7xl mx-auto'} print:max-w-none`}>
           {currentView === 'DASHBOARD' && (() => {
             const visibleStudentIds = visibleStudents.map(s => s.id);
             const visibleLogs = store.behaviorLogs.filter(l => visibleStudentIds.includes(l.studentId));
@@ -294,6 +294,7 @@ const App: React.FC = () => {
                 config={store.schoolConfig}
                 logs={visibleLogs}
                 assignments={visibleAssignments}
+                onResetAssignment={store.handleToggleAssignment}
               />
             );
           })()}

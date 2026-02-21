@@ -504,23 +504,28 @@ export const useAppStore = () => {
                 const isCompleted = student.completedAssignmentIds?.includes(assignmentId);
                 let newCompletedIds = [];
                 let newResults = { ...(student.assignmentResults || {}) };
+                let newAttempts = { ...(student.assignmentAttempts || {}) };
 
                 if (isCompleted && score === undefined) {
-                    // Normal toggle OFF
-                    newCompletedIds = student.completedAssignmentIds.filter(id => id !== assignmentId);
-                    // We keep the result for history unless explicity removed? Usually keep it.
+                    // Normal toggle OFF - Reset attempts and completion
+                    newCompletedIds = (student.completedAssignmentIds || []).filter(id => id !== assignmentId);
+                    delete newResults[assignmentId];
+                    delete newAttempts[assignmentId];
                 } else {
                     // Toggle ON or Updating Score
                     newCompletedIds = [...new Set([...(student.completedAssignmentIds || []), assignmentId])];
                     if (score !== undefined) {
                         newResults[assignmentId] = score;
                     }
+                    // Optionally increment attempts if not already completed? 
+                    // Usually handled by the portal, but keeping track here is safer.
                 }
 
                 updatedStudent = {
                     ...student,
                     completedAssignmentIds: newCompletedIds,
                     assignmentResults: newResults,
+                    assignmentAttempts: newAttempts,
                     assignmentsCompleted: newCompletedIds.length,
                     totalAssignments: assignments.length
                 };

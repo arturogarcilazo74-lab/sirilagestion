@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Student, SchoolConfig, BehaviorLog, Assignment } from '../types';
 import { generateReportCard, generateBehaviorReport, generateStudentCredentials } from '../services/pdfGenerator';
-import { Plus, Search, Edit2, Trash2, X, Save, User, Phone, Image as ImageIcon, QrCode, Download, FileText, Printer, Building2, Calendar, MapPin, Hash, GraduationCap, AlertCircle, Upload, FileSpreadsheet, Cake, CheckCircle, FileDown, Users, RectangleHorizontal, PieChart, CheckCircle2, Circle } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, X, Save, User, Phone, Image as ImageIcon, QrCode, Download, FileText, Printer, Building2, Calendar, MapPin, Hash, GraduationCap, AlertCircle, Upload, FileSpreadsheet, Cake, CheckCircle, FileDown, Users, RectangleHorizontal, PieChart, CheckCircle2, Circle, RotateCcw } from 'lucide-react';
 import { GroupAnalysisModal } from './GroupAnalysisModal';
 
 interface StudentsViewProps {
@@ -14,6 +14,7 @@ interface StudentsViewProps {
   logs: BehaviorLog[];
   assignments?: Assignment[];
   readOnly?: boolean;
+  onResetAssignment?: (studentId: string, assignmentId: string) => void;
 }
 
 const INITIAL_FORM_DATA: Omit<Student, 'id' | 'attendance' | 'behaviorPoints' | 'assignmentsCompleted' | 'totalAssignments' | 'participationCount' | 'completedAssignmentIds'> & { id?: string } = {
@@ -37,7 +38,7 @@ const INITIAL_FORM_DATA: Omit<Student, 'id' | 'attendance' | 'behaviorPoints' | 
   guardianOccupation: ''
 };
 
-export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onEdit, onDelete, onImport, config, logs, assignments = [], readOnly }) => {
+export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onEdit, onDelete, onImport, config, logs, assignments = [], readOnly, onResetAssignment }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAnalysisOpen, setIsAnalysisOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -56,6 +57,14 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
 
   // Extract unique groups from students
   const studentGroups = Array.from(new Set(students.map(s => s.group || config?.gradeGroup || 'Sin Grupo'))).sort();
+
+  // Keep report student in sync with master list (for resets/updates in render)
+  React.useEffect(() => {
+    if (reportStudent) {
+      const updated = students.find(s => s.id === reportStudent.id);
+      if (updated) setReportStudent(updated);
+    }
+  }, [students]);
 
   const filteredStudents = students
     .filter(s => {
@@ -1564,11 +1573,36 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
                         <div className="text-[10px] text-slate-400 text-center py-2 italic font-medium">Sin entregas</div>
                       ) : (
                         assignments.filter(a => reportStudent.completedAssignmentIds?.includes(a.id)).map(a => (
-                          <div key={a.id} className="flex justify-between items-center bg-white p-2 rounded-lg border border-emerald-100">
+                          <div key={a.id} className="flex justify-between items-center bg-white p-2 rounded-lg border border-emerald-100 group/item relative">
                             <span className="text-[10px] font-bold text-slate-700 truncate">{a.title}</span>
-                            {reportStudent.assignmentResults?.[a.id] !== undefined && (
-                              <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-1 rounded">{reportStudent.assignmentResults[a.id]}</span>
-                            )}
+                            <div className="flex items-center gap-2">
+                              {reportStudent.assignmentResults?.[a.id] !== undefined && (
+                                <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-1 rounded">{reportStudent.assignmentResults[a.id]}</span>
+                              )}
+                              {!readOnly && onResetAssignment && (
+                                <button
+                                  onClick={() => {
+                                    if (window.confirm(`¿Estás seguro de que deseas restaurar la actividad "${a.title}"? El alumno podrá realizarla de nuevo.`)) {
+                                      onResetAssignment(reportStudent.id, a.id);
+                                      // Local update for immediate feedback in modal
+                                      setReportStudent({
+                                        ...reportStudent,
+                                        completedAssignmentIds: reportStudent.completedAssignmentIds?.filter(id => id !== a.id) || [],
+                                        assignmentResults: (() => {
+                                          const r = { ...(reportStudent.assignmentResults || {}) };
+                                          delete r[a.id];
+                                          return r;
+                                        })()
+                                      });
+                                    }
+                                  }}
+                                  className="p-1 text-red-500 hover:bg-red-50 rounded opacity-0 group-hover/item:opacity-100 transition-opacity"
+                                  title="Restaurar Actividad"
+                                >
+                                  <RotateCcw size={14} />
+                                </button>
+                              )}
+                            </div>
                           </div>
                         ))
                       )}
