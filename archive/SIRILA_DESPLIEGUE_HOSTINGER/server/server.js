@@ -958,8 +958,8 @@ app.delete('/api/books/:id', async (req, res) => {
     }
 });
 
-// Handle React Routing - return all requests to React app (Express 4 & 5 compatible)
-app.get('*path', (req, res) => {
+// Handle React Routing, return all requests to React app (Fixed for Express 5)
+app.get(/^(.*)$/, (req, res) => {
     res.sendFile(path.join(__dirname, '../dist-app', 'index.html'));
 });
 

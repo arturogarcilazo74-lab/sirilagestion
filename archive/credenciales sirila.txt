@@ -1,0 +1,11 @@
+credenciales sirila
+
+
+nombre de base de datos: u654780111_sirila_db
+Usuario: u654780111_admin_sirila
+contraseña: Sirila1330
+
+
+ssh -p 65002 u654780111@62.72.50.222
+
+/home/u654780111/sirila-new/sirila-new
