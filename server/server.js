@@ -18,8 +18,11 @@ app.use(cors());
 app.use(express.json({ limit: '500mb' }));
 
 // --- SERVE STATIC FRONTEND ---
-const distPath = path.join(__dirname, '../dist-app');
-app.use(express.static(distPath));
+const STATIC_ROOT = path.resolve(__dirname, '../dist-app');
+
+// Serve static files from the dist-app directory
+app.use(express.static(STATIC_ROOT));
+app.use('/assets', express.static(path.join(STATIC_ROOT, 'assets')));
 
 // Endpoint for checking if server is alive
 // Endpoint for checking if server is alive and Diagnostics
