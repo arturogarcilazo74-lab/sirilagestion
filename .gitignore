@@ -42,3 +42,8 @@ linux-unpacked/
 .env
 server/.env
 server/.env.production
+
+# Scripts de migración (contienen credenciales, uso único)
+tools/scripts/migrar_aiven_a_hostinger.js
+tools/scripts/migrar_directo.js
+MIGRACION_HOSTINGER.sql
