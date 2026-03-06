@@ -41,3 +41,4 @@ linux-unpacked/
 *.sw?
 .env
 server/.env
+server/.env.production
