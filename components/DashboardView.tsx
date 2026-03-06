@@ -119,7 +119,7 @@ export const DashboardView: React.FC<DashboardProps> = ({
         try {
           new Notification(title, {
             body: body,
-            icon: '/logo escuela.png',
+            icon: '/logo-escuela.png',
             tag: task.id // Prevent duplicate notifications from OS if supported
           });
           // Also play a sound if urgent

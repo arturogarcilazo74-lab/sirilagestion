@@ -297,7 +297,7 @@ export const useAppStore = () => {
                     if ('Notification' in window && Notification.permission === 'granted') {
                         new Notification('Nuevo Mensaje de Padre', {
                             body: `Tienes ${count} mensajes sin leer.`,
-                            icon: '/logo escuela.png'
+                            icon: '/logo-escuela.png'
                         });
                     }
                 }

@@ -10,7 +10,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'logo escuela.png'],
+      includeAssets: ['favicon.ico', 'logo-escuela.png'],
       manifest: {
         name: 'Sirila Gestión Escolar',
         short_name: 'Sirila',
@@ -20,17 +20,17 @@ export default defineConfig({
         display: 'standalone',
         icons: [
           {
-            src: 'logo escuela.png',
+            src: 'logo-escuela.png',
             sizes: '192x192',
             type: 'image/png'
           },
           {
-            src: 'logo escuela.png',
+            src: 'logo-escuela.png',
             sizes: '512x512',
             type: 'image/png'
           },
           {
-            src: 'logo escuela.png',
+            src: 'logo-escuela.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable'
