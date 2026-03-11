@@ -708,25 +708,37 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
         try {
             const allAssignments = await api.getAssignments();
             const filtered = allAssignments.filter((a: Assignment) => {
-                if (a.targetGroup === 'GLOBAL') return true;
-                const sGroupRaw = (targetStudent.group || '').toUpperCase().trim();
-                const sGrade = sGroupRaw.match(/(\d+)/)?.[0];
-                const sLetter = sGroupRaw.match(/[A-F]/)?.[0];
+                // 1. Check if it's explicitly visible
+                if (a.isVisibleInParentsPortal === false) return false;
 
-                const aGroupRaw = (a.targetGroup || '4 A').toUpperCase().trim();
-                const aGrade = aGroupRaw.match(/(\d+)/)?.[0];
-                const aLetter = aGroupRaw.match(/[A-F]/)?.[0];
+                // 2. Global assignments are always visible
+                const targetGroup = (a.targetGroup || '').toUpperCase().trim();
+                if (!targetGroup || targetGroup === 'GLOBAL') return true;
 
-                if (sGrade && sLetter && aGrade && aLetter) {
-                    return sGrade === aGrade && sLetter === aLetter;
+                // 3. Match by student group
+                const studentGroup = (targetStudent.group || '').toUpperCase().trim();
+                if (!studentGroup) return false;
+
+                // direct match
+                if (studentGroup === targetGroup) return true;
+
+                // partial match (e.g. "4 A" matches "4")
+                const sGrade = studentGroup.match(/(\d+)/)?.[0];
+                const sLetter = studentGroup.match(/[A-F]/)?.[0];
+                const aGrade = targetGroup.match(/(\d+)/)?.[0];
+                const aLetter = targetGroup.match(/[A-F]/)?.[0];
+
+                if (sGrade && aGrade && sGrade === aGrade) {
+                    // If target has a letter, student MUST match it
+                    if (aLetter) return sLetter === aLetter;
+                    // If target doesn't have a letter but grade matches, it's global for that grade
+                    return true;
                 }
-                if (aGrade && !aLetter && sGrade) {
-                    return sGrade === aGrade;
-                }
-                return sGroupRaw === aGroupRaw;
+
+                return false;
             });
             setAssignments(filtered);
-        } catch (e) { console.error(e); }
+        } catch (e) { console.error("Failed to load assignments", e); }
     };
 
     const loadMessages = async (studentId: string) => {
