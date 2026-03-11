@@ -789,7 +789,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
 
     if (!isLoggedIn) {
         return (
-            <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4 relative overflow-hidden">
+            <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4 relative overflow-y-auto">
                 <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100 contrast-150"></div>
 
                 {!standalone && (
@@ -902,7 +902,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
     });
 
     return (
-        <div className="h-full overflow-y-auto overscroll-contain bg-slate-50 font-sans pb-28"> {/* Adjusted padding for bottom nav */}
+        <div className="h-screen overflow-y-auto overscroll-contain bg-slate-50 font-sans pb-28"> {/* Adjusted padding for bottom nav */}
             {/* Header Mobile App Style */}
             <div className="bg-indigo-600 text-white p-4 md:p-6 pb-6 md:pb-12 rounded-b-[2rem] md:rounded-b-[2.5rem] shadow-xl relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-10 bg-white/5 rounded-full blur-3xl w-64 h-64 -mr-16 -mt-16 pointer-events-none"></div>
