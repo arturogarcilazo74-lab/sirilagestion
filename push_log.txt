@@ -1,0 +1,109 @@
+git : remote: error: 
+GH013: Repository rule 
+violations found for 
+refs/heads/main.       
+ 
+En l?nea: 1 Car?cter: 1
++ git push origin main 
+2>&1 | Out-File 
+-FilePath push_log.txt 
+-Encoding ...
++ ~~~~~~~~~~~~~~~~~~~~~
+~~~~
+    + CategoryInfo     
+         : NotSpecifi  
+  ed: (remote: error   
+ : ...s/main.          
+  :String) [], Rem    
+oteException
+    + FullyQualifiedEr 
+   rorId : NativeComm  
+  andError
+ 
+remote: 
+remote: - GITHUB PUSH 
+PROTECTION        
+remote:   ?????????????
+???????????????????????
+???????????????????????
+???????????????????????
+???????????????????????
+??????????????????     
+   
+remote:     Resolve 
+the following 
+violations before 
+pushing again        
+remote: 
+remote:     - Push 
+cannot contain secrets 
+       
+remote: 
+remote:             
+remote:      (?) Learn 
+how to resolve a 
+blocked push        
+remote:      https://do
+cs.github.com/code-secu
+rity/secret-scanning/wo
+rking-with-secret-scann
+ing-and-push-protection
+/working-with-push-prot
+ection-from-the-command
+-line#resolving-a-block
+ed-push        
+remote:             
+remote:             
+remote:       ?????? 
+Aiven Service Password 
+???????????????????????
+???????????????????????
+???????????????????????
+???????????????        
+remote:        
+locations:        
+remote:          - 
+commit: bc10827d044f372
+fbfc6c712b20a5956f4af0a
+10        
+remote:            
+path: tools/scripts/mig
+rar_aiven_a_hostinger.j
+s:21        
+remote:          - 
+commit: bc10827d044f372
+fbfc6c712b20a5956f4af0a
+10        
+remote:            
+path: tools/scripts/mig
+rar_directo.js:13      
+  
+remote:             
+remote:        (?) To 
+push, remove secret 
+from commit(s) or 
+follow this URL to 
+allow the secret.      
+  
+remote:        https://
+github.com/arturogarcil
+azo74-lab/sirilagestion
+/security/secret-scanni
+ng/unblock-secret/3AmXk
+E0sXsL81bxqGobNeQ4JWB3 
+       
+remote:             
+remote: 
+remote: 
+To https://github.com/a
+rturogarcilazo74-lab/si
+rilagestion
+ ! [remote rejected] 
+main -> main (push 
+declined due to 
+repository rule 
+violations)
+error: failed to push 
+some refs to 'https://g
+ithub.com/arturogarcila
+zo74-lab/sirilagestion'

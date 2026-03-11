@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { SchoolConfig } from '../types';
-import { Save, User, School, MapPin, Clock, Upload, Building2, BookOpen, Hash, Mail, CheckCircle2, Phone, Users, Plus, Trash2, Edit2, Shield, Globe } from 'lucide-react';
+import { Save, User, School, MapPin, Clock, Upload, Building2, BookOpen, Hash, Mail, CheckCircle2, Phone, Users, Plus, Trash2, Edit2, Shield, Globe, Sparkles } from 'lucide-react';
 
 interface SettingsViewProps {
   config: SchoolConfig;
@@ -750,6 +750,44 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ config, onSave, onEx
                 <br />
                 Estado: <span className="text-green-600 font-bold">Conectado</span>
               </p>
+            </div>
+
+            <div className="flex flex-col gap-2 md:col-span-2 border-t border-slate-200 pt-4 mt-2">
+              <h4 className="font-bold text-slate-700 flex items-center gap-2">
+                <Sparkles className="text-indigo-500" size={18} />
+                Inteligencia Artificial (Gemini API)
+              </h4>
+              <p className="text-xs text-slate-500 mb-2">
+                Pega aquí tu clave de Google AI Studio para usar las funciones de IA. 
+                Se guarda localmente en este navegador.
+              </p>
+              <div className="flex gap-2">
+                <input
+                  type="password"
+                  id="geminiKeyInput"
+                  placeholder="AIza..."
+                  defaultValue={localStorage.getItem('VITE_GEMINI_API_KEY') || ''}
+                  className="w-full p-2 border border-slate-300 rounded-lg text-sm font-mono"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const input = document.getElementById('geminiKeyInput') as HTMLInputElement;
+                    const val = input.value.trim();
+                    if (val) {
+                      localStorage.setItem('VITE_GEMINI_API_KEY', val);
+                      alert('API Key de Gemini guardada correctamente.');
+                    } else {
+                      localStorage.removeItem('VITE_GEMINI_API_KEY');
+                      alert('API Key de Gemini eliminada.');
+                    }
+                    window.location.reload();
+                  }}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 whitespace-nowrap"
+                >
+                  Guardar LLave
+                </button>
+              </div>
             </div>
 
             <div className="flex flex-col gap-2 md:col-span-2 border-t border-slate-200 pt-4 mt-2">

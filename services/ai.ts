@@ -1,14 +1,21 @@
 import { Student } from "../types";
 
 // Helper to get API Key dynamically
-const getApiKey = () => (import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.VITE_API_KEY || '').trim();
+const getApiKey = () => {
+    return (
+        localStorage.getItem('VITE_GEMINI_API_KEY') ||
+        import.meta.env.VITE_GEMINI_API_KEY ||
+        import.meta.env.VITE_API_KEY ||
+        ''
+    ).trim();
+};
 
 // Helper to handle model fallbacks using direct REST API
 const generateWithFallback = async (input: string | any[], config?: any): Promise<string> => {
-  const apiKey = getApiKey();
-  if (!apiKey) {
-    throw new Error("No se encontró la API Key de Gemini. Si estás en la Nube (Render), asegúrate de haber agregado VITE_GEMINI_API_KEY en la pestaña Environment y que el valor empiece con 'AIza...'. Nota: Render requiere un nuevo Deploy manual para aplicar cambios en variables VITE_.");
-  }
+    const apiKey = getApiKey();
+    if (!apiKey) {
+        throw new Error("No se encontró la API Key de Gemini. Puedes configurarla en Ajustes o en el modal de creación de actividades.");
+    }
 
   // Robust model list - PRIORITIZING PRO MODELS for better quality
   let modelsToTry = [

@@ -71,6 +71,8 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
   const [aiWorksheetTopic, setAiWorksheetTopic] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
   const [imageError, setImageError] = useState(false);
+  const [geminiKeyInput, setGeminiKeyInput] = useState(localStorage.getItem('VITE_GEMINI_API_KEY') || '');
+  const [showKeyEntry, setShowKeyEntry] = useState(false);
 
   // -- LIVEWORKSHEETS EDITOR STATE --
   const imageRef = useRef<HTMLImageElement>(null);
@@ -454,8 +456,8 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                       <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center mb-2 md:mb-4 transition-colors ${activityType === 'HTML_GAME' ? 'bg-orange-500 text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-orange-100 group-hover:text-orange-500'}`}>
                         <Gamepad2 size={18} className="md:w-6 md:h-6" />
                       </div>
-                      <h4 className={`font-bold text-sm md:text-lg mb-1 leading-tight ${activityType === 'HTML_GAME' ? 'text-orange-900' : 'text-slate-700'}`}>Juego</h4>
-                      <p className="hidden md:block text-sm text-slate-500 leading-snug">Juego Lúdico.</p>
+                      <h4 className={`font-bold text-sm md:text-lg mb-1 leading-tight ${activityType === 'HTML_GAME' ? 'text-orange-900' : 'text-slate-700'}`}>Actividad HTML</h4>
+                      <p className="hidden md:block text-sm text-slate-500 leading-snug">Archivo .html interactivo.</p>
                       {activityType === 'HTML_GAME' && <div className="absolute top-2 right-2 md:top-4 md:right-4 text-orange-500"><CheckCircle size={16} fill="currentColor" className="text-white md:w-5 md:h-5" /></div>}
                     </button>
                   </div>
@@ -594,10 +596,51 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                       3. Editor de Contenido - {
                         activityType === 'WORKSHEET' ? 'Ficha Interactiva' :
                           activityType === 'QUIZ' ? 'Cuestionario' :
-                            activityType === 'HTML_GAME' ? 'Juego Lúdico (HTML5)' :
-                              'Planeación Didáctica NEM'
+                            activityType === 'HTML_GAME' ? 'Actividad HTML' :
+                              'Planeación NEM'
                       }
                     </label>
+
+                    {/* API KEY FALLBACK ENTRY */}
+                    {['QUIZ', 'WORKSHEET', 'PLANNING', 'HTML_GAME'].includes(activityType) && !localStorage.getItem('VITE_GEMINI_API_KEY') && !import.meta.env.VITE_GEMINI_API_KEY && !import.meta.env.VITE_API_KEY && (
+                      <div className="mb-6 animate-fadeIn">
+                        <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl flex flex-col md:flex-row items-center gap-4">
+                          <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
+                            <AlertCircle size={20} />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-bold text-amber-900">Configuración de IA Requerida</p>
+                            <p className="text-xs text-amber-700">Para usar funciones de IA (generación, escaneo), necesitas una API Key de Gemini.</p>
+                            <div className="mt-2 flex gap-2">
+                              <input
+                                type="password"
+                                placeholder="Pega tu clave AIza..."
+                                value={geminiKeyInput}
+                                onChange={(e) => setGeminiKeyInput(e.target.value)}
+                                className="flex-1 p-2 border border-amber-300 rounded text-xs outline-none focus:ring-2 focus:ring-amber-500"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (geminiKeyInput.startsWith('AIza')) {
+                                    localStorage.setItem('VITE_GEMINI_API_KEY', geminiKeyInput);
+                                    setShowKeyEntry(false);
+                                    alert("API Key guardada localmente.");
+                                    window.location.reload(); // Reload to refresh AI service state
+                                  } else {
+                                    alert("La clave debe empezar con 'AIza'.");
+                                  }
+                                }}
+                                className="px-3 py-2 bg-amber-600 text-white text-xs font-bold rounded hover:bg-amber-700"
+                              >
+                                Guardar
+                              </button>
+                            </div>
+                          </div>
+                          <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold text-amber-600 underline whitespace-nowrap">Obtener Clave Gratis</a>
+                        </div>
+                      </div>
+                    )}
 
                     {/* PLANNING AGENT UI */}
                     {activityType === 'PLANNING' && (
@@ -1136,7 +1179,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                         <div className="bg-gradient-to-br from-orange-50 to-white p-6 rounded-2xl border-2 border-orange-100 shadow-sm">
                           <h4 className="font-bold text-orange-800 flex items-center gap-2 mb-4">
                             <Gamepad2 size={24} />
-                            Generador de Juegos Educativos
+                            Actividad o Juego HTML5
                           </h4>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-4">
@@ -1176,7 +1219,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                               </button>
 
                               <div className="relative pt-4 border-t border-orange-100">
-                                <label className="block text-[10px] font-bold text-orange-400 uppercase tracking-widest mb-2 text-center">Opcional: Subir Juego Propio</label>
+                                <label className="block text-xs font-bold text-orange-700 uppercase tracking-widest mb-3 text-center">O Subir tu propio Archivo HTML (Recomendado)</label>
                                 <div className="relative group">
                                   <input
                                     type="file"
