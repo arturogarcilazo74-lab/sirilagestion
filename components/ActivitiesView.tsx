@@ -1394,17 +1394,24 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                           <span>{assignment.title}</span>
                           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button
+                              onClick={() => onUpdateAssignment(assignment.id, { isVisibleInParentsPortal: !assignment.isVisibleInParentsPortal })}
+                              className={`p-1 rounded-md transition-colors ${assignment.isVisibleInParentsPortal ? 'text-indigo-600 hover:bg-indigo-50' : 'text-slate-400 hover:bg-slate-100'}`}
+                              title={assignment.isVisibleInParentsPortal ? "Visible en Portal de Padres" : "Oculto en Portal de Padres"}
+                            >
+                              {assignment.isVisibleInParentsPortal ? <Eye size={14} /> : <EyeOff size={14} />}
+                            </button>
+                            <button
                               onClick={() => {
                                 const msg = getTaskMessage(assignment.title, new Date(assignment.dueDate).toLocaleDateString(), assignment.description);
                                 const encodedMsg = encodeURIComponent(msg);
                                 window.open(`https://wa.me/?text=${encodedMsg}`, '_blank');
                               }}
-                              className="text-green-500 hover:text-green-600 p-0.5"
+                              className="text-emerald-500 hover:text-emerald-600 p-0.5"
                               title="Compartir por WhatsApp"
                             >
                               <MessageCircle size={14} />
                             </button>
-                            <button onClick={() => onDeleteAssignment(assignment.id)} className="text-slate-300 hover:text-red-500 transition-colors" aria-label="Eliminar actividad">
+                            <button onClick={() => onDeleteAssignment(assignment.id)} className="text-slate-300 hover:text-red-500 transition-colors" title="Eliminar actividad">
                               <Trash2 size={14} />
                             </button>
                           </div>

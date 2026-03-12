@@ -164,7 +164,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ students, books, onBac
                     {/* Filters & Search */}
                     <div className="flex flex-col md:flex-row gap-4">
                         <div className="flex-1 relative">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} aria-hidden="true" title="Buscar" />
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} aria-hidden="true" />
                             <input
                                 type="text"
                                 placeholder="Buscar libros, autores o temas..."

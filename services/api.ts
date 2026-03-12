@@ -211,7 +211,7 @@ export const api = {
             const res = await fetch(`${API_URL}/students`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(student)
             });
-            if (!res.ok) throw new Error('Server unreachable');
+            if (!res.ok) throw new Error(`Server error: ${res.status}`);
         } catch (e) {
             addToQueue(`/students`, 'POST', student);
         }
@@ -234,9 +234,10 @@ export const api = {
 
     saveAssignment: async (assignment: Assignment) => {
         try {
-            await fetch(`${API_URL}/assignments`, {
+            const res = await fetch(`${API_URL}/assignments`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(assignment)
             });
+            if (!res.ok) throw new Error(`Server error: ${res.status}`);
         } catch (e) {
             addToQueue(`/assignments`, 'POST', assignment);
         }
@@ -253,9 +254,10 @@ export const api = {
 
     saveEvent: async (event: SchoolEvent) => {
         try {
-            await fetch(`${API_URL}/events`, {
+            const res = await fetch(`${API_URL}/events`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(event)
             });
+            if (!res.ok) throw new Error(`Server error: ${res.status}`);
         } catch (e) {
             addToQueue(`/events`, 'POST', event);
         }
@@ -271,9 +273,10 @@ export const api = {
 
     saveBehaviorLog: async (log: BehaviorLog) => {
         try {
-            await fetch(`${API_URL}/behavior`, {
+            const res = await fetch(`${API_URL}/behavior`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(log)
             });
+            if (!res.ok) throw new Error(`Server error: ${res.status}`);
         } catch (e) {
             addToQueue(`/behavior`, 'POST', log);
         }
@@ -295,9 +298,10 @@ export const api = {
 
     saveFinanceEvent: async (event: FinanceEvent) => {
         try {
-            await fetch(`${API_URL}/finance`, {
+            const res = await fetch(`${API_URL}/finance`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(event)
             });
+            if (!res.ok) throw new Error(`Server error: ${res.status}`);
         } catch (e) {
             addToQueue(`/finance`, 'POST', event);
         }
@@ -313,9 +317,10 @@ export const api = {
 
     saveConfig: async (config: SchoolConfig) => {
         try {
-            await fetch(`${API_URL}/config`, {
+            const res = await fetch(`${API_URL}/config`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(config)
             });
+            if (!res.ok) throw new Error(`Server error: ${res.status}`);
         } catch (e) {
             addToQueue(`/config`, 'POST', config);
         }
@@ -354,9 +359,10 @@ export const api = {
 
     saveNotification: async (notification: any) => {
         try {
-            await fetch(`${API_URL}/notifications`, {
+            const res = await fetch(`${API_URL}/notifications`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(notification)
             });
+            if (!res.ok) throw new Error(`Server error: ${res.status}`);
         } catch (e) {
             addToQueue(`/notifications`, 'POST', notification);
         }
@@ -381,9 +387,10 @@ export const api = {
     // --- STAFF TASKS ---
     saveStaffTask: async (task: StaffTask) => {
         try {
-            await fetch(`${API_URL}/staff-tasks`, {
+            const res = await fetch(`${API_URL}/staff-tasks`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(task)
             });
+            if (!res.ok) throw new Error(`Server error: ${res.status}`);
         } catch (e) {
             addToQueue(`/staff-tasks`, 'POST', task);
         }
@@ -404,9 +411,10 @@ export const api = {
 
     sendParentMessage: async (studentId: string, message: string, sender: 'PARENT' | 'TEACHER' | 'DIRECTOR') => {
         try {
-            await fetch(`${API_URL}/parent/messages`, {
+            const res = await fetch(`${API_URL}/parent/messages`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ studentId, message, sender })
             });
+            if (!res.ok) throw new Error(`Server error: ${res.status}`);
         } catch (e) {
             addToQueue(`/parent/messages`, 'POST', { studentId, message, sender });
         }
@@ -440,7 +448,7 @@ export const api = {
             const res = await fetch(`${API_URL}/books`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(book)
             });
-            if (!res.ok) throw new Error('Server unreachable');
+            if (!res.ok) throw new Error(`Server error: ${res.status}`);
         } catch (e) {
             addToQueue(`/books`, 'POST', book);
         }

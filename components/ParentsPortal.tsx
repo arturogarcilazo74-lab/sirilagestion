@@ -80,7 +80,10 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
         let fullAssignment = assignment;
 
         // Lazy load full data if missing or stripped (Optimized Load Support)
-        const isStripped = assignment.interactiveData && (assignment.interactiveData as any).hasContent && !(assignment.interactiveData as any).imageUrl && !(assignment.interactiveData as any).questions;
+        const isStripped = assignment.interactiveData && (assignment.interactiveData as any).hasContent && 
+            !(assignment.interactiveData as any).imageUrl && 
+            !(assignment.interactiveData as any).questions &&
+            !(assignment.interactiveData as any).htmlContent;
 
         if (!assignment.interactiveData || isStripped) {
             try {
