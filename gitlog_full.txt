@@ -1,0 +1,42 @@
+1915eec Fix Gemini API availability with localStorage fallback and improve HTML activity upload UI
+0a0d62f Fix: robust group filtering for activities in Parents Portal
+8ddcef1 Fix scrolling in Parents Portal and clean up App.tsx
+2985ee7 Remove migration scripts with credentials from tracking
+5596362 Fix: logo en public/, rebuild con logo-escuela.png correcto
+5a98bef Security: remove .env.production from tracking, use Hostinger env vars
+46003cb Fix: logo filename, datos Aiven, rebuild dist-app
+927604b Fix static file serving paths for Hostinger
+7923850 Organización de carpetas + Build para Hostinger + Fix Express 5
+1906e88 Fix exam generation logic: Add unique IDs to questions and add fallback in ParentsPortal
+d6285b1 Mejoras en Portal de Padres: Seleccion de multiples hijos, limites de intentos y ajustes moviles
+84a97f9 Enhance exam generation with auto-grading and attempt limits
+cb87af8 Implementar generador de examenes y guias de estudio
+6d9dcee fix: student avatar display and add profile tab
+29e6301 feat: implement honor roll in parents portal and server endpoint
+44ff4ff Fix: Mobile view for activities fix and improved UI rendering
+de651dc Implement HTML activity upload and grading logic
+ad28b75 Fix Render build error: Increase PWA cache size limit
+7caac5c Add optional instructions and links for Simple tasks
+029023f Add HTML Game generator and player to app
+b1e02d8 Implementacion de sistema de notificaciones dual (Internet y WhatsApp) con plantillas inteligentes
+8ec5990 Switch to Gemini Pro models for better worksheet generation quality
+e5d6854 Simplify AI worksheet generation to use JSON-only format
+a8c5065 Comprehensive worksheet generation redesign with detailed layout specs
+45e4acb Robust SVG generation: separate text blocks, client-side encoding
+55d2b58 Pass Base64 SVG cleanly to frontend to fix rendering issues
+0cb98dd Optimize AI worksheet layout: fewer items, better spacing, solid background
+c69b5e2 Switch AI SVG generation to Base64 to prevent JSON errors
+2f9d0a8 Fix bad control character JSON error
+77a1f63 Enhance activity fullscreen and interactions
+a368371 Fix AI JSON generation error by forcing escaped quotes
+0a6880a Enhance AI Activity size and layout
+d9e9bb7 Fix secrets and updates
+0b7376b Fix: Sistema de notas, carga optimizada y conexion a la nube
+6f58538 Fix PWA caching issues and increase timeout for Render free tier
+07ed2f0 Suppress local memory full alert for cloud users
+ac38159 Fix SQL errors caused by double quotes (ANSI_QUOTES mode)
+7cc7149 Add Server URL configuration in Settings
+faaedd5 Debug DB Connection Host
+7ae5752 Fix database connection for cloud and add health diagnostics
+d305a8e Preparando para despliegue en Render (Secured)
+a130fc3 feat: initial commit for cloud deployment

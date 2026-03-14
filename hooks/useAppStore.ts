@@ -325,7 +325,11 @@ export const useAppStore = () => {
             behaviorPoints: 0,
             assignmentsCompleted: 0,
             completedAssignmentIds: [],
-            totalAssignments: assignments.length,
+            totalAssignments: assignments.filter(a => {
+                const target = (a.targetGroup || '').toUpperCase().trim();
+                const studentG = (studentData.group || '').toUpperCase().trim();
+                return !target || target === 'GLOBAL' || target === 'TODOS' || target === studentG;
+            }).length,
             participationCount: 0,
             grades: [],
             annualFeePaid: false
@@ -386,7 +390,11 @@ export const useAppStore = () => {
                         behaviorPoints: 0,
                         assignmentsCompleted: 0,
                         completedAssignmentIds: [],
-                        totalAssignments: assignments.length,
+                        totalAssignments: assignments.filter(a => {
+                            const target = (a.targetGroup || '').toUpperCase().trim();
+                            const studentG = (data.group || defaultGroup || schoolConfig.gradeGroup || '').toUpperCase().trim();
+                            return !target || target === 'GLOBAL' || target === 'TODOS' || target === studentG;
+                        }).length,
                         participationCount: 0,
                         grades: [],
                         annualFeePaid: false,

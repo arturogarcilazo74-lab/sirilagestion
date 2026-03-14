@@ -1,0 +1,59 @@
+commit 1915eece3487dea59417c3596c1a7c6c908cbf3e
+Author: Usuario Sirila <sirila@gestion.com>
+Date:   Tue Mar 10 21:28:15 2026 -0700
+
+    Fix Gemini API availability with localStorage fallback and improve HTML activity upload UI
+
+commit 0a0d62f30366837449867e546f8b74c5e2ba110a
+Author: Usuario Sirila <sirila@gestion.com>
+Date:   Tue Mar 10 21:14:04 2026 -0700
+
+    Fix: robust group filtering for activities in Parents Portal
+
+commit 8ddcef139689cfe5c7ea343003fda56d4ffb0c29
+Author: Usuario Sirila <arturogarcilazo74-lab@users.noreply.github.com>
+Date:   Tue Mar 10 20:13:35 2026 -0700
+
+    Fix scrolling in Parents Portal and clean up App.tsx
+
+commit 2985ee766df17357c0a87a622bf9575a2a00f3d1
+Author: Usuario Sirila <arturogarcilazo74-lab@users.noreply.github.com>
+Date:   Fri Mar 6 02:09:27 2026 -0700
+
+    Remove migration scripts with credentials from tracking
+
+commit 55963620f6e40a71ffba2711b4d74fb4443fd08f
+Author: Usuario Sirila <arturogarcilazo74-lab@users.noreply.github.com>
+Date:   Fri Mar 6 02:04:34 2026 -0700
+
+    Fix: logo en public/, rebuild con logo-escuela.png correcto
+
+commit 5a98bef0c602f8e40ad3af985939998b1b1e6cca
+Author: Usuario Sirila <sirila@gestion.com>
+Date:   Fri Mar 6 00:37:02 2026 -0700
+
+    Security: remove .env.production from tracking, use Hostinger env vars
+
+commit 46003cb286c88527bde92bff4b02337f1585c5a6
+Author: Usuario Sirila <sirila@gestion.com>
+Date:   Fri Mar 6 00:34:04 2026 -0700
+
+    Fix: logo filename, datos Aiven, rebuild dist-app
+
+commit 927604b7044a1b24627d61be305f562f66ef3850
+Author: Usuario Sirila <sirila@gestion.com>
+Date:   Fri Mar 6 00:23:27 2026 -0700
+
+    Fix static file serving paths for Hostinger
+
+commit 7923850e0043d038a39b0fe8a4ec9cce567c5f9b
+Author: Usuario Sirila <sirila@gestion.com>
+Date:   Thu Mar 5 23:42:37 2026 -0700
+
+    Organización de carpetas + Build para Hostinger + Fix Express 5
+
+commit 1906e88f8d023eae600f77de5af9666f617cb4af
+Author: Usuario Sirila <sirila@gestion.com>
+Date:   Sat Feb 21 12:20:34 2026 -0700
+
+    Fix exam generation logic: Add unique IDs to questions and add fallback in ParentsPortal

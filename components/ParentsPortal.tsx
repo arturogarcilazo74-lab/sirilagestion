@@ -24,7 +24,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
     const [activeQuiz, setActiveQuiz] = useState<Assignment | null>(null);
     const [activeHtmlGame, setActiveHtmlGame] = useState<Assignment | null>(null);
     const [quizAnswers, setQuizAnswers] = useState<Record<string, number>>({});
-    const [quizResult, setQuizResult] = useState<{ score: number, passed: boolean } | null>(null);
+    const [quizResult, setQuizResult] = useState<{ score: number, passed: boolean, areaScores?: Record<string, { correct: number, total: number }> } | null>(null);
 
     // Worksheet State
     const [activeWorksheet, setActiveWorksheet] = useState<Assignment | null>(null);
@@ -141,7 +141,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
     useEffect(() => {
         const handleGameMessage = async (event: MessageEvent) => {
             if (event.data && event.data.type === 'GAME_COMPLETE' && activeHtmlGame && student) {
-                const { score, maxScore = 100 } = event.data;
+                const { score, maxScore = 100, areaScores } = event.data;
                 console.log("Game Completed. Score received:", score, "/", maxScore);
 
                 // Mapear a 0-10
@@ -152,7 +152,8 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                 try {
                     await api.submitAssignment(student.id, activeHtmlGame.id, {
                         score: finalScore,
-                        type: 'HTML_GAME'
+                        type: 'HTML_GAME',
+                        areaScores: areaScores // Pass area scores if provided
                     });
 
                     alert(`¡Juego Completado!\nTu calificación es: ${finalScore}/10`);
@@ -525,6 +526,18 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
 
         const total = activeQuiz.interactiveData.questions.length;
         let rawScore = total > 0 ? (correctCount / total) * 10 : 0;
+        
+        // Calculate Area-Based Scores
+        const areaScores: Record<string, { correct: number, total: number }> = {};
+        activeQuiz.interactiveData.questions.forEach((q, idx) => {
+          const cat = q.category || 'General';
+          if (!areaScores[cat]) areaScores[cat] = { correct: 0, total: 0 };
+          areaScores[cat].total++;
+          const answerId = q.id || `q-${idx}`;
+          if (quizAnswers[answerId] === q.correctIndex) {
+            areaScores[cat].correct++;
+          }
+        });
 
         // Check for late submission
         let isLate = false;
@@ -542,12 +555,20 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
         const minPass = activeQuiz.interactiveData.minScoreToPass ?? 6;
         const passed = score >= minPass;
 
-        setQuizResult({ score, passed });
+        setQuizResult({ score, passed, areaScores });
         if (isLate) {
             alert("⚠️ Tu entrega está fuera de fecha. Tu calificación vale el 60% de la nota original.");
         }
 
+        const areaPercentageResults: Record<string, number> = {};
+        if (areaScores) {
+          Object.entries(areaScores).forEach(([area, data]) => {
+            areaPercentageResults[area] = Math.round((data.correct / data.total) * 100);
+          });
+        }
+
         const newAttempts = { ...(student.assignmentAttempts || {}), [activeQuiz.id]: (student.assignmentAttempts?.[activeQuiz.id] || 0) + 1 };
+        const newAreaResults = { ...(student.assignmentAreaResults || {}), [activeQuiz.id]: areaPercentageResults };
 
         if (passed) {
             // Update Student
@@ -558,6 +579,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                 ...student,
                 completedAssignmentIds: newCompleted,
                 assignmentResults: newResults,
+                assignmentAreaResults: newAreaResults,
                 assignmentAttempts: newAttempts,
                 assignmentsCompleted: newCompleted.length
             };
@@ -573,7 +595,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
             // If failed, still save result but don't mark as complete? 
             // Better to save result so teacher sees it.
             const newResults = { ...(student.assignmentResults || {}), [activeQuiz.id]: score };
-            const updatedStudent = { ...student, assignmentResults: newResults, assignmentAttempts: newAttempts };
+            const updatedStudent = { ...student, assignmentResults: newResults, assignmentAreaResults: newAreaResults, assignmentAttempts: newAttempts };
             setStudent(updatedStudent);
             await api.saveStudent(updatedStudent);
 
@@ -704,44 +726,48 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
     };
 
     const loadAssignments = async (currentStudent?: Student | null) => {
-        // Use provided student or current state
         const targetStudent = currentStudent || student;
         if (!targetStudent) return;
 
         try {
             const allAssignments = await api.getAssignments();
+            console.log(`[ParentPortal] Loaded ${allAssignments.length} total assignments. Filtering for student group: "${targetStudent.group}"`);
+
             const filtered = allAssignments.filter((a: Assignment) => {
-                // 1. Check if it's explicitly visible
+                // 1. Explicit visibility check
                 if (a.isVisibleInParentsPortal === false) return false;
 
-                // 2. Global assignments are always visible
-                const targetGroup = (a.targetGroup || '').toUpperCase().trim();
-                if (!targetGroup || targetGroup === 'GLOBAL') return true;
+                // 2. Normalize inputs
+                const targetGroupRaw = (a.targetGroup || '').toUpperCase().trim();
+                const studentGroupRaw = (targetStudent.group || '').toUpperCase().trim();
 
-                // 3. Match by student group
-                const studentGroup = (targetStudent.group || '').toUpperCase().trim();
-                if (!studentGroup) return false;
+                // 3. Global assignments (Empty target or 'GLOBAL')
+                if (!targetGroupRaw || targetGroupRaw === 'GLOBAL' || targetGroupRaw === 'TODOS') return true;
 
-                // direct match
-                if (studentGroup === targetGroup) return true;
+                // 4. Match logic
+                if (studentGroupRaw === targetGroupRaw) return true;
 
-                // partial match (e.g. "4 A" matches "4")
-                const sGrade = studentGroup.match(/(\d+)/)?.[0];
-                const sLetter = studentGroup.match(/[A-F]/)?.[0];
-                const aGrade = targetGroup.match(/(\d+)/)?.[0];
-                const aLetter = targetGroup.match(/[A-F]/)?.[0];
+                // Partial match (e.g. "4 A" matches "4")
+                const sGrade = studentGroupRaw.match(/(\d+)/)?.[0];
+                const sLetter = studentGroupRaw.match(/[A-F]/)?.[0];
+                const aGrade = targetGroupRaw.match(/(\d+)/)?.[0];
+                const aLetter = targetGroupRaw.match(/[A-F]/)?.[0];
 
                 if (sGrade && aGrade && sGrade === aGrade) {
-                    // If target has a letter, student MUST match it
+                    // If task specifies a letter, student must match it
                     if (aLetter) return sLetter === aLetter;
-                    // If target doesn't have a letter but grade matches, it's global for that grade
+                    // If task only specifies grade, it's for all students in that grade
                     return true;
                 }
 
                 return false;
             });
+
+            console.log(`[ParentPortal] Filtered to ${filtered.length} assignments for student.`);
             setAssignments(filtered);
-        } catch (e) { console.error("Failed to load assignments", e); }
+        } catch (e) { 
+            console.error("[ParentPortal] Failed to load assignments", e); 
+        }
     };
 
     const loadMessages = async (studentId: string) => {
@@ -1598,6 +1624,31 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                     <p className="text-slate-500 mb-6">
                                         Tu puntuación: <strong className="text-lg text-slate-800">{quizResult.score}/10</strong>
                                     </p>
+
+                                    {quizResult.areaScores && Object.keys(quizResult.areaScores).length > 0 && (
+                                      <div className="mb-6 max-w-sm mx-auto bg-slate-50 rounded-2xl p-4 border border-slate-100">
+                                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Resultados por Campo</h4>
+                                        <div className="space-y-2">
+                                          {Object.entries(quizResult.areaScores).map(([area, data]) => {
+                                            const pct = Math.round((data.correct / data.total) * 100);
+                                            return (
+                                              <div key={area} className="flex flex-col gap-1">
+                                                <div className="flex justify-between text-xs font-bold">
+                                                  <span className="text-slate-700">{area}</span>
+                                                  <span className={pct >= 60 ? 'text-indigo-600' : 'text-red-500'}>{data.correct}/{data.total} ({pct}%)</span>
+                                                </div>
+                                                <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                                                  <div 
+                                                    className={`h-full transition-all duration-1000 ${pct >= 60 ? 'bg-indigo-500' : 'bg-red-400'}`} 
+                                                    style={{ width: `${pct}%` }}
+                                                  ></div>
+                                                </div>
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
+                                      </div>
+                                    )}
                                     <div className="flex justify-center gap-4">
                                         {!quizResult.passed && (
                                             <button onClick={() => { setQuizResult(null); setQuizAnswers({}); }} className="px-6 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-colors">

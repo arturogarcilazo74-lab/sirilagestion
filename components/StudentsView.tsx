@@ -66,6 +66,29 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
     }
   }, [students]);
 
+  const calculateStudentMetrics = (s: Student) => {
+    const getTrimesterAvg = (g: any) => {
+      if (!g) return 0;
+      if (typeof g === 'number') return g;
+      if (typeof g === 'string') return parseFloat(g) || 0;
+      if (typeof g === 'object') {
+        const fields = [g.lenguajes, g.saberes, g.etica, g.humano].map(v => Number(v) || 0);
+        const validFields = fields.filter(v => v > 0);
+        return validFields.length > 0 ? validFields.reduce((a, b) => a + b, 0) / validFields.length : 0;
+      }
+      return 0;
+    };
+
+    const trimAvgs = (s.grades || []).map(getTrimesterAvg);
+    const activeTrims = trimAvgs.filter(a => a > 0);
+    const academicAvg = activeTrims.length > 0 ? activeTrims.reduce((a, b) => a + b, 0) / activeTrims.length : 0;
+    
+    const hwScore = s.totalAssignments > 0 ? (s.assignmentsCompleted / s.totalAssignments) * 10 : 0;
+    const finalAvg = academicAvg > 0 ? (academicAvg + hwScore) / 2 : 0;
+
+    return { trimAvgs, academicAvg, hwScore, finalAvg: finalAvg > 0 ? finalAvg.toFixed(1) : '-' };
+  };
+
   const filteredStudents = students
     .filter(s => {
       const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -523,32 +546,10 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
             <tbody className="divide-y divide-slate-100">
               {filteredStudents.length > 0 ? (
                 filteredStudents.map((student) => {
-                  const getTrimesterAverage = (g?: any) => {
-                    if (!g) return 0;
-                    if (typeof g === 'number') return g;
-                    if (typeof g === 'string' && !isNaN(parseFloat(g))) return parseFloat(g);
-                    if (typeof g === 'object') {
-                      return (Number(g.lenguajes || 0) + Number(g.saberes || 0) + Number(g.etica || 0) + Number(g.humano || 0)) / 4;
-                    }
-                    return 0;
-                  };
-
-                  const t1Avg = getTrimesterAverage(student.grades?.[0]);
-                  const t2Avg = getTrimesterAverage(student.grades?.[1]);
-                  const t3Avg = getTrimesterAverage(student.grades?.[2]);
-
-                  const hwScore = student.totalAssignments > 0
-                    ? (student.assignmentsCompleted / student.totalAssignments) * 10
-                    : 0;
-
-                  const activeTrimesters = [t1Avg, t2Avg, t3Avg].filter(a => a > 0);
-                  const academicAvg = activeTrimesters.length > 0
-                    ? activeTrimesters.reduce((a, b) => a + b, 0) / activeTrimesters.length
-                    : 0;
-
-                  const finalAvg = academicAvg > 0
-                    ? ((academicAvg + hwScore) / 2).toFixed(1)
-                    : '-';
+                  const { trimAvgs, finalAvg } = calculateStudentMetrics(student);
+                  const t1Avg = trimAvgs[0] || 0;
+                  const t2Avg = trimAvgs[1] || 0;
+                  const t3Avg = trimAvgs[2] || 0;
 
                   const age = getAge(student.birthDate);
 
@@ -687,15 +688,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
       <div className="md:hidden space-y-4 print:hidden">
         {filteredStudents.length > 0 ? (
           filteredStudents.map((student) => {
-            // Re-calculate for mobile view (simplified)
-            const getTrimesterAverage = (g?: any) => {
-              if (!g) return 0;
-              if (typeof g === 'number') return g;
-              if (typeof g === 'object') return (Number(g.lenguajes || 0) + Number(g.saberes || 0) + Number(g.etica || 0) + Number(g.humano || 0)) / 4;
-              return 0;
-            };
-            const activeTrimesters = student.grades ? student.grades.map(g => getTrimesterAverage(g)).filter(a => a > 0) : [];
-            const academicAvg = activeTrimesters.length > 0 ? activeTrimesters.reduce((a, b) => a + b, 0) / activeTrimesters.length : 0;
+            const { finalAvg } = calculateStudentMetrics(student);
 
             return (
               <div key={student.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
@@ -706,9 +699,9 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
                       <h3 className="font-bold text-slate-800 text-sm">{student.name}</h3>
                       <div className="flex items-center gap-2 mt-1">
                         <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${student.status === 'INSCRITO' ? 'bg-indigo-50 text-indigo-700' : 'bg-red-50 text-red-700'}`}>{student.status}</span>
-                        {academicAvg > 0 && (
-                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${academicAvg >= 8 ? 'bg-emerald-50 text-emerald-700' : academicAvg >= 6 ? 'bg-yellow-50 text-yellow-700' : 'bg-red-50 text-red-700'}`}>
-                            Prom: {academicAvg.toFixed(1)}
+                        {finalAvg !== '-' && (
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${Number(finalAvg) >= 8 ? 'bg-emerald-50 text-emerald-700' : Number(finalAvg) >= 6 ? 'bg-yellow-50 text-yellow-700' : 'bg-red-50 text-red-700'}`}>
+                            Prom: {finalAvg}
                           </span>
                         )}
                       </div>
@@ -1455,16 +1448,8 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
                   <div className="grid grid-cols-3 gap-2 text-center">
                     <div className="bg-slate-50 p-2 rounded border border-slate-200">
                       <div className="text-xl font-bold text-indigo-700">
-                        {reportStudent.grades.length > 0
-                          ? (() => {
-                            // Safe calculation of average from Trimester objects
-                            const sumAvgs = reportStudent.grades.reduce((acc, g: any) => {
-                              if (typeof g === 'number') return acc + g; // Legacy
-                              const tAvg = (Number(g.lenguajes || 0) + Number(g.saberes || 0) + Number(g.etica || 0) + Number(g.humano || 0)) / 4;
-                              return acc + tAvg;
-                            }, 0);
-                            return (sumAvgs / reportStudent.grades.length).toFixed(1);
-                          })()
+                        {calculateStudentMetrics(reportStudent).academicAvg > 0
+                          ? calculateStudentMetrics(reportStudent).academicAvg.toFixed(1)
                           : '-'}
                       </div>
                       <div className="text-[10px] uppercase font-bold text-slate-500">Promedio</div>
@@ -1503,22 +1488,8 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
                       <tr><td colSpan={3} className="p-4 text-center text-slate-400">Sin calificaciones registradas</td></tr>
                     ) : (
                       reportStudent.grades.map((grade, idx) => {
-                        // Calculate single trimester average for display
-                        // Calculate single trimester average for display
-                        let score = 0;
-                        if (typeof grade === 'number') {
-                          score = grade;
-                        } else if (typeof grade === 'string') {
-                          score = parseFloat(grade) || 0;
-                        } else if (typeof grade === 'object' && grade !== null) {
-                          const g = grade as any;
-                          // If object keys are missing, they default to 0. 
-                          // If grade is actually a Number object (rare), this might fail? No, typeof null is object.
-                          score = (Number(g.lenguajes || 0) + Number(g.saberes || 0) + Number(g.etica || 0) + Number(g.humano || 0)) / 4;
-                        } else {
-                          // Fallback for weird string cases that are just numbers
-                          score = Number(grade) || 0;
-                        }
+                        const metrics = calculateStudentMetrics(reportStudent);
+                        const score = metrics.trimAvgs[idx] || 0;
 
                         return (
                           <tr key={idx}>

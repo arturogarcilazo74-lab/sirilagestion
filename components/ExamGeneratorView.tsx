@@ -91,7 +91,8 @@ export const ExamGeneratorView: React.FC<ExamGeneratorViewProps> = ({ assignment
                 text: q.text || q.question || '',
                 options: q.options || [],
                 correctIndex: q.correctIndex !== undefined ? q.correctIndex : 0,
-                points: q.points || 1
+                points: q.points || 1,
+                category: q.category || 'General'
             }));
 
             const newExam: Assignment = {

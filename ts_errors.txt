@@ -1,0 +1,4 @@
+App.tsx(249,94): error TS2367: This comparison appears to be unintentional because the types '"DASHBOARD" | "ATTENDANCE" | "STUDENTS" | "TOOLS" | "BEHAVIOR" | "ACTIVITIES" | "HOMEWORK_QR" | "FINANCE" | "DOCUMENTS" | "SETTINGS" | "COMMUNICATIONS" | "EXAM_GENERATOR"' and '"PARENTS_PORTAL"' have no overlap.
+App.tsx(263,145): error TS2367: This comparison appears to be unintentional because the types '"DASHBOARD" | "ATTENDANCE" | "STUDENTS" | "TOOLS" | "ACTIVITIES" | "HOMEWORK_QR" | "FINANCE" | "DOCUMENTS" | "SETTINGS" | "COMMUNICATIONS" | "EXAM_GENERATOR"' and '"PARENTS_PORTAL"' have no overlap.
+components/LibraryView.tsx(167,134): error TS2322: Type '{ className: string; size: number; "aria-hidden": "true"; title: string; }' is not assignable to type 'IntrinsicAttributes & LucideProps'.
+  Property 'title' does not exist on type 'IntrinsicAttributes & LucideProps'.

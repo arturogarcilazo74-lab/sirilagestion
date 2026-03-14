@@ -48,6 +48,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
   const [curQuestion, setCurQuestion] = useState('');
   const [curOptions, setCurOptions] = useState(['', '', '']);
   const [curCorrect, setCurCorrect] = useState(0);
+  const [curCategory, setCurCategory] = useState('Lenguajes');
 
   // File Upload State
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -281,7 +282,8 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
       text: curQuestion,
       options: [...curOptions],
       correctIndex: curCorrect,
-      points: 10
+      points: 10,
+      category: curCategory
     }]);
     setCurQuestion('');
     setCurOptions(['', '', '']);
@@ -1306,6 +1308,20 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                         <div className="space-y-4">
                           <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
                             <h4 className="font-bold text-slate-700 mb-3 text-sm">Agregar Pregunta Manual</h4>
+                            
+                            <div className="grid grid-cols-2 gap-2 mb-3">
+                              {['Lenguajes', 'Saberes', 'Etica', 'Humano'].map(cat => (
+                                <button
+                                  key={cat}
+                                  type="button"
+                                  onClick={() => setCurCategory(cat)}
+                                  className={`py-1.5 px-2 rounded-lg text-[10px] font-bold border transition-all ${curCategory === cat ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm' : 'bg-white border-slate-200 text-slate-500 hover:border-indigo-300'}`}
+                                >
+                                  {cat}
+                                </button>
+                              ))}
+                            </div>
+
                             <input type="text" placeholder="Pregunta" value={curQuestion} onChange={e => setCurQuestion(e.target.value)} className="w-full p-2.5 mb-2 text-sm border rounded-lg bg-white" />
                             {curOptions.map((o, i) => (
                               <div key={i} className="flex gap-2 mb-2 items-center">
@@ -1324,7 +1340,10 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                               <div key={q.id} className="bg-white p-3 rounded-xl border border-slate-100 flex justify-between items-start text-sm">
                                 <div className="flex-1">
                                   <p className="font-bold text-slate-800"><span className="text-purple-500 mr-1">#{idx + 1}</span>{q.text}</p>
-                                  <p className="text-xs text-slate-400 mt-1">{q.options[q.correctIndex || 0]}</p>
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <span className="text-[10px] font-bold bg-slate-100 px-1.5 py-0.5 rounded text-slate-500 uppercase">{q.category || 'General'}</span>
+                                    <p className="text-xs text-slate-400">{q.options[q.correctIndex || 0]}</p>
+                                  </div>
                                 </div>
                                 <button onClick={() => setQuestions(questions.filter(qi => qi.id !== q.id))} className="text-slate-300 hover:text-red-500" aria-label="Eliminar pregunta"><Trash2 size={14} /></button>
                               </div>

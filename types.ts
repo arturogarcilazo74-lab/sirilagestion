@@ -38,6 +38,7 @@ export interface Student {
   assignmentsCompleted: number;
   completedAssignmentIds: string[]; // List of IDs of completed assignments
   assignmentResults?: Record<string, number>; // assignmentId -> score (0-10)
+  assignmentAreaResults?: Record<string, Record<string, number>>; // assignmentId -> { areaName: scorePercentage }
   assignmentAttempts?: Record<string, number>; // assignmentId -> number of attempts made
   totalAssignments: number;
   participationCount: number;
@@ -70,6 +71,7 @@ export interface InteractiveQuestion {
   options: string[];
   correctIndex: number;
   points: number;
+  category?: string; // NEM Fields: Lenguajes, Saberes, Etica, Humano
 }
 
 

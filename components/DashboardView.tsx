@@ -238,14 +238,20 @@ export const DashboardView: React.FC<DashboardProps> = ({
     const csvContent = [
       headers.join(','),
       ...sortedStudents.map(s => {
-        const grades = s.grades || [];
-        const avg = grades.length
-          ? (grades.reduce((acc, g) => {
-            if (typeof g === 'number') return acc + g;
-            const gObj = g as any;
-            return acc + ((Number(gObj.lenguajes || 0) + Number(gObj.saberes || 0) + Number(gObj.etica || 0) + Number(gObj.humano || 0)) / 4);
-          }, 0) / grades.length).toFixed(1)
-          : '0';
+        const validGrades = (s.grades || []).map(g => {
+          if (typeof g === 'number') return g;
+          if (typeof g === 'string') return parseFloat(g) || 0;
+          if (typeof g === 'object') {
+            const fields = [g.lenguajes, g.saberes, g.etica, g.humano].map(v => Number(v) || 0);
+            const valid = fields.filter(v => v > 0);
+            return valid.length > 0 ? valid.reduce((a, b) => a + b, 0) / valid.length : 0;
+          }
+          return 0;
+        }).filter(v => v > 0);
+
+        const academicAvg = validGrades.length > 0 ? validGrades.reduce((a, b) => a + b, 0) / validGrades.length : 0;
+        const hwScore = s.totalAssignments > 0 ? (s.assignmentsCompleted / s.totalAssignments) * 10 : 0;
+        const finalAvg = academicAvg > 0 ? ((academicAvg + hwScore) / 2).toFixed(1) : '0';
         const attendanceCount = Object.values(s.attendance || {}).filter(x => x === 'Presente').length;
         return [
           s.id,
@@ -256,7 +262,7 @@ export const DashboardView: React.FC<DashboardProps> = ({
           s.assignmentsCompleted,
           s.totalAssignments,
           s.participationCount,
-          avg,
+          finalAvg,
           attendanceCount
         ].join(',');
       })

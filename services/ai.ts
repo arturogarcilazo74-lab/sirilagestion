@@ -173,7 +173,7 @@ export const generateRiskPlan = async (studentName: string, riskReason: string, 
 };
 
 export const generateInteractiveQuiz = async (topic: string, count: number): Promise<string> => {
-  const prompt = `Cuestionario 4to grado sobre ${topic}. ${count} preguntas. JSON format: [{"text": "", "options": [], "correctIndex": 0}].`;
+  const prompt = `Cuestionario 4to grado sobre ${topic}. ${count} preguntas. JSON format: [{"text": "", "options": [], "correctIndex": 0, "category": "Lenguajes|Saberes|Etica|Humano"}]. Clasifica cada pregunta en uno de esos 4 campos formativos de la NEM.`;
   try {
     const text = await generateWithFallback(prompt, { responseMimeType: "application/json" });
     return text.replace(/```json|```/g, '').trim();
@@ -187,7 +187,7 @@ export const generateInteractiveQuizFromContext = async (context: string, images
     const clean = img.includes('base64,') ? img.split('base64,')[1] : img;
     parts.push({ inline_data: { mime_type: "image/jpeg", data: clean } });
   });
-  parts.push({ text: `Genera ${count} preguntas de opción múltiple basadas en este contenido. JSON format: [{"text": "", "options": [], "correctIndex": 0}]` });
+  parts.push({ text: `Genera ${count} preguntas de opción múltiple basadas en este contenido. JSON format: [{"text": "", "options": [], "correctIndex": 0, "category": "Lenguajes|Saberes|Etica|Humano"}]. Clasifica cada pregunta en uno de esos 4 campos formativos de la NEM.` });
 
   try {
     const text = await generateWithFallback(parts, { responseMimeType: "application/json" });

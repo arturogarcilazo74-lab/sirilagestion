@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evaluación Segundo Trimestre - Gestión Sirila</title>
+    <!-- Tailwind CSS para los estilos -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide para los íconos -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; }
+        /* Animación suave para la barra de progreso */
+        .progress-bar { transition: width 0.3s ease-out; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen">
+
+    <!-- Contenedor principal donde se inyectará la app -->
+    <div id="app" class="min-h-screen flex flex-col"></div>
+
+    <script>
+        // ==========================================
+        // DATOS DEL EXAMEN (48 Preguntas)
+        // ==========================================
+        const examData = [
+            // LENGUAJES
+            {
+                subject: "Lenguajes", icon: "book-open", color: "bg-blue-100 text-blue-800",
+                question: "Lee el texto 'El cuidado de los ríos y lagos...'. ¿Qué parte del texto presenta una solución al problema de la contaminación de ríos y lagos en comunidades rurales?",
+                options: [
+                    "A) La limpieza del río hizo que el lago desapareciera con el paso del tiempo.",
+                    "B) El río y el lago son iguales porque ambos pueden usarse para nadar y pescar.",
+                    "C) El problema se resolvió solo cuando dejó de llover y el agua volvió a verse clara.",
+                    "D) La contaminación del río afectó a los peces, lo que motivó a la comunidad a organizarse para limpiarlo."
+                ], correct: 3
+            },
+            {
+                subject: "Lenguajes", icon: "book-open", color: "bg-blue-100 text-blue-800",
+                question: "En una población el río se contamina con basura inorgánica. La maestra solicitó realizar un texto expositivo. ¿Cuál de las siguientes opciones muestra qué es lo que deberían hacer los alumnos?",
+                options: [
+                    "A) Investigar en libros o preguntar a personas de la comunidad y escribir causas y soluciones.",
+                    "B) Mirar muchos videos en internet y copiar un texto sin revisarlo.",
+                    "C) Escribir que el río es bonito y tiene muchos peces.",
+                    "D) Escribir solo una opinión sin explicar el problema."
+                ], correct: 0
+            },
+            {
+                subject: "Lenguajes", icon: "book-open", color: "bg-blue-100 text-blue-800",
+                question: "María vive en una comunidad rural y necesita avisar a su maestra que no podrá asistir a clases porque el camino se inundó. ¿Cuál es la mejor forma de comunicarse a distancia?",
+                options: [
+                    "A) Redactar una carta informal, para después enviarla por correspondencia.",
+                    "B) Enviar un mensaje de texto o correo a su maestra explicando la situación.",
+                    "C) Esperar a ver a la maestra la próxima semana.",
+                    "D) Contar el problema solo en su casa."
+                ], correct: 1
+            },
+            {
+                subject: "Lenguajes", icon: "book-open", color: "bg-blue-100 text-blue-800",
+                question: "En la escuela, el grupo de cuarto grado quiere pedir que reparen la llave de agua porque hay mucho desperdicio. ¿Qué texto formal es el más adecuado?",
+                options: [
+                    "A) Un mensaje entre amigos.",
+                    "B) Un escrito en el cuaderno.",
+                    "C) Un comentario en voz alta en el patio.",
+                    "D) Una carta formal o solicitud dirigida al director de la escuela."
+                ], correct: 3
+            },
+            {
+                subject: "Lenguajes", icon: "book-open", color: "bg-blue-100 text-blue-800",
+                question: "En un aviso escolar, el título está escrito con letras grandes y subrayadas, y aparece el logotipo. ¿Para qué sirven estas características gráficas?",
+                options: [
+                    "A) Para que el aviso sea informal.",
+                    "B) Para decorar sin dar información.",
+                    "C) Para llamar la atención y ayudar a identificar la información importante.",
+                    "D) Para hacer el texto más largo y dar una mejor apariencia."
+                ], correct: 2
+            },
+            {
+                subject: "Lenguajes", icon: "book-open", color: "bg-blue-100 text-blue-800",
+                question: "Los alumnos quieren llegar de la escuela al río usando un croquis donde aparece el camino, el puente y el campo. ¿Para qué sirve el croquis?",
+                options: [
+                    "A) Para saber cuántas casas hay en la comunidad.",
+                    "B) Para contar la historia de los lugares recorridos.",
+                    "C) Para describir el trayecto y localizar el río.",
+                    "D) Para dibujar croquis en su cuaderno."
+                ], correct: 2
+            },
+            {
+                subject: "Lenguajes", icon: "book-open", color: "bg-blue-100 text-blue-800",
+                question: "Al observar un mapa, Claudia nota una rosa de los vientos, símbolos y una leyenda. ¿Para qué sirven estas convenciones gráficas?",
+                options: [
+                    "A) Para que el mapa se vea bonito.",
+                    "B) Indica los colores favoritos del autor.",
+                    "C) Cuenta historias sobre la comunidad.",
+                    "D) Comprender la información y ubicar lugares correctamente."
+                ], correct: 3
+            },
+            {
+                subject: "Lenguajes", icon: "book-open", color: "bg-blue-100 text-blue-800",
+                question: "El grupo va a realizar una presentación artística en equipo usando dibujos, colores, movimientos y sonidos. ¿Qué actividad muestra que están experimentando en una producción colectiva?",
+                options: [
+                    "A) Cada alumno trabaja solo sin compartir ideas.",
+                    "B) Copiar una obra sin hacer cambios en la presentación.",
+                    "C) Probar diferentes colores, imágenes y sonidos para la presentación del grupo.",
+                    "D) Usar solo texto escrito sin imágenes ni sonidos."
+                ], correct: 2
+            },
+            {
+                subject: "Lenguajes", icon: "book-open", color: "bg-blue-100 text-blue-800",
+                question: "Para recordar la fiesta del pueblo, los alumnos transforman un objeto. ¿Cuál elemento demuestra mejor que recrean una experiencia colectiva?",
+                options: [
+                    "A) Decorar un objeto usando materiales de la naturaleza y reciclados para representar la fiesta.",
+                    "B) Copiar un objeto ya terminado de otro grupo.",
+                    "C) Dibujar la fiesta solo en el cuaderno.",
+                    "D) Guardar el objeto sin modificarlo."
+                ], correct: 0
+            },
+            {
+                subject: "Lenguajes", icon: "book-open", color: "bg-blue-100 text-blue-800",
+                question: "Sofía se inspira en los sonidos, movimientos y colores del recreo para crear un dibujo y una melodía. ¿Qué demuestra Sofía?",
+                options: [
+                    "A) Copia exactamente lo que ve.",
+                    "B) Sigue una instrucción sin reflexionar.",
+                    "C) Que solo realiza una actividad escolar.",
+                    "D) Usa los lenguajes artísticos para expresar una experiencia cotidiana."
+                ], correct: 3
+            },
+            {
+                subject: "Lenguajes", icon: "book-open", color: "bg-blue-100 text-blue-800",
+                question: "Después de una reforestación, ¿cuál es una buena forma para que Luisa reflexione sobre su experiencia significativa?",
+                options: [
+                    "A) Comenta lo que pasó sin usar objetos ni sonidos.",
+                    "B) Dibuja árboles y realiza una ronda de chistes copiados de internet.",
+                    "C) Representa su historia utilizando objetos animados y sonidos corporales.",
+                    "D) Memoriza la historia de otro compañero."
+                ], correct: 2
+            },
+            {
+                subject: "Lenguajes", icon: "book-open", color: "bg-blue-100 text-blue-800",
+                question: "En el pueblo de Pedro se hablan distintas lenguas (español e indígena). ¿Qué actividad le ayuda a investigar la diversidad lingüística?",
+                options: [
+                    "A) Copiar palabras de distintas lenguas sin saber su significado.",
+                    "B) Ver películas en distintos idiomas como inglés, francés e italiano.",
+                    "C) Realizar un escrito defendiendo que la única lengua debe ser el español.",
+                    "D) Preguntar a personas de su comunidad y buscar información sobre las lenguas del país."
+                ], correct: 3
+            },
+            {
+                subject: "Lenguajes", icon: "book-open", color: "bg-blue-100 text-blue-800",
+                question: "Para conocer cómo era la comunidad hace años, van a entrevistar a un adulto mayor. ¿Cuál es la mejor acción para realizar la entrevista?",
+                options: [
+                    "A) Copiar muchas preguntas de internet para hacer una entrevista larga.",
+                    "B) Preparar preguntas y escuchar con atención las respuestas.",
+                    "C) Hablar solo de temas personales de las comunidades.",
+                    "D) Interrumpir a la persona mientras habla."
+                ], correct: 1
+            },
+            {
+                subject: "Lenguajes", icon: "book-open", color: "bg-blue-100 text-blue-800",
+                question: "Alicia investiga cómo cuidar el río. ¿Qué es lo mejor que puede hacer para buscar y manejar la información de forma reflexiva?",
+                options: [
+                    "A) Copiar el primer texto que encuentre y memorizarlo a detalle.",
+                    "B) Investigar en distintas fuentes para identificar la información principal sobre el tema.",
+                    "C) Escribir solo lo que ella piensa sin investigar más.",
+                    "D) Usar información sin verificar de dónde viene."
+                ], correct: 1
+            },
+            {
+                subject: "Lenguajes", icon: "book-open", color: "bg-blue-100 text-blue-800",
+                question: "En clase leen un poema y después inventan una canción corta con rimas. ¿Qué aspecto muestra que disfrutan la lectura y creación?",
+                options: [
+                    "A) Terminan la actividad rápido para pasar a otra.",
+                    "B) Repiten el poema varias veces hasta decirlo sin errores.",
+                    "C) Copian el poema o la canción tal como se presentó.",
+                    "D) Juegan con las palabras y comentan qué emociones o ideas les provoca."
+                ], correct: 3
+            },
+
+            // SABERES Y PENSAMIENTO CIENTÍFICO
+            {
+                subject: "Saberes y Pensamiento Científico", icon: "award", color: "bg-purple-100 text-purple-800",
+                question: "Relaciona los ecosistemas con sus características: 1. Manglar, 2. Desierto, 3. Bosque, 4. Selva. (F=Clima frío, G=Agua salada/raíces aéreas, H=Mucha lluvia/tucanes, I=Poca agua/cactáceas)",
+                options: [
+                    "A) 1G - 2I - 3F - 4H",
+                    "B) 1I - 2G - 3H - 4F",
+                    "C) 1H - 2F - 3G - 4I",
+                    "D) 1H - 2I - 3F - 4G"
+                ], correct: 0
+            },
+            {
+                subject: "Saberes y Pensamiento Científico", icon: "award", color: "bg-purple-100 text-purple-800",
+                question: "En un bosque, las plantas fabrican su alimento. ¿Qué sucedería con los animales si el suelo se contaminara y las plantas dejaran de crecer?",
+                options: [
+                    "A) Los animales vivirían mejor porque tendrían más espacio para correr.",
+                    "B) El Sol brillaría con más fuerza para ayudar a los animales.",
+                    "C) No pasaría nada, porque los animales pueden alimentarse de aire y piedras.",
+                    "D) Los animales se quedarían sin alimento y refugio, afectando el equilibrio de la vida."
+                ], correct: 3
+            },
+            {
+                subject: "Saberes y Pensamiento Científico", icon: "award", color: "bg-purple-100 text-purple-800",
+                question: "Desechos químicos, quema de basura, residuos sin separar y pesticidas. ¿Qué tienen en común estas situaciones?",
+                options: [
+                    "A) Únicamente provocan malos olores.",
+                    "B) Benefician la economía de la comunidad.",
+                    "C) Solo afectan a los animales, no a las personas.",
+                    "D) Contaminan el ambiente y afectan la salud de todos."
+                ], correct: 3
+            },
+            {
+                subject: "Saberes y Pensamiento Científico", icon: "award", color: "bg-purple-100 text-purple-800",
+                question: "En la escuela generan mucha basura (bolsas y botellas). ¿Cuál es una propuesta de consumo responsable?",
+                options: [
+                    "A) Quemar toda la basura detrás de la escuela para que no se vea.",
+                    "B) Usar una botella rellenable para el agua y un recipiente reutilizable para el refrigerio.",
+                    "C) Enterrar los envases en el jardín para que se deshagan solos.",
+                    "D) Comprar más productos de plástico desechable y tirarlos en el bote."
+                ], correct: 1
+            },
+            {
+                subject: "Saberes y Pensamiento Científico", icon: "award", color: "bg-purple-100 text-purple-800",
+                question: "Para construir un prisma rectangular de 40x30x20 cm. ¿Cuáles son las características de este cuerpo geométrico?",
+                options: [
+                    "A) 8 vértices, 12 aristas y 6 caras cuadradas.",
+                    "B) 4 vértices, 6 aristas y 4 caras triangulares.",
+                    "C) 6 vértices, 10 aristas y 6 caras rectangulares.",
+                    "D) 8 vértices, 12 aristas y 6 caras (2 cuadradas y 4 rectangulares o todas rectangulares)."
+                ], correct: 3
+            },
+            {
+                subject: "Saberes y Pensamiento Científico", icon: "award", color: "bg-purple-100 text-purple-800",
+                question: "Elige la descripción correcta para un cuadrado según sus características geométricas (4 lados iguales, 4 ángulos rectos):",
+                options: [
+                    "A) Cuadrilátero con cuatro lados iguales y cuatro ángulos rectos.",
+                    "B) Cuadrilátero con dos pares de lados paralelos, pero ángulos no rectos.",
+                    "C) Polígono con todos sus lados iguales, con ángulos agudos.",
+                    "D) Polígono con todos sus lados iguales, con ángulos obtusos."
+                ], correct: 0
+            },
+            {
+                subject: "Saberes y Pensamiento Científico", icon: "award", color: "bg-purple-100 text-purple-800",
+                question: "Jornada de limpieza: 1 hora 30 minutos (basura), 45 minutos (separación), y 2 horas 15 minutos (plantación). ¿Cuánto tiempo duró en total?",
+                options: [
+                    "A) 5 horas.",
+                    "B) 3 horas y 90 minutos.",
+                    "C) 4 horas y 30 minutos.",
+                    "D) 3 horas y 30 minutos."
+                ], correct: 2
+            },
+            {
+                subject: "Saberes y Pensamiento Científico", icon: "award", color: "bg-purple-100 text-purple-800",
+                question: "Se busca el huerto con mayor superficie (área) y menor perímetro. Equipo A: Área 18, Perímetro 18. Equipo B: Área 16, Perímetro 20. ¿Qué propuesta elegir?",
+                options: [
+                    "A) El Equipo B, porque tiene área de 16 cuadros y perímetro de 20 metros.",
+                    "B) El Equipo A, porque tiene área de 18 cuadros y perímetro de 18 metros.",
+                    "C) El Equipo B, porque tiene la misma área pero menor perímetro.",
+                    "D) El Equipo A, porque tiene mayor área aunque su perímetro sea mayor."
+                ], correct: 1
+            },
+            {
+                subject: "Saberes y Pensamiento Científico", icon: "award", color: "bg-purple-100 text-purple-800",
+                question: "María compró 0.75 metros de cinta. ¿Cuál opción representa correctamente esta medida?",
+                options: [
+                    "A) Setenta y cinco centésimos de metro, que es lo mismo que 7 décimos y 5 centésimos.",
+                    "B) Setenta y cinco décimos de metro, que es lo mismo que 7 décimos y 5 centésimos.",
+                    "C) Setenta y cinco milésimos de metro.",
+                    "D) Setenta y cinco enteros de metro."
+                ], correct: 0
+            },
+            {
+                subject: "Saberes y Pensamiento Científico", icon: "award", color: "bg-purple-100 text-purple-800",
+                question: "Kermés: Sábado $2,845 y Domingo $1,678. La meta es $5,000. ¿Cuánto dinero falta?",
+                options: [
+                    "A) Les faltan $ 477 pesos.",
+                    "B) Les faltan $ 478 pesos.",
+                    "C) Les faltan $ 475 pesos.",
+                    "D) Les faltan $ 1,477 pesos."
+                ], correct: 0
+            },
+            {
+                subject: "Saberes y Pensamiento Científico", icon: "award", color: "bg-purple-100 text-purple-800",
+                question: "NARRATIVA: Carlos entrena 2 horas y 30 minutos cada día. ¿Cuántos segundos nada en total cada día?",
+                options: [
+                    "A) 9,000 segundos",
+                    "B) 150 segundos",
+                    "C) 3,600 segundos",
+                    "D) 7,200 segundos"
+                ], correct: 0
+            },
+            {
+                subject: "Saberes y Pensamiento Científico", icon: "award", color: "bg-purple-100 text-purple-800",
+                question: "NARRATIVA: El desarrollo plano muestra una cruz de 6 caras cuadradas. ¿Qué cuerpo geométrico forma al doblarse?",
+                options: [
+                    "A) Un cubo (hexaedro) con 6 caras cuadradas.",
+                    "B) Una pirámide cuadrangular.",
+                    "C) Un prisma triangular.",
+                    "D) Un cilindro."
+                ], correct: 0
+            },
+            {
+                subject: "Saberes y Pensamiento Científico", icon: "award", color: "bg-purple-100 text-purple-800",
+                question: "NARRATIVA: Menú de 3 bebidas (Jamaica, Horchata, Naranja) y 2 platillos (Quesadillas, Tacos). ¿Cuántos días podrá comer una combinación diferente sin repetir?",
+                options: [
+                    "A) 6 días",
+                    "B) 5 días",
+                    "C) 3 días",
+                    "D) 2 días"
+                ], correct: 0
+            },
+
+            // ÉTICA, NATURALEZA Y SOCIEDADES
+            {
+                subject: "Ética, Naturaleza y Sociedades", icon: "alert-triangle", color: "bg-green-100 text-green-800",
+                question: "Para cuidar los ecosistemas y que sigan siendo un espacio de vida, ¿qué acción es la más responsable y sustentable?",
+                options: [
+                    "A) Usar los recursos naturales solo cuando son necesarios y participar en actividades para proteger ríos y bosques.",
+                    "B) Extraer más recursos para que la localidad crezca rápido.",
+                    "C) Aprovechar todos los recursos posibles ahora, la naturaleza se recupera sola.",
+                    "D) Evitar acercarse a los ecosistemas para no tener responsabilidades."
+                ], correct: 0
+            },
+            {
+                subject: "Ética, Naturaleza y Sociedades", icon: "alert-triangle", color: "bg-green-100 text-green-800",
+                question: "Pueblos originarios toman lo necesario y respetan el bosque. ¿Qué enseñanza nos deja esta forma de relacionarse con la naturaleza?",
+                options: [
+                    "A) Que solo los pueblos originarios son responsables de proteger el medio ambiente.",
+                    "B) Es importante cuidar y respetar la naturaleza para el bienestar de todos.",
+                    "C) La naturaleza solo sirve para obtener recursos sin límites.",
+                    "D) La naturaleza no necesita cuidado porque se regenera."
+                ], correct: 1
+            },
+            {
+                subject: "Ética, Naturaleza y Sociedades", icon: "alert-triangle", color: "bg-green-100 text-green-800",
+                question: "Para ayudar al cuidado de los ecosistemas y permitir que se regeneren, ¿cuál opción es más adecuada?",
+                options: [
+                    "A) Participar en acciones comunitarias como reforestar y reducir la basura, pensando en el bienestar de todos.",
+                    "B) Cuidar los ecosistemas únicamente cuando se ven dañados.",
+                    "C) Evitar usar los ecosistemas para no causar ningún impacto.",
+                    "D) Usar los recursos naturales sin medir consecuencias."
+                ], correct: 0
+            },
+            {
+                subject: "Ética, Naturaleza y Sociedades", icon: "alert-triangle", color: "bg-green-100 text-green-800",
+                question: "En temporada de lluvias el agua se acumula causando inundaciones. ¿Qué elemento muestra cultura de prevención y solidaridad?",
+                options: [
+                    "A) No tirar basura, participar en la limpieza y ayudar a las personas afectadas.",
+                    "B) Ignorar la situación porque es responsabilidad solo de las autoridades.",
+                    "C) Tirar basura en la calle para que el agua se vaya más rápido.",
+                    "D) Quedarse en casa sin decir nada para evitar problemas."
+                ], correct: 0
+            },
+            {
+                subject: "Ética, Naturaleza y Sociedades", icon: "alert-triangle", color: "bg-green-100 text-green-800",
+                question: "Para conocer mejor el lugar donde vivimos, ¿qué elementos de la naturaleza nos ayudan a entender el territorio?",
+                options: [
+                    "A) Relacionar el clima, el suelo y el agua con la forma de vivir de la comunidad.",
+                    "B) Aprender de memoria los nombres de los estados.",
+                    "C) Ubicar el lugar en el mapa sin más información.",
+                    "D) Ver solo los animales más conocidos."
+                ], correct: 0
+            },
+            {
+                subject: "Ética, Naturaleza y Sociedades", icon: "alert-triangle", color: "bg-green-100 text-green-800",
+                question: "¿Por qué los símbolos patrios (bandera, escudo, himno) dan identidad y sentido de pertenencia?",
+                options: [
+                    "A) Para localizar el sitio en el mapa sin agregar datos.",
+                    "B) Porque sirven únicamente para decorar edificios públicos.",
+                    "C) Porque solo se usan en los libros de historia.",
+                    "D) Porque representan la historia, los valores y la cultura de las personas que viven en un lugar."
+                ], correct: 3
+            },
+            {
+                subject: "Ética, Naturaleza y Sociedades", icon: "alert-triangle", color: "bg-green-100 text-green-800",
+                question: "Algunos alumnos no quieren jugar con Daniela porque habla una lengua indígena. Identifica el hecho que evita la discriminación:",
+                options: [
+                    "A) Permitir bromas siempre que no sean muy fuertes.",
+                    "B) Escuchar las opiniones de todos, respetar las diferencias y resolver los conflictos mediante el diálogo.",
+                    "C) Tratar bien solo a quienes piensan de la misma manera.",
+                    "D) Ignorar a quienes son diferentes para evitar problemas."
+                ], correct: 1
+            },
+            {
+                subject: "Ética, Naturaleza y Sociedades", icon: "alert-triangle", color: "bg-green-100 text-green-800",
+                question: "¿Qué acciones reflejan una práctica intercultural y sustentable basada en pueblos originarios?",
+                options: [
+                    "A) Utilizar muchos recursos sin pensar en el futuro.",
+                    "B) Pensar que solo una forma de vivir es correcta.",
+                    "C) Dañar la naturaleza porque se puede recuperar sola.",
+                    "D) Aprender de las prácticas de los pueblos originarios y participar en acciones colectivas."
+                ], correct: 3
+            },
+            {
+                subject: "Ética, Naturaleza y Sociedades", icon: "alert-triangle", color: "bg-green-100 text-green-800",
+                question: "¿Cuál puede ser un efecto negativo hacia las personas cuando NO se respetan las diferencias culturales en México?",
+                options: [
+                    "A) Que se discrimine o excluya a personas por ser diferentes.",
+                    "B) Que todas las personas aprendan nuevas tradiciones.",
+                    "C) Que se promueva el respeto entre culturas.",
+                    "D) Que se valore la diversidad cultural del país."
+                ], correct: 0
+            },
+            {
+                subject: "Ética, Naturaleza y Sociedades", icon: "alert-triangle", color: "bg-green-100 text-green-800",
+                question: "¿Qué acción ayuda mejor a investigar desastres naturales o causados por humanos a lo largo de la historia?",
+                options: [
+                    "A) Consultar distintas fuentes como entrevistas, libros y noticias para comparar información.",
+                    "B) Pensar que los desastres siempre ocurren igual y no cambian.",
+                    "C) Escuchar una sola historia y asumir que así sucedió.",
+                    "D) Buscar solo imágenes sin leer ni preguntar."
+                ], correct: 0
+            },
+
+            // DE LO HUMANO Y LO COMUNITARIO
+            {
+                subject: "De lo Humano y lo Comunitario", icon: "users", color: "bg-orange-100 text-orange-800",
+                question: "Opciones importantes de la familia: 1. Enseña a ser responsable, 2. Enseña a respetar, 3. Transmite valores, 4. Lugar para ver TV y dormir. Selecciona las correctas:",
+                options: [
+                    "A) 1, 2 y 3",
+                    "B) 2, 3 y 4",
+                    "C) 1, 2 y 4",
+                    "D) 1, 3 y 4"
+                ], correct: 0
+            },
+            {
+                subject: "De lo Humano y lo Comunitario", icon: "users", color: "bg-orange-100 text-orange-800",
+                question: "Ana se lastimó la rodilla. Su mamá la abrazó y curó, su papá le preparó té y su hermano le dibujó un corazón. ¿Qué demuestra la familia?",
+                options: [
+                    "A) Enojo porque se cayó.",
+                    "B) Amor, cuidado y protección.",
+                    "C) Preocupación por la tarea pendiente.",
+                    "D) Sorpresa porque no esperaba que se cayera."
+                ], correct: 1
+            },
+            {
+                subject: "De lo Humano y lo Comunitario", icon: "users", color: "bg-orange-100 text-orange-800",
+                question: "María leía 10 páginas al día, ahora lee 20. ¿Qué debe hacer para seguir mejorando?",
+                options: [
+                    "A) Cambiar de libro todos los días.",
+                    "B) Dejar de leer porque ya es suficiente.",
+                    "C) Ajustar su meta de páginas a leer al día y crear un plan para lograrlo.",
+                    "D) Seguir leyendo 20 páginas al día sin cambiar nada."
+                ], correct: 2
+            },
+            {
+                subject: "De lo Humano y lo Comunitario", icon: "users", color: "bg-orange-100 text-orange-800",
+                question: "A Luis le gusta el bordado aunque otros niños le dicen que no es para él. Su escuela y abuela lo apoyan. ¿Qué factor actúa como una POSIBILIDAD para su desarrollo personal?",
+                options: [
+                    "A) El hecho de tener que elegir una carrera de adulto.",
+                    "B) El comentario negativo de sus compañeros.",
+                    "C) La tradición cultural de su comunidad y el apoyo de su abuela y su escuela.",
+                    "D) La distancia entre su casa y la feria."
+                ], correct: 2
+            },
+            {
+                subject: "De lo Humano y lo Comunitario", icon: "users", color: "bg-orange-100 text-orange-800",
+                question: "Ana de 10 años hace cosas sola, tiene amigos y opina en clase. ¿Qué la ha ayudado a cambiar y conocerse mejor?",
+                options: [
+                    "A) Los libros que lee.",
+                    "B) Solo sus propias decisiones.",
+                    "C) Solo lo que le dicen sus maestros.",
+                    "D) La influencia de su familia y amigos."
+                ], correct: 3
+            },
+            {
+                subject: "De lo Humano y lo Comunitario", icon: "users", color: "bg-orange-100 text-orange-800",
+                question: "Sofía va a jugar fútbol con sus amigos. ¿Qué habilidades motrices debe poner en práctica?",
+                options: [
+                    "A) Patear la pelota con toda su fuerza.",
+                    "B) Correr, gritar muy fuerte, gatear y saltar.",
+                    "C) Correr, patear, lanzar y trabajar en equipo.",
+                    "D) Mirar, planear, escribir y dibujar la cancha."
+                ], correct: 2
+            },
+            {
+                subject: "De lo Humano y lo Comunitario", icon: "users", color: "bg-orange-100 text-orange-800",
+                question: "El equipo de Sofía pierde porque no trabajan juntos. ¿Qué estrategia puede usar para mejorar?",
+                options: [
+                    "A) Gritarles a sus compañeros para que jueguen mejor.",
+                    "B) Hablar con sus compañeros para coordinar jugadas y defender mejor.",
+                    "C) Decirle al maestro que el juego es injusto.",
+                    "D) Pedirle a otro equipo que les ayude."
+                ], correct: 1
+            },
+            {
+                subject: "De lo Humano y lo Comunitario", icon: "users", color: "bg-orange-100 text-orange-800",
+                question: "Algunos dicen que el parque no es seguro. ¿Qué acciones se deben realizar para saber si lo es?",
+                options: [
+                    "A) No ir nunca al parque.",
+                    "B) Ir al parque en solitario para ver qué pasa.",
+                    "C) Preguntar a los padres, amigos y vecinos sobre la seguridad del parque.",
+                    "D) Juntarse con amigos para ir todos juntos a investigar."
+                ], correct: 2
+            },
+            {
+                subject: "De lo Humano y lo Comunitario", icon: "users", color: "bg-orange-100 text-orange-800",
+                question: "Ana ve a personas destruyendo el tobogán del parque. ¿Qué puede hacer para prevenir este vandalismo?",
+                options: [
+                    "A) Intentar detenerlos sola.",
+                    "B) Ignorar la situación y jugar en otra parte.",
+                    "C) Ir a casa y llamar a un adulto o a la policía.",
+                    "D) Unirse al grupo y destruir el tobogán también."
+                ], correct: 2
+            },
+            {
+                subject: "De lo Humano y lo Comunitario", icon: "users", color: "bg-orange-100 text-orange-800",
+                question: "En la escuela hay mucha basura y los baños no están limpios. ¿Qué se puede hacer para mejorar la higiene?",
+                options: [
+                    "A) Organizar una campaña de limpieza con amigos y maestros.",
+                    "B) No hacer nada porque no es problema de los niños.",
+                    "C) Hacer un mural sobre la importancia de la higiene.",
+                    "D) Quejarse con amigos sobre la suciedad."
+                ], correct: 0
+            }
+        ];
+
+        // ==========================================
+        // LÓGICA DE LA APLICACIÓN
+        // ==========================================
+        let currentQuestionIndex = 0;
+        let userAnswers = new Array(examData.length).fill(null);
+        const appDiv = document.getElementById('app');
+
+        // 1. PANTALLA DE INICIO
+        function showStartScreen() {
+            appDiv.innerHTML = `
+                <div class="flex flex-1 items-center justify-center p-4">
+                    <div class="max-w-2xl w-full bg-white rounded-3xl shadow-xl overflow-hidden border border-slate-100">
+                        <div class="bg-indigo-600 p-10 text-center relative overflow-hidden">
+                            <h1 class="text-4xl font-black text-white mb-3 relative z-10 tracking-tight">Evaluación Final</h1>
+                            <p class="text-indigo-100 text-xl font-medium relative z-10">Segundo Trimestre - Cuarto Grado</p>
+                        </div>
+                        <div class="p-10">
+                            <div class="space-y-6 mb-10 text-slate-600 text-lg">
+                                <p>¡Hola! Bienvenido al examen completo. Pondrás a prueba tus conocimientos en las <strong>${examData.length} preguntas</strong> divididas en 4 campos formativos:</p>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div class="flex items-center gap-3 p-4 rounded-xl bg-blue-50 border border-blue-100">
+                                        <i data-lucide="book-open" class="text-blue-600"></i>
+                                        <span class="font-semibold text-blue-900">Lenguajes (15)</span>
+                                    </div>
+                                    <div class="flex items-center gap-3 p-4 rounded-xl bg-purple-50 border border-purple-100">
+                                        <i data-lucide="award" class="text-purple-600"></i>
+                                        <span class="font-semibold text-purple-900">Saberes (13)</span>
+                                    </div>
+                                    <div class="flex items-center gap-3 p-4 rounded-xl bg-green-50 border border-green-100">
+                                        <i data-lucide="alert-triangle" class="text-green-600"></i>
+                                        <span class="font-semibold text-green-900">Ética y Naturaleza (10)</span>
+                                    </div>
+                                    <div class="flex items-center gap-3 p-4 rounded-xl bg-orange-50 border border-orange-100">
+                                        <i data-lucide="users" class="text-orange-600"></i>
+                                        <span class="font-semibold text-orange-900">De lo Humano (10)</span>
+                                    </div>
+                                </div>
+                                <p class="text-sm text-slate-500 text-center bg-slate-50 p-4 rounded-xl border border-slate-200">
+                                    Al finalizar obtendrás tus resultados detallados por cada área.
+                                </p>
+                            </div>
+                            <button onclick="startQuiz()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-5 px-6 rounded-2xl transition duration-300 flex items-center justify-center gap-3 text-xl shadow-[0_8px_30px_rgb(79,70,229,0.3)] hover:shadow-[0_8px_30px_rgb(79,70,229,0.5)] hover:-translate-y-1">
+                                Comenzar Examen <i data-lucide="arrow-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        function startQuiz() {
+            currentQuestionIndex = 0;
+            userAnswers = new Array(examData.length).fill(null);
+            showQuizScreen();
+        }
+
+        // 2. PANTALLA DEL EXAMEN
+        function showQuizScreen() {
+            appDiv.innerHTML = `
+                <div class="flex-1 flex flex-col p-4 md:p-8 max-w-4xl w-full mx-auto">
+                    <!-- Progress Header -->
+                    <div class="mb-4 flex items-center justify-between text-sm font-bold text-slate-500 uppercase tracking-wider">
+                        <span>Pregunta <span id="q-number">1</span> de ${examData.length}</span>
+                        <span class="text-indigo-600" id="q-progress-text">0% Completado</span>
+                    </div>
+                    <div class="w-full bg-slate-200 rounded-full h-3 mb-8 shadow-inner overflow-hidden">
+                        <div id="q-progress-bar" class="bg-indigo-600 h-3 rounded-full progress-bar" style="width: 0%"></div>
+                    </div>
+
+                    <!-- Question Card -->
+                    <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 md:p-10 flex-1 relative overflow-hidden flex flex-col">
+                        <div id="q-badge" class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold mb-8 shadow-sm w-max">
+                            <i id="q-icon" data-lucide="book-open" class="w-5 h-5"></i>
+                            <span id="q-subject">MATERIA</span>
+                        </div>
+                        
+                        <h2 id="q-text" class="text-xl md:text-3xl font-bold text-slate-800 mb-10 leading-relaxed">
+                            Pregunta
+                        </h2>
+
+                        <div id="q-options" class="space-y-4 flex-1">
+                            <!-- Opciones inyectadas por JS -->
+                        </div>
+                    </div>
+
+                    <!-- Navigation -->
+                    <div class="flex justify-between items-center mt-8">
+                        <button id="btn-prev" onclick="prevQuestion()" class="flex items-center gap-2 px-6 py-4 rounded-2xl font-bold text-slate-600 hover:bg-white hover:shadow-sm disabled:opacity-0 disabled:pointer-events-none transition-all">
+                            <i data-lucide="chevron-left"></i> Anterior
+                        </button>
+                        <button id="btn-next" onclick="nextQuestion()" class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white font-bold py-4 px-10 rounded-2xl transition duration-200 shadow-[0_4px_14px_0_rgb(79,70,229,0.39)] disabled:shadow-none">
+                            <span id="btn-next-text">Siguiente</span> 
+                            <i id="btn-next-icon" data-lucide="chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            renderCurrentQuestion();
+        }
+
+        function renderCurrentQuestion() {
+            const q = examData[currentQuestionIndex];
+            const progress = ((currentQuestionIndex + 1) / examData.length) * 100;
+            const hasAnswered = userAnswers[currentQuestionIndex] !== null;
+
+            document.getElementById('q-number').innerText = currentQuestionIndex + 1;
+            document.getElementById('q-progress-text').innerText = `${Math.round(progress)}% Completado`;
+            document.getElementById('q-progress-bar').style.width = `${progress}%`;
+
+            const badge = document.getElementById('q-badge');
+            badge.className = `inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold mb-8 shadow-sm w-max ${q.color}`;
+            document.getElementById('q-subject').innerText = q.subject.toUpperCase();
+            
+            // Re-render icon
+            const iconEl = document.getElementById('q-icon');
+            iconEl.setAttribute('data-lucide', q.icon);
+            
+            document.getElementById('q-text').innerText = q.question;
+
+            // Render Options
+            const optionsContainer = document.getElementById('q-options');
+            let optionsHTML = '';
+            q.options.forEach((opt, idx) => {
+                const isSelected = userAnswers[currentQuestionIndex] === idx;
+                
+                let btnClass = isSelected 
+                    ? 'border-indigo-600 bg-indigo-50 shadow-md transform scale-[1.01]' 
+                    : 'border-slate-100 bg-slate-50 hover:border-indigo-200 hover:bg-slate-100';
+                    
+                let dotBorderClass = isSelected ? 'border-indigo-600 bg-indigo-100' : 'border-slate-300 group-hover:border-indigo-300';
+                let dotClass = isSelected ? '<div class="w-3.5 h-3.5 bg-indigo-600 rounded-full shadow-sm"></div>' : '';
+                let textClass = isSelected ? 'font-bold text-indigo-900' : 'font-medium text-slate-700';
+
+                optionsHTML += `
+                    <button onclick="selectOption(${idx})" class="w-full text-left p-5 rounded-2xl border-2 transition-all duration-200 flex items-start gap-5 group ${btnClass}">
+                        <div class="flex-shrink-0 w-7 h-7 rounded-full border-2 mt-0.5 flex items-center justify-center transition-colors ${dotBorderClass}">
+                            ${dotClass}
+                        </div>
+                        <span class="text-lg md:text-xl leading-snug ${textClass}">
+                            ${opt}
+                        </span>
+                    </button>
+                `;
+            });
+            optionsContainer.innerHTML = optionsHTML;
+
+            // Buttons State
+            document.getElementById('btn-prev').disabled = currentQuestionIndex === 0;
+            document.getElementById('btn-next').disabled = !hasAnswered;
+            
+            const btnNextText = document.getElementById('btn-next-text');
+            const btnNextIcon = document.getElementById('btn-next-icon');
+            
+            if (currentQuestionIndex === examData.length - 1) {
+                btnNextText.innerText = 'Terminar Evaluación';
+                btnNextIcon.style.display = 'none';
+            } else {
+                btnNextText.innerText = 'Siguiente';
+                btnNextIcon.style.display = 'block';
+                btnNextIcon.setAttribute('data-lucide', 'chevron-right');
+            }
+
+            lucide.createIcons();
+        }
+
+        function selectOption(idx) {
+            userAnswers[currentQuestionIndex] = idx;
+            renderCurrentQuestion();
+        }
+
+        function nextQuestion() {
+            if (currentQuestionIndex < examData.length - 1) {
+                currentQuestionIndex++;
+                renderCurrentQuestion();
+            } else {
+                showResultsScreen();
+            }
+        }
+
+        function prevQuestion() {
+            if (currentQuestionIndex > 0) {
+                currentQuestionIndex--;
+                renderCurrentQuestion();
+            }
+        }
+
+        // 3. PANTALLA DE RESULTADOS
+        function showResultsScreen() {
+            // Calcular score global
+            let totalScore = 0;
+            userAnswers.forEach((ans, idx) => {
+                if (ans === examData[idx].correct) totalScore++;
+            });
+            const globalGrade = (totalScore / examData.length) * 10;
+            const isApproved = globalGrade >= 6;
+
+            // Calcular score por categorías
+            const categories = [...new Set(examData.map(item => item.subject))];
+            const stats = categories.map(cat => {
+                const catQuestions = examData.filter(q => q.subject === cat);
+                const total = catQuestions.length;
+                let correctCount = 0;
+                
+                catQuestions.forEach(q => {
+                    const globalIdx = examData.indexOf(q);
+                    if (userAnswers[globalIdx] === q.correct) correctCount++;
+                });
+                
+                const score = (correctCount / total) * 10;
+                
+                let styleClasses = "bg-slate-100 text-slate-800 border-slate-200";
+                if(cat.includes('Lenguajes')) styleClasses = "bg-blue-50 text-blue-900 border-blue-200";
+                if(cat.includes('Saberes')) styleClasses = "bg-purple-50 text-purple-900 border-purple-200";
+                if(cat.includes('Ética')) styleClasses = "bg-green-50 text-green-900 border-green-200";
+                if(cat.includes('Humano')) styleClasses = "bg-orange-50 text-orange-900 border-orange-200";
+
+                return { cat, total, correct: correctCount, score, styleClasses };
+            });
+
+            // Notificar al portal de padres con desglose por área
+            if (window.parent) {
+                const areaScoresPayload = {};
+                stats.forEach(s => {
+                    areaScoresPayload[s.cat] = { correct: s.correct, total: s.total };
+                });
+
+                window.parent.postMessage({ 
+                    type: 'GAME_COMPLETE', 
+                    score: globalGrade, 
+                    maxScore: 10,
+                    areaScores: areaScoresPayload
+                }, '*');
+            }
+
+            // HTML de las tarjetas de categorías
+            let statsHTML = '';
+            stats.forEach(stat => {
+                statsHTML += `
+                    <div class="rounded-3xl p-6 border-2 flex flex-col justify-between ${stat.styleClasses}">
+                        <div>
+                            <h3 class="font-black text-lg mb-4 leading-tight">${stat.cat}</h3>
+                            <div class="space-y-2 mb-6">
+                                <div class="flex justify-between text-sm font-bold opacity-70">
+                                    <span>Aciertos:</span>
+                                    <span>${stat.correct} / ${stat.total}</span>
+                                </div>
+                                <div class="w-full bg-white/50 rounded-full h-2">
+                                    <div class="bg-current h-2 rounded-full opacity-70" style="width: ${(stat.correct / stat.total) * 100}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="pt-4 border-t border-current border-opacity-20 flex justify-between items-end">
+                            <span class="text-sm font-bold opacity-70 uppercase tracking-wider">Promedio</span>
+                            <span class="text-3xl font-black">${stat.score.toFixed(1)}</span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            // HTML de la revisión detallada
+            let reviewHTML = '';
+            categories.forEach(category => {
+                reviewHTML += `
+                    <div class="space-y-6">
+                        <h3 class="text-xl font-bold text-slate-800 bg-slate-100 px-6 py-3 rounded-xl inline-block mt-8">
+                            ${category}
+                        </h3>
+                        <div class="grid grid-cols-1 gap-6">
+                `;
+                
+                examData.forEach((item, globalIdx) => {
+                    if (item.subject !== category) return;
+                    
+                    const ansIdx = userAnswers[globalIdx];
+                    const isCorrect = ansIdx === item.correct;
+                    
+                    let cardBorder = isCorrect ? 'border-green-100 bg-green-50/30' : 'border-red-100 bg-red-50/30';
+                    let iconSVG = isCorrect 
+                        ? '<i data-lucide="check-circle" class="w-7 h-7 text-green-500"></i>' 
+                        : '<i data-lucide="x-circle" class="w-7 h-7 text-red-500"></i>';
+                    
+                    let userAnswerStr = item.options[ansIdx];
+                    let correctAnswerStr = item.options[item.correct];
+
+                    reviewHTML += `
+                        <div class="rounded-2xl border-2 p-6 transition-colors ${cardBorder}">
+                            <div class="flex items-start gap-4">
+                                <div class="mt-1">${iconSVG}</div>
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 mb-3">
+                                        <span class="text-sm font-bold text-slate-400 bg-white px-3 py-1 rounded-lg border border-slate-200">
+                                            Pregunta ${globalIdx + 1}
+                                        </span>
+                                    </div>
+                                    <p class="font-bold text-slate-800 text-lg mb-5">${item.question}</p>
+                                    <div class="space-y-3">
+                                        <div class="p-4 rounded-xl text-base ${isCorrect ? 'bg-green-100/50 text-green-900 border border-green-200' : 'bg-red-100/50 text-red-900 border border-red-200'}">
+                                            <span class="font-black mr-2">${isCorrect ? 'Tu respuesta (Correcta):' : 'Tu respuesta (Incorrecta):'}</span>
+                                            <span class="font-medium">${userAnswerStr}</span>
+                                        </div>
+                                        ${!isCorrect ? `
+                                        <div class="p-4 rounded-xl text-base bg-emerald-100/50 text-emerald-900 border border-emerald-200">
+                                            <span class="font-black mr-2">Respuesta Correcta:</span>
+                                            <span class="font-medium">${correctAnswerStr}</span>
+                                        </div>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                reviewHTML += `</div></div>`;
+            });
+
+            // Construir la vista completa
+            appDiv.innerHTML = `
+                <div class="py-10 px-4 md:px-8 max-w-5xl w-full mx-auto space-y-8">
+                    <!-- Main Global Score -->
+                    <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-10 text-center relative overflow-hidden">
+                        <div class="absolute top-0 w-full h-2 bg-gradient-to-r from-blue-500 via-purple-500 to-orange-500 left-0"></div>
+                        
+                        <div class="inline-flex justify-center items-center w-24 h-24 rounded-full bg-slate-50 border-4 border-slate-100 mb-6 shadow-inner">
+                            <i data-lucide="award" class="w-12 h-12 ${isApproved ? 'text-green-500' : 'text-orange-500'}"></i>
+                        </div>
+                        <h1 class="text-4xl font-black mb-2 text-slate-800">Resultados del Examen</h1>
+                        <p class="text-slate-500 mb-10 text-lg">Has completado las ${examData.length} preguntas de la evaluación.</p>
+                        
+                        <div class="flex flex-col md:flex-row justify-center items-center gap-6 md:gap-16">
+                            <div class="bg-slate-50 px-10 py-6 rounded-3xl border border-slate-100">
+                                <p class="text-sm font-bold text-slate-400 uppercase tracking-widest mb-2">Aciertos Totales</p>
+                                <p class="text-5xl font-black text-slate-800">${totalScore} <span class="text-2xl text-slate-400">/ ${examData.length}</span></p>
+                            </div>
+                            <div class="bg-slate-50 px-10 py-6 rounded-3xl border border-slate-100">
+                                <p class="text-sm font-bold text-slate-400 uppercase tracking-widest mb-2">Calificación Global</p>
+                                <p class="text-5xl font-black ${isApproved ? 'text-green-600' : 'text-orange-600'}">
+                                    ${globalGrade.toFixed(1)}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Categories Breakdown -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        ${statsHTML}
+                    </div>
+
+                    <!-- Detailed Review Section -->
+                    <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 md:p-10">
+                        <div class="flex items-center gap-3 mb-8 pb-6 border-b border-slate-100">
+                            <i data-lucide="bar-chart-3" class="w-8 h-8 text-indigo-600"></i>
+                            <h2 class="text-2xl font-black text-slate-800">Revisión Detallada por Campo Formativo</h2>
+                        </div>
+                        ${reviewHTML}
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="pt-4 pb-10 flex justify-center">
+                        <button onclick="showStartScreen()" class="flex items-center gap-3 bg-slate-800 hover:bg-slate-900 text-white font-bold py-5 px-10 rounded-2xl transition duration-300 shadow-xl hover:shadow-2xl hover:-translate-y-1 text-lg">
+                            <i data-lucide="rotate-ccw"></i>
+                            Reiniciar Examen Completo
+                        </button>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        // Iniciar app
+        showStartScreen();
+    </script>
+</body>
+</html>

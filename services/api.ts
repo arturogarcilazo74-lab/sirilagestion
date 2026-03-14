@@ -2,26 +2,34 @@ import { Student, Assignment, SchoolEvent, BehaviorLog, FinanceEvent, SchoolConf
 
 // --- CONFIGURATION ---
 const GET_BASE_URL = () => {
-    // Check if we have a stored preference
+    // Priority 1: Check for explicit override in localStorage
     let stored = localStorage.getItem('SIRILA_SERVER_URL');
 
     // INTELLIGENT OVERRIDE:
-    // If we are on a remote device (e.g. tunnel, public IP) but the stored URL is 'localhost',
-    // it is definitely wrong (leftover from testing). We must ignore it.
+    // If we are on Hostinger (or any remote domain) but stored points to localhost or orender,
+    // it's likely a leftover from migration or dev testing.
     const isRemote = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
-    if (isRemote && stored && (stored.includes('localhost') || stored.includes('127.0.0.1'))) {
-        console.warn('Ignoring invalid localhost configuration on remote device');
+    const isLegacy = stored && (
+        stored.includes('localhost') || 
+        stored.includes('127.0.0.1') || 
+        stored.includes('orender.com') || 
+        stored.includes('render.com')
+    );
+
+    if (isRemote && isLegacy) {
+        console.warn('Ignoring legacy or invalid server URL configuration:', stored);
         stored = null;
+        localStorage.removeItem('SIRILA_SERVER_URL'); // Clean up
     }
 
-    // If running as file:// (Electron), we must use absolute URL
+    // If running as file:// (Electron), we must use absolute URL if provided, or default local
     if (window.location.protocol === 'file:') {
         return stored || 'http://localhost:3001/api';
     }
 
-    // For all web access (localhost, LAN, tunnel URL), use relative path
-    // This allows the tunnel to proxy correctly without CORS/Mixed-Content issues
-    return stored || '/api';
+    // For all web access (Production Hostinger, Local Dev, LAN), relative path is safest
+    // unless the user explicitly set a valid remote URL that isn't legacy.
+    return (stored && !isLegacy) ? stored : '/api';
 };
 
 // --- OFFLINE QUEUE SYSTEM ---
@@ -475,30 +483,40 @@ export const api = {
         return await res.json();
     },
 
-    submitAssignment: async (studentId: string, assignmentId: string, result: { score: number, type: string }) => {
-        // 1. Fetch current full state (inefficient but safe fallback)
+    submitAssignment: async (studentId: string, assignmentId: string, result: { score: number, type: string, areaScores?: Record<string, { correct: number, total: number }> }) => {
+        // 1. Fetch current full state
         const state = await api.checkStatus();
         const student = state.students.find((s: Student) => s.id === studentId);
         if (!student) throw new Error("Student not found");
 
-        // 2. Update student record
         const updatedStudent = { ...student };
 
-        // Ensure arrays init
-        if (!updatedStudent.completedAssignmentIds) updatedStudent.completedAssignmentIds = [];
-        if (!updatedStudent.assignmentResults) updatedStudent.assignmentResults = {};
-        if (!updatedStudent.grades) updatedStudent.grades = [];
+        // 2. Initialize arrays if missing
+        updatedStudent.completedAssignmentIds = Array.isArray(student.completedAssignmentIds) ? [...student.completedAssignmentIds] : [];
+        updatedStudent.assignmentResults = (student.assignmentResults && typeof student.assignmentResults === 'object') ? { ...student.assignmentResults } : {};
+        updatedStudent.assignmentAttempts = (student.assignmentAttempts && typeof student.assignmentAttempts === 'object') ? { ...student.assignmentAttempts } : {};
+        updatedStudent.assignmentAreaResults = (student.assignmentAreaResults && typeof student.assignmentAreaResults === 'object') ? { ...student.assignmentAreaResults } : {};
 
-        // Add if not present
+        // 3. Mark as complete if not already
         if (!updatedStudent.completedAssignmentIds.includes(assignmentId)) {
             updatedStudent.completedAssignmentIds.push(assignmentId);
-            updatedStudent.assignmentsCompleted = (updatedStudent.assignmentsCompleted || 0) + 1;
         }
 
-        // Update score
+        // 4. Update core counters
+        updatedStudent.assignmentsCompleted = updatedStudent.completedAssignmentIds.length;
         updatedStudent.assignmentResults[assignmentId] = result.score;
+        updatedStudent.assignmentAttempts[assignmentId] = (updatedStudent.assignmentAttempts[assignmentId] || 0) + 1;
 
-        // 3. Save back
+        // 5. Update Area Results if provided
+        if (result.areaScores) {
+            const areaPercentages: Record<string, number> = {};
+            Object.entries(result.areaScores).forEach(([area, stats]) => {
+                areaPercentages[area] = Math.round((stats.correct / (stats.total || 1)) * 100);
+            });
+            updatedStudent.assignmentAreaResults[assignmentId] = areaPercentages;
+        }
+
+        // 6. Save back
         await api.saveStudent(updatedStudent);
         return updatedStudent;
     }
