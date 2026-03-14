@@ -110,7 +110,8 @@ export interface WorksheetData {
 
 export interface HtmlGameData {
   type: 'HTML_GAME';
-  htmlContent: string;
+  htmlContent?: string;
+  gameUrl?: string; // NEW: Support for external files or URLs
   gameType?: 'MULTIPLICATION' | 'OTHER';
 }
 

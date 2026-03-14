@@ -45,6 +45,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
   const [nemPlanResult, setNemPlanResult] = useState('');
   const [aiContextText, setAiContextText] = useState('');
   const [htmlGameContent, setHtmlGameContent] = useState('');
+  const [htmlGameUrl, setHtmlGameUrl] = useState('');
   const [curQuestion, setCurQuestion] = useState('');
   const [curOptions, setCurOptions] = useState(['', '', '']);
   const [curCorrect, setCurCorrect] = useState(0);
@@ -243,13 +244,14 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
         }
         newAssignment.description = nemPlanResult; // Save the plan as description in both cases
       } else if (activityType === 'HTML_GAME') {
-        if (!htmlGameContent) {
-          alert("Debes generar o subir el juego antes de guardar.");
+        if (!htmlGameContent && !htmlGameUrl) {
+          alert("Debes generar, subir el juego o especificar una URL antes de guardar.");
           return;
         }
         newAssignment.interactiveData = {
           type: 'HTML_GAME',
-          htmlContent: htmlGameContent,
+          htmlContent: htmlGameContent || '',
+          gameUrl: htmlGameUrl.trim() || undefined,
           gameType: 'OTHER'
         };
       }
@@ -272,6 +274,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
       setNewInstructions('');
       setNewExternalLinks([]);
       setCurrentLinkInput('');
+      setHtmlGameUrl('');
     }
   };
 
@@ -1203,6 +1206,16 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                                   onChange={e => setAiContextText(e.target.value)}
                                 />
                               </div>
+                              <div>
+                                <label className="block text-sm font-bold text-orange-700 mb-1">URL o Nombre de Archivo (Opcional)</label>
+                                <input
+                                  className="w-full p-3 border border-orange-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none"
+                                  placeholder="Ej. evaluacion_trimestre2.html"
+                                  value={htmlGameUrl}
+                                  onChange={e => setHtmlGameUrl(e.target.value)}
+                                />
+                                <p className="text-[10px] text-orange-400 mt-1">Si ya subiste el archivo a Hostinger, escribe su nombre aquí.</p>
+                              </div>
                               <button
                                 type="button"
                                 onClick={async () => {
@@ -1401,7 +1414,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
         ) : (
           <>
             {/* Desktop Table View */}
-            <div className="hidden md:block flex-1 overflow-x-auto custom-scrollbar relative">
+            <div className="hidden md:block flex-1 overflow-auto custom-scrollbar relative">
               <table className="w-full text-left border-collapse min-w-[800px]">
                 <thead className="bg-slate-50/90 backdrop-blur-sm sticky top-0 z-20 shadow-sm">
                   <tr>
@@ -1410,7 +1423,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                     {assignments.map(assignment => (
                       <th key={assignment.id} className="p-4 font-medium text-slate-600 min-w-[180px] border-l border-slate-200 relative group bg-slate-50">
                         <div className="flex justify-between items-start gap-2">
-                          <span>{assignment.title}</span>
+                          <span className="line-clamp-2 text-xs" title={assignment.title}>{assignment.title}</span>
                           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button
                               onClick={() => onUpdateAssignment(assignment.id, { isVisibleInParentsPortal: !assignment.isVisibleInParentsPortal })}

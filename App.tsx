@@ -67,17 +67,22 @@ const App: React.FC = () => {
       const userLetter = userGroupStr.match(/[A-F]/)?.[0];
 
       visibleStudents = store.students.filter(s => {
-        // If student has no group assigned, assume they belong to '4 A' (Legacy Recovery)
-        const studentGroupStr = (s.group || '4 A').toUpperCase().trim();
+        // More flexible group matching
+        const studentGroupStr = (s.group || '').toUpperCase().trim();
+        const userGroupStr = (currentUser.group || '').toUpperCase().trim();
+        
+        if (!studentGroupStr) return true; // Show unassigned students to their teacher for recovery
+
         const studentGrade = studentGroupStr.match(/(\d+)/)?.[0];
         const studentLetter = studentGroupStr.match(/[A-F]/)?.[0];
 
         if (userGrade && studentGrade) {
-          return studentGrade === userGrade && studentLetter === userLetter;
+          if (userLetter && studentLetter) {
+            return studentGrade === userGrade && studentLetter === userLetter;
+          }
+          return studentGrade === userGrade; // Partial match if letters are missing
         }
-        if ((userGrade && !studentGrade) || (!userGrade && studentGrade)) return false;
-        if (!userGrade && !studentGrade) return userGroupStr === studentGroupStr;
-        return false;
+        return studentGroupStr.includes(userGroupStr) || userGroupStr.includes(studentGroupStr);
       });
     }
   }
