@@ -740,21 +740,28 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                 // 1. Explicit visibility check (Toggle icon in teacher panel)
                 if (a.isVisibleInParentsPortal === false) return false;
 
-                // 2. Technical filter: Ignore teacher-only diagnostic tools (NEM Agent)
+                // 2. Technical filter: Ignore teacher-only diagnostic tools unless they are quizzes for students
                 // @ts-ignore
-                if (a.assignmentType === 'NEM_EVALUATION' || (a.interactiveData as any)?.forTeacherOnly) return false;
+                const isForTeacherOnly = (a.interactiveData as any)?.forTeacherOnly === true;
+                if (isForTeacherOnly) return false;
 
                 // 3. Group Normalization & Matching
                 const targetGroupRaw = (a.targetGroup || '').toUpperCase().trim();
                 const studentGroupRaw = (targetStudent.group || '').toUpperCase().trim();
 
                 // 4. Global assignments (Empty target, 'GLOBAL', 'TODOS', 'TODAS')
-                if (!targetGroupRaw || targetGroupRaw === 'GLOBAL' || targetGroupRaw === 'TODOS' || targetGroupRaw === 'TODAS') return true;
+                if (!targetGroupRaw || targetGroupRaw === 'GLOBAL' || targetGroupRaw === 'TODOS' || targetGroupRaw === 'TODAS') {
+                    console.log(`[ParentPortal] Global activity visible: ${a.title}`);
+                    return true;
+                }
 
                 // 5. Exact Match (Normalized)
                 const sGroupNormalized = studentGroupRaw.replace(/[^A-Z0-9]/g, '');
                 const aGroupNormalized = targetGroupRaw.replace(/[^A-Z0-9]/g, '');
-                if (sGroupNormalized === aGroupNormalized) return true;
+                if (sGroupNormalized === aGroupNormalized) {
+                    console.log(`[ParentPortal] Exact group match: ${a.title} (${a.targetGroup})`);
+                    return true;
+                }
 
                 // 6. Robust Grade/Letter Match (e.g., "4 A" matches "4TO A")
                 const sGrade = studentGroupRaw.match(/(\d+)/)?.[0];
@@ -764,8 +771,13 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
 
                 if (sGrade && aGrade && sGrade === aGrade) {
                     // If activity specifies a letter (A-F), student group must have the same letter
-                    if (aLetter) return sLetter === aLetter;
+                    if (aLetter) {
+                        const match = sLetter === aLetter;
+                        if (match) console.log(`[ParentPortal] Grade+Letter match: ${a.title} (${a.targetGroup})`);
+                        return match;
+                    }
                     // If activity ONLY specifies grade (no letter), all students in that grade see it
+                    console.log(`[ParentPortal] Grade-only match: ${a.title} (${a.targetGroup})`);
                     return true;
                 }
 

@@ -234,12 +234,11 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
           if (questions.length > 0) {
             newAssignment.type = 'INTERACTIVE';
             newAssignment.assignmentType = 'NEM_EVALUATION';
-            newAssignment.isVisibleInParentsPortal = false;
             newAssignment.interactiveData = {
               type: 'QUIZ',
               questions: questions,
               videoUrl: videoUrl.trim() || undefined,
-              forTeacherOnly: true
+              forTeacherOnly: false // Changed to false to allow visibility if toggle is on
             };
           } else {
             newAssignment.type = 'TASK';
