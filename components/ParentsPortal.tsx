@@ -731,39 +731,48 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
 
         try {
             const allAssignments = await api.getAssignments();
-            console.log(`[ParentPortal] Loaded ${allAssignments.length} total assignments. Filtering for student group: "${targetStudent.group}"`);
+            // Safety: Ensure it's an array for filtering
+            const rawList = Array.isArray(allAssignments) ? allAssignments : (allAssignments.assignments || []);
+            
+            console.log(`[ParentPortal] Loaded ${rawList.length} total. Filtering for student group: "${targetStudent.group}"`);
 
-            const filtered = allAssignments.filter((a: Assignment) => {
-                // 1. Explicit visibility check
+            const filtered = rawList.filter((a: Assignment) => {
+                // 1. Explicit visibility check (Toggle icon in teacher panel)
                 if (a.isVisibleInParentsPortal === false) return false;
 
-                // 2. Normalize inputs
+                // 2. Technical filter: Ignore teacher-only diagnostic tools (NEM Agent)
+                // @ts-ignore
+                if (a.assignmentType === 'NEM_EVALUATION' || (a.interactiveData as any)?.forTeacherOnly) return false;
+
+                // 3. Group Normalization & Matching
                 const targetGroupRaw = (a.targetGroup || '').toUpperCase().trim();
                 const studentGroupRaw = (targetStudent.group || '').toUpperCase().trim();
 
-                // 3. Global assignments (Empty target or 'GLOBAL')
-                if (!targetGroupRaw || targetGroupRaw === 'GLOBAL' || targetGroupRaw === 'TODOS') return true;
+                // 4. Global assignments (Empty target, 'GLOBAL', 'TODOS', 'TODAS')
+                if (!targetGroupRaw || targetGroupRaw === 'GLOBAL' || targetGroupRaw === 'TODOS' || targetGroupRaw === 'TODAS') return true;
 
-                // 4. Match logic
-                if (studentGroupRaw === targetGroupRaw) return true;
+                // 5. Exact Match (Normalized)
+                const sGroupNormalized = studentGroupRaw.replace(/[^A-Z0-9]/g, '');
+                const aGroupNormalized = targetGroupRaw.replace(/[^A-Z0-9]/g, '');
+                if (sGroupNormalized === aGroupNormalized) return true;
 
-                // Partial match (e.g. "4 A" matches "4")
+                // 6. Robust Grade/Letter Match (e.g., "4 A" matches "4TO A")
                 const sGrade = studentGroupRaw.match(/(\d+)/)?.[0];
                 const sLetter = studentGroupRaw.match(/[A-F]/)?.[0];
                 const aGrade = targetGroupRaw.match(/(\d+)/)?.[0];
                 const aLetter = targetGroupRaw.match(/[A-F]/)?.[0];
 
                 if (sGrade && aGrade && sGrade === aGrade) {
-                    // If task specifies a letter, student must match it
+                    // If activity specifies a letter (A-F), student group must have the same letter
                     if (aLetter) return sLetter === aLetter;
-                    // If task only specifies grade, it's for all students in that grade
+                    // If activity ONLY specifies grade (no letter), all students in that grade see it
                     return true;
                 }
 
                 return false;
             });
 
-            console.log(`[ParentPortal] Filtered to ${filtered.length} assignments for student.`);
+            console.log(`[ParentPortal] Found ${filtered.length} relevant assignments.`);
             setAssignments(filtered);
         } catch (e) { 
             console.error("[ParentPortal] Failed to load assignments", e); 
@@ -919,38 +928,9 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
         );
     }
 
-    // SAFETY NET: Strict Render-Time Filtering
-    // Ensures that even if state is stale, we only show valid assignments for this student's group
-    const relevantAssignments = assignments.filter(a => {
-        // 1. GLOBAL assignments are visible to everyone
-        const aTarget = (a.targetGroup || '').toUpperCase().trim();
-        if (!aTarget || aTarget === 'GLOBAL' || aTarget === 'TODOS' || aTarget === 'TODAS') {
-            return true;
-        }
-
-        // 2. Normalize for robust comparison
-        const sGroupRaw = (student?.group || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-        const aGroupRaw = aTarget.replace(/[^A-Z0-9]/g, '');
-
-        if (sGroupRaw === aGroupRaw) return true;
-
-        // 3. Extract grade and letter for partial or specific matches (e.g., "4 A" matches "4TO A")
-        const sGrade = sGroupRaw.match(/(\d+)/)?.[0];
-        const sLetter = sGroupRaw.match(/[A-F]/)?.[0];
-        const aGrade = aGroupRaw.match(/(\d+)/)?.[0];
-        const aLetter = aGroupRaw.match(/[A-F]/)?.[0];
-
-        if (sGrade && aGrade && sGrade === aGrade) {
-            // If both have letters, they must match
-            if (sLetter && aLetter) {
-                return sLetter === aLetter;
-            }
-            // If one doesn't have a letter, we consider it a grade-wide assignment
-            return true;
-        }
-
-        return false;
-    });
+    // assignments state is already filtered by loadAssignments (Visibility + Group Matching)
+    const pendingAssignments = assignments.filter(a => !student?.completedAssignmentIds?.includes(a.id));
+    const completedAssignments = assignments.filter(a => student?.completedAssignmentIds?.includes(a.id));
 
     return (
         <div className="h-screen overflow-y-auto overscroll-contain bg-slate-50 font-sans pb-28"> {/* Adjusted padding for bottom nav */}
@@ -1201,10 +1181,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                     Pendientes por Entregar
                                 </h4>
                                 <div className="space-y-3">
-                                    {relevantAssignments.filter(assign => {
-                                        if (assign.isVisibleInParentsPortal === false) return false;
-                                        return !student?.completedAssignmentIds?.includes(assign.id);
-                                    }).length === 0 ? (
+                                    {pendingAssignments.length === 0 ? (
                                         <div className="bg-white p-6 rounded-2xl border border-slate-100 text-center">
                                             <div className="w-12 h-12 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-2">
                                                 <Check size={24} />
@@ -1212,10 +1189,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                             <p className="text-sm text-slate-500 font-medium">¡Todo al día! No tienes tareas pendientes.</p>
                                         </div>
                                     ) : (
-                                        relevantAssignments.filter(assign => {
-                                            if (assign.isVisibleInParentsPortal === false) return false;
-                                            return !student?.completedAssignmentIds?.includes(assign.id);
-                                        }).map(assign => {
+                                        pendingAssignments.map(assign => {
                                             const isInteractive = assign.type === 'INTERACTIVE';
                                             const dueEnd = new Date(assign.dueDate);
                                             dueEnd.setHours(23, 59, 59);
@@ -1302,18 +1276,12 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                     Completadas
                                 </h4>
                                 <div className="space-y-3">
-                                    {relevantAssignments.filter(assign => {
-                                        if (assign.isVisibleInParentsPortal === false) return false;
-                                        return student?.completedAssignmentIds?.includes(assign.id);
-                                    }).length === 0 ? (
+                                    {completedAssignments.length === 0 ? (
                                         <div className="min-h-[100px] flex items-center justify-center text-slate-400 text-xs">
                                             Aún no has completado ninguna tarea.
                                         </div>
                                     ) : (
-                                        relevantAssignments.filter(assign => {
-                                            if (assign.isVisibleInParentsPortal === false) return false;
-                                            return student?.completedAssignmentIds?.includes(assign.id);
-                                        }).map(assign => {
+                                        completedAssignments.map(assign => {
                                             const isInteractive = assign.type === 'INTERACTIVE';
                                             const score = student?.assignmentResults?.[assign.id];
                                             return (

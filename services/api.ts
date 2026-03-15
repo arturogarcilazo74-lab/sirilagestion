@@ -226,7 +226,7 @@ export const api = {
     },
 
     getAssignments: async () => {
-        const res = await fetch(`${API_URL}/assignments`);
+        const res = await fetch(`${API_URL}/assignments?_t=${Date.now()}`);
         if (!res.ok) throw new Error('Failed to fetch assignments');
         return await res.json();
     },
@@ -368,7 +368,7 @@ export const api = {
     },
 
     getEvents: async () => {
-        const res = await fetch(`${API_URL}/events`);
+        const res = await fetch(`${API_URL}/events?_t=${Date.now()}`);
         if (!res.ok) throw new Error('Failed to fetch events');
         return await res.json();
     },

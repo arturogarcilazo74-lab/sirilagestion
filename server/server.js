@@ -498,7 +498,7 @@ app.get('/api/assignments', async (req, res) => {
             if (typeof d === 'string') {
                 try { d = JSON.parse(d); } catch (e) { console.error("Failed to parse", d); }
             }
-            return d;
+            return { ...d, id: r.id }; // Ensure ID from column is used
         });
         res.json(assignments);
     } catch (error) {
@@ -568,7 +568,10 @@ app.get('/api/events', async (req, res) => {
         // My schema has columns + data_json.
         // Let's return the structured data.
         const events = rows.map(r => {
-            const base = r.data_json || {};
+            let base = r.data_json || {};
+            if (typeof base === 'string') {
+                try { base = JSON.parse(base); } catch (e) { }
+            }
             return { ...base, id: r.id, title: r.title, date: r.date, type: r.type, description: r.description };
         });
         res.json(events);
