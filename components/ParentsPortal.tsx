@@ -924,22 +924,28 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
     const relevantAssignments = assignments.filter(a => {
         if (a.targetGroup === 'GLOBAL') return true;
 
-        const sGroupRaw = (student?.group || '').toUpperCase().trim();
+        const sGroupRaw = (student?.group || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+        const aGroupRaw = (a.targetGroup || '4 A').toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+        // Match normalized strings (e.g., "4TO A" -> "4TOA", "4 A" -> "4A")
+        if (sGroupRaw === aGroupRaw) return true;
+
+        // Extract grade and letter for partial matches
         const sGrade = sGroupRaw.match(/(\d+)/)?.[0];
         const sLetter = sGroupRaw.match(/[A-F]/)?.[0];
-
-        // Default to '4 A' if missing (Legacy)
-        const aGroupRaw = (a.targetGroup || '4 A').toUpperCase().trim();
         const aGrade = aGroupRaw.match(/(\d+)/)?.[0];
         const aLetter = aGroupRaw.match(/[A-F]/)?.[0];
 
         if (sGrade && sLetter && aGrade && aLetter) {
             return sGrade === aGrade && sLetter === aLetter;
         }
+
+        // Grade without letter
         if (aGrade && !aLetter && sGrade) {
             return sGrade === aGrade;
         }
-        return sGroupRaw === aGroupRaw;
+
+        return false;
     });
 
     return (
