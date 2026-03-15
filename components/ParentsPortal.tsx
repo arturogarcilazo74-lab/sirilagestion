@@ -922,27 +922,31 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
     // SAFETY NET: Strict Render-Time Filtering
     // Ensures that even if state is stale, we only show valid assignments for this student's group
     const relevantAssignments = assignments.filter(a => {
-        if (a.targetGroup === 'GLOBAL') return true;
+        // 1. GLOBAL assignments are visible to everyone
+        const aTarget = (a.targetGroup || '').toUpperCase().trim();
+        if (!aTarget || aTarget === 'GLOBAL' || aTarget === 'TODOS' || aTarget === 'TODAS') {
+            return true;
+        }
 
+        // 2. Normalize for robust comparison
         const sGroupRaw = (student?.group || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-        const aGroupRaw = (a.targetGroup || '4 A').toUpperCase().replace(/[^A-Z0-9]/g, '');
+        const aGroupRaw = aTarget.replace(/[^A-Z0-9]/g, '');
 
-        // Match normalized strings (e.g., "4TO A" -> "4TOA", "4 A" -> "4A")
         if (sGroupRaw === aGroupRaw) return true;
 
-        // Extract grade and letter for partial matches
+        // 3. Extract grade and letter for partial or specific matches (e.g., "4 A" matches "4TO A")
         const sGrade = sGroupRaw.match(/(\d+)/)?.[0];
         const sLetter = sGroupRaw.match(/[A-F]/)?.[0];
         const aGrade = aGroupRaw.match(/(\d+)/)?.[0];
         const aLetter = aGroupRaw.match(/[A-F]/)?.[0];
 
-        if (sGrade && sLetter && aGrade && aLetter) {
-            return sGrade === aGrade && sLetter === aLetter;
-        }
-
-        // Grade without letter
-        if (aGrade && !aLetter && sGrade) {
-            return sGrade === aGrade;
+        if (sGrade && aGrade && sGrade === aGrade) {
+            // If both have letters, they must match
+            if (sLetter && aLetter) {
+                return sLetter === aLetter;
+            }
+            // If one doesn't have a letter, we consider it a grade-wide assignment
+            return true;
         }
 
         return false;
