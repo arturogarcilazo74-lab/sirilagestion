@@ -508,6 +508,9 @@ app.get('/api/assignments', async (req, res) => {
 
 app.post('/api/assignments', async (req, res) => {
     const a = req.body;
+    const payloadSize = JSON.stringify(a).length;
+    console.log(`[ASSIGNMENT] Attempting to save activity: "${a.title}" (ID: ${a.id}). Payload size: ${(payloadSize / 1024).toFixed(2)} KB`);
+    
     try {
         const pool = getPool();
         await pool.query(`
@@ -516,9 +519,21 @@ app.post('/api/assignments', async (req, res) => {
       ON DUPLICATE KEY UPDATE
       title=VALUES(title), due_date=VALUES(due_date), data_json=VALUES(data_json)
     `, [a.id, a.title, a.dueDate || null, JSON.stringify(a)]);
+        
+        console.log(`✅ Activity saved successfully: ${a.id}`);
         res.json({ success: true });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error(`❌ DB Error saving assignment ${a.id}:`, error.message);
+        console.error('SQL State:', error.sqlState, 'Code:', error.code);
+        
+        // Check for common MySQL errors
+        if (error.code === 'ER_NET_PACKET_TOO_LARGE') {
+            res.status(413).json({ error: 'La actividad es demasiado grande para el servidor (Límite de paquete excedido).' });
+        } else if (error.code === 'ER_DATA_TOO_LONG') {
+            res.status(400).json({ error: 'Los datos son demasiado largos para la columna de la base de datos.' });
+        } else {
+            res.status(500).json({ error: `Error en la base de datos: ${error.message}` });
+        }
     }
 });
 

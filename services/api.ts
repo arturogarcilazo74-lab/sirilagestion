@@ -245,9 +245,24 @@ export const api = {
             const res = await fetch(`${API_URL}/assignments`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(assignment)
             });
-            if (!res.ok) throw new Error(`Server error: ${res.status}`);
-        } catch (e) {
-            addToQueue(`/assignments`, 'POST', assignment);
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({ error: `Error ${res.status}` }));
+                throw new Error(errorData.error || `Error del servidor: ${res.status}`);
+            }
+            return await res.json();
+        } catch (e: any) {
+            console.error("Save Assignment Error:", e);
+            // Re-throw if it's a specific server rejection (like 413 or 400)
+            if (e.message.includes('servidor') || e.message.includes('grande') || e.message.includes('base de datos')) {
+                throw e;
+            }
+            
+            // Otherwise, attempt offline queue
+            try {
+                addToQueue(`/assignments`, 'POST', assignment);
+            } catch (queueErr) {
+                throw new Error("No se pudo guardar ni encolar la tarea. Es posible que la memoria del navegador esté llena o la tarea sea demasiado grande.");
+            }
         }
     },
 

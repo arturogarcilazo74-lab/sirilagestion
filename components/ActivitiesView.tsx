@@ -56,6 +56,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
   const [isProcessingFile, setIsProcessingFile] = useState(false);
   const [worksheetImage, setWorksheetImage] = useState('');
   const [gradingCriteria, setGradingCriteria] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
   const [answerKeyPoints, setAnswerKeyPoints] = useState<{ x: number, y: number }[]>([]);
   const [isMarkingMode, setIsMarkingMode] = useState(false);
 
@@ -189,92 +190,101 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
   };
 
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newTitle.trim()) {
-      const newAssignment: Partial<Assignment> = {
-        title: newTitle,
-        dueDate: newDate,
-        type: activityType === 'TASK' ? 'TASK' : 'INTERACTIVE',
-        isVisibleInParentsPortal: isVisibleInParentsPortal,
-        targetGroup: targetGroup.trim().toUpperCase() || 'GLOBAL',
-        instructions: (activityType === 'TASK' && newInstructions.trim()) ? newInstructions.trim() : undefined,
-        externalLinks: (activityType === 'TASK' && newExternalLinks.length > 0) ? newExternalLinks : undefined
-      };
+      setIsSaving(true);
+      try {
+        const newAssignment: Partial<Assignment> = {
+          title: newTitle,
+          dueDate: newDate,
+          type: activityType === 'TASK' ? 'TASK' : 'INTERACTIVE',
+          isVisibleInParentsPortal: isVisibleInParentsPortal,
+          targetGroup: targetGroup.trim().toUpperCase() || 'GLOBAL',
+          instructions: (activityType === 'TASK' && newInstructions.trim()) ? newInstructions.trim() : undefined,
+          externalLinks: (activityType === 'TASK' && newExternalLinks.length > 0) ? newExternalLinks : undefined
+        };
 
-      if (activityType === 'QUIZ') {
-        if (questions.length === 0) {
-          alert("Debes agregar al menos una pregunta para crear un Cuestionario Interactivo.");
-          return;
-        }
-        newAssignment.interactiveData = {
-          type: 'QUIZ',
-          questions: questions,
-          videoUrl: videoUrl.trim() || undefined
-        };
-      } else if (activityType === 'WORKSHEET') {
-        if (!worksheetImage) {
-          alert("Debes subir una imagen o PDF para la ficha.");
-          return;
-        }
-        newAssignment.interactiveData = {
-          type: 'WORKSHEET',
-          imageUrl: worksheetImage,
-          gradingCriteria: gradingCriteria.trim(),
-          interactiveZones: interactiveZones,
-          draggableItems: draggableItems.length > 0 ? draggableItems : undefined,
-          videoUrl: videoUrl.trim() || undefined
-        };
-      } else if (activityType === 'PLANNING') {
-        // NEM AGENT LOGIC
-        if (questions.length > 0) {
-          // If a quiz was generated, save as INTERACTIVE QUIZ but for TEACHER EVALUATION
-          newAssignment.type = 'INTERACTIVE';
-          newAssignment.assignmentType = 'NEM_EVALUATION'; // Mark as special teacher tool
-          newAssignment.isVisibleInParentsPortal = false; // Hidden from parents/students by default
+        if (activityType === 'QUIZ') {
+          if (questions.length === 0) {
+            alert("Debes agregar al menos una pregunta para crear un Cuestionario Interactivo.");
+            setIsSaving(false);
+            return;
+          }
           newAssignment.interactiveData = {
             type: 'QUIZ',
             questions: questions,
-            videoUrl: videoUrl.trim() || undefined,
-            forTeacherOnly: true // Flag to ensure it's not taken by student
+            videoUrl: videoUrl.trim() || undefined
           };
-        } else {
-          // Otherwise save as standard TASK
-          newAssignment.type = 'TASK';
+        } else if (activityType === 'WORKSHEET') {
+          if (!worksheetImage) {
+            alert("Debes subir una imagen o PDF para la ficha.");
+            setIsSaving(false);
+            return;
+          }
+          newAssignment.interactiveData = {
+            type: 'WORKSHEET',
+            imageUrl: worksheetImage,
+            gradingCriteria: gradingCriteria.trim(),
+            interactiveZones: interactiveZones,
+            draggableItems: draggableItems.length > 0 ? draggableItems : undefined,
+            videoUrl: videoUrl.trim() || undefined
+          };
+        } else if (activityType === 'PLANNING') {
+          if (questions.length > 0) {
+            newAssignment.type = 'INTERACTIVE';
+            newAssignment.assignmentType = 'NEM_EVALUATION';
+            newAssignment.isVisibleInParentsPortal = false;
+            newAssignment.interactiveData = {
+              type: 'QUIZ',
+              questions: questions,
+              videoUrl: videoUrl.trim() || undefined,
+              forTeacherOnly: true
+            };
+          } else {
+            newAssignment.type = 'TASK';
+          }
+          newAssignment.description = nemPlanResult;
+        } else if (activityType === 'HTML_GAME') {
+          if (!htmlGameContent && !htmlGameUrl) {
+            alert("Debes generar, subir el juego o especificar una URL antes de guardar.");
+            setIsSaving(false);
+            return;
+          }
+          newAssignment.interactiveData = {
+            type: 'HTML_GAME',
+            htmlContent: htmlGameContent || '',
+            gameUrl: htmlGameUrl.trim() || undefined,
+            gameType: 'OTHER'
+          };
         }
-        newAssignment.description = nemPlanResult; // Save the plan as description in both cases
-      } else if (activityType === 'HTML_GAME') {
-        if (!htmlGameContent && !htmlGameUrl) {
-          alert("Debes generar, subir el juego o especificar una URL antes de guardar.");
-          return;
-        }
-        newAssignment.interactiveData = {
-          type: 'HTML_GAME',
-          htmlContent: htmlGameContent || '',
-          gameUrl: htmlGameUrl.trim() || undefined,
-          gameType: 'OTHER'
-        };
+
+        await onAddAssignment(newAssignment);
+
+        // Reset
+        setNewTitle('');
+        setIsAdding(false);
+        setActivityType('TASK');
+        setIsVisibleInParentsPortal(true);
+        setQuestions([]);
+        setVideoUrl('');
+        setAiWorksheetTopic('');
+        setAiWorksheetType('');
+        setImageError(false);
+        setInteractiveZones([]);
+        setEditorTool('SELECT');
+        setNewInstructions('');
+        setNewExternalLinks([]);
+        setCurrentLinkInput('');
+        setHtmlGameUrl('');
+        setNemPlanResult('');
+        setAiContextText('');
+        setWorksheetImage('');
+      } catch (err: any) {
+        alert("Error al guardar la actividad: " + (err.message || "Error desconocido"));
+      } finally {
+        setIsSaving(false);
       }
-
-      onAddAssignment(newAssignment);
-
-      // Reset
-      setNewTitle('');
-      setIsAdding(false);
-      setActivityType('TASK');
-      setIsVisibleInParentsPortal(true);
-      setQuestions([]);
-      setVideoUrl('');
-      setAiWorksheetTopic('');
-      setAiWorksheetType('');
-      setImageError(false);
-      setInteractiveZones([]);
-      setInteractiveZones([]);
-      setEditorTool('SELECT');
-      setNewInstructions('');
-      setNewExternalLinks([]);
-      setCurrentLinkInput('');
-      setHtmlGameUrl('');
     }
   };
 

@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS behavior_logs (
     id VARCHAR(50) PRIMARY KEY,
     student_id VARCHAR(50),
     type VARCHAR(20),
-    description TEXT,
+    description LONGTEXT,
     date DATETIME,
     data_json JSON,
     FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS events (
     title VARCHAR(100),
     date DATE,
     type VARCHAR(20),
-    description TEXT,
+    description LONGTEXT,
     data_json JSON
 );
 
@@ -108,7 +108,7 @@ CREATE TABLE IF NOT EXISTS parent_users (
 CREATE TABLE IF NOT EXISTS parent_messages (
     id VARCHAR(50) PRIMARY KEY,
     student_id VARCHAR(50),
-    message TEXT,
+    message LONGTEXT,
     date DATETIME,
     is_read BOOLEAN DEFAULT FALSE,
     sender VARCHAR(10) DEFAULT 'PARENT', -- PARENT or TEACHER (for replies)

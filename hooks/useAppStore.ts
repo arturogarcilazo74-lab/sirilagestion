@@ -545,7 +545,7 @@ export const useAppStore = () => {
         if (updatedStudent) api.saveStudent(updatedStudent);
     };
 
-    const handleAddAssignment = (assignmentData: Partial<Assignment>) => {
+    const handleAddAssignment = async (assignmentData: Partial<Assignment>) => {
         const newAssignment: Assignment = {
             id: `A${Date.now()}`,
             title: assignmentData.title || 'Nueva Tarea',
@@ -554,14 +554,23 @@ export const useAppStore = () => {
             type: assignmentData.type || 'TASK',
             interactiveData: assignmentData.interactiveData,
             isVisibleInParentsPortal: assignmentData.isVisibleInParentsPortal ?? true,
-            targetGroup: assignmentData.targetGroup // Fixed: Persist privacy group
+            targetGroup: assignmentData.targetGroup, // Fixed: Persist privacy group
+            description: assignmentData.description,
+            assignmentType: assignmentData.assignmentType
         };
-        const newAssignmentList = [...assignments, newAssignment];
-        setAssignments(newAssignmentList);
-        api.saveAssignment(newAssignment);
         
-        // Removed: Automatic update of student totals (Saturates server with ~40 requests).
-        // Total assignments can be calculated on-the-fly in views.
+        // Optimistic Update
+        setAssignments(prev => [...prev, newAssignment]);
+        
+        try {
+            await api.saveAssignment(newAssignment);
+            return { success: true };
+        } catch (error: any) {
+            console.error("Failed to save assignment:", error);
+            // We don't necessarily revert here if it went to offline queue,
+            // but we should notify if it's a hard rejection.
+            throw error;
+        }
     };
 
     const handleUpdateAssignment = (id: string, updatedData: Partial<Assignment>) => {
