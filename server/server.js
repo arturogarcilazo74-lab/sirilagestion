@@ -149,7 +149,14 @@ app.get('/api/full-state', async (req, res) => {
         const [assignmentRows] = await pool.query('SELECT id, title, due_date, data_json FROM assignments');
         const assignments = assignmentRows.map(r => {
             let d = r.data_json || {};
-            if (typeof d === 'string') { try { d = JSON.parse(d); } catch (e) { } }
+            if (typeof d === 'string') { 
+                try { 
+                    d = JSON.parse(d); 
+                } catch (e) { 
+                    console.error(`[CRITICAL] JSON Parse failed for assignment ${r.id}. Data might be truncated.`, e.message);
+                    d = { id: r.id, title: r.title || "ERROR: Datos Corruptos", corrupt: true };
+                } 
+            }
 
             // Only keep lightweight assignment info for initial state
             return {
@@ -496,7 +503,12 @@ app.get('/api/assignments', async (req, res) => {
         const assignments = rows.map(r => {
             let d = r.data_json || {};
             if (typeof d === 'string') {
-                try { d = JSON.parse(d); } catch (e) { console.error("Failed to parse", d); }
+                try { 
+                    d = JSON.parse(d); 
+                } catch (e) { 
+                    console.error(`[CRITICAL] JSON Parse failed in /api/assignments for ${r.id}`, e.message);
+                    d = { id: r.id, title: "Error de carga (Datos truncados)", corrupt: true };
+                }
             }
             return { ...d, id: r.id }; // Ensure ID from column is used
         });

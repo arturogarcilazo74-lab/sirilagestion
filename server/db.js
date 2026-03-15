@@ -60,6 +60,32 @@ export async function initDB() {
                 // Only run schema if tables don't exist? Or allow errors (IF NOT EXISTS is in schema)
                 await connection.query(schema);
                 console.log('Database initialized and schema loaded.');
+
+                // 4. FORCED MIGRATIONS (Ensure existing columns are upgraded to LONGTEXT)
+                console.log('Running schema migrations...');
+                const migrations = [
+                    "ALTER TABLE students MODIFY COLUMN avatar LONGTEXT",
+                    "ALTER TABLE students MODIFY COLUMN data_json LONGTEXT",
+                    "ALTER TABLE behavior_logs MODIFY COLUMN description LONGTEXT",
+                    "ALTER TABLE behavior_logs MODIFY COLUMN data_json LONGTEXT",
+                    "ALTER TABLE assignments MODIFY COLUMN data_json LONGTEXT",
+                    "ALTER TABLE events MODIFY COLUMN description LONGTEXT",
+                    "ALTER TABLE events MODIFY COLUMN data_json LONGTEXT",
+                    "ALTER TABLE school_config MODIFY COLUMN config_value LONGTEXT",
+                    "ALTER TABLE parent_messages MODIFY COLUMN message LONGTEXT",
+                    "ALTER TABLE staff_tasks MODIFY COLUMN data_json LONGTEXT",
+                    "ALTER TABLE books MODIFY COLUMN data_json LONGTEXT"
+                ];
+
+                for (const sql of migrations) {
+                    try {
+                        await connection.query(sql);
+                    } catch (mErr) {
+                        // Ignore errors like "column doesn't exist" or "already longtext" if they happen
+                        console.warn(`Migration step skipped/failed: ${sql.substring(0, 50)}...`, mErr.message);
+                    }
+                }
+                console.log('Migrations completed.');
             } finally {
                 connection.release();
             }
