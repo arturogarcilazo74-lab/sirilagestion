@@ -1036,14 +1036,14 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                 onClick={() => setCurrentTab('ACTIVITIES')}
                                 className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center text-center cursor-pointer hover:shadow-md transition-all active:scale-95 relative"
                             >
-                                {relevantAssignments.filter(a => !student?.completedAssignmentIds?.includes(a.id)).length > 0 && (
+                                {pendingAssignments.length > 0 && (
                                     <div className="absolute top-2 right-2 w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
                                 )}
                                 <div className="w-10 h-10 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center mb-2">
                                     <BookOpen size={20} />
                                 </div>
                                 <span className="text-2xl font-bold text-slate-800">
-                                    {relevantAssignments.filter(a => !student?.completedAssignmentIds?.includes(a.id)).length}
+                                    {pendingAssignments.length}
                                 </span>
                                 <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">Tareas Pend.</span>
                             </div>
