@@ -107,7 +107,7 @@ function writeJSON(data) {
 // Now we'll wrap each endpoint to use JSON when MySQL is not available
 
 // 1. GET ALL DATA
-app.get('/api/full-state', async (req, res) => {
+app.get('/sirila-v1/full-state', async (req, res) => {
     try {
         if (!useMySQL) {
             const data = readJSON();
@@ -220,7 +220,7 @@ app.get('/api/full-state', async (req, res) => {
 });
 
 // NEW: Endpoint to fetch avatars in small batches or for specific student
-app.get('/api/students/avatars', async (req, res) => {
+app.get('/sirila-v1/students/avatars', async (req, res) => {
     try {
         const pool = getPool();
         // Fetch all students to ensure we check both avatar column and data_json
@@ -247,7 +247,7 @@ app.get('/api/students/avatars', async (req, res) => {
 });
 
 // NEW: Endpoint to fetch Honor Roll (Top performers by behavior points)
-app.get('/api/honor-roll', async (req, res) => {
+app.get('/sirila-v1/honor-roll', async (req, res) => {
     try {
         if (!useMySQL) {
             const data = readJSON();
@@ -285,7 +285,7 @@ app.get('/api/honor-roll', async (req, res) => {
 });
 
 // NEW: Endpoint to fetch specific assignment data (interactive worksheets)
-app.get('/api/assignments/:id', async (req, res) => {
+app.get('/sirila-v1/assignments/:id', async (req, res) => {
     try {
         const pool = getPool();
         const [rows] = await pool.query('SELECT data_json FROM assignments WHERE id = ?', [req.params.id]);
@@ -298,7 +298,7 @@ app.get('/api/assignments/:id', async (req, res) => {
 });
 
 // 2. SYNC / MIGRATE (Receives full state and overwrites/inserts)
-app.post('/api/sync', async (req, res) => {
+app.post('/sirila-v1/sync', async (req, res) => {
     console.log('Received Sync Request. Processing payload...');
     const { students, assignments, events, behaviorLogs, financeEvents, schoolConfig } = req.body;
 
@@ -450,7 +450,7 @@ app.post('/api/sync', async (req, res) => {
 // --- CRUD ENDPOINTS ---
 
 // STUDENTS
-app.post('/api/students', async (req, res) => {
+app.post('/sirila-v1/students', async (req, res) => {
     const s = req.body;
     const pool = getPool();
     try {
@@ -485,7 +485,7 @@ app.post('/api/students', async (req, res) => {
     }
 });
 
-app.delete('/api/students/:id', async (req, res) => {
+app.delete('/sirila-v1/students/:id', async (req, res) => {
     try {
         const pool = getPool();
         await pool.query('DELETE FROM students WHERE id = ?', [req.params.id]);
@@ -496,7 +496,7 @@ app.delete('/api/students/:id', async (req, res) => {
 });
 
 // ASSIGNMENTS
-app.get('/api/assignments', async (req, res) => {
+app.get('/sirila-v1/assignments', async (req, res) => {
     try {
         const pool = getPool();
         const [rows] = await pool.query('SELECT * FROM assignments');
@@ -506,7 +506,7 @@ app.get('/api/assignments', async (req, res) => {
                 try { 
                     d = JSON.parse(d); 
                 } catch (e) { 
-                    console.error(`[CRITICAL] JSON Parse failed in /api/assignments for ${r.id}`, e.message);
+                    console.error(`[CRITICAL] JSON Parse failed in /sirila-v1/assignments for ${r.id}`, e.message);
                     d = { id: r.id, title: "Error de carga (Datos truncados)", corrupt: true };
                 }
             }
@@ -518,7 +518,7 @@ app.get('/api/assignments', async (req, res) => {
     }
 });
 
-app.post('/api/assignments', async (req, res) => {
+app.post('/sirila-v1/assignments', async (req, res) => {
     const a = req.body;
     const payloadSize = JSON.stringify(a).length;
     console.log(`[ASSIGNMENT] Attempting to save activity: "${a.title}" (ID: ${a.id}). Payload size: ${(payloadSize / 1024).toFixed(2)} KB`);
@@ -549,7 +549,7 @@ app.post('/api/assignments', async (req, res) => {
     }
 });
 
-app.delete('/api/assignments/:id', async (req, res) => {
+app.delete('/sirila-v1/assignments/:id', async (req, res) => {
     try {
         const pool = getPool();
         // Manually delete dependencies first to fix potential missing CASCADE issues on legacy DBs
@@ -572,7 +572,7 @@ app.delete('/api/assignments/:id', async (req, res) => {
 });
 
 // EVENTS
-app.get('/api/events', async (req, res) => {
+app.get('/sirila-v1/events', async (req, res) => {
     try {
         const pool = getPool();
         const [rows] = await pool.query('SELECT * FROM events');
@@ -592,7 +592,7 @@ app.get('/api/events', async (req, res) => {
     }
 });
 
-app.post('/api/events', async (req, res) => {
+app.post('/sirila-v1/events', async (req, res) => {
     const e = req.body;
     try {
         const pool = getPool();
@@ -608,7 +608,7 @@ app.post('/api/events', async (req, res) => {
     }
 });
 
-app.delete('/api/events/:id', async (req, res) => {
+app.delete('/sirila-v1/events/:id', async (req, res) => {
     try {
         const pool = getPool();
         await pool.query('DELETE FROM events WHERE id = ?', [req.params.id]);
@@ -619,7 +619,7 @@ app.delete('/api/events/:id', async (req, res) => {
 });
 
 // BEHAVIOR
-app.post('/api/behavior', async (req, res) => {
+app.post('/sirila-v1/behavior', async (req, res) => {
     const l = req.body; // Log
     try {
         const pool = getPool();
@@ -635,7 +635,7 @@ app.post('/api/behavior', async (req, res) => {
     }
 });
 
-app.delete('/api/behavior/:id', async (req, res) => {
+app.delete('/sirila-v1/behavior/:id', async (req, res) => {
     try {
         const pool = getPool();
         await pool.query('DELETE FROM behavior_logs WHERE id = ?', [req.params.id]);
@@ -645,7 +645,7 @@ app.delete('/api/behavior/:id', async (req, res) => {
     }
 });
 
-app.get('/api/behavior/student/:studentId', async (req, res) => {
+app.get('/sirila-v1/behavior/student/:studentId', async (req, res) => {
     try {
         const pool = getPool();
         const [rows] = await pool.query('SELECT * FROM behavior_logs WHERE student_id = ? ORDER BY date DESC', [req.params.studentId]);
@@ -662,7 +662,7 @@ app.get('/api/behavior/student/:studentId', async (req, res) => {
 });
 
 // FINANCE
-app.post('/api/finance', async (req, res) => {
+app.post('/sirila-v1/finance', async (req, res) => {
     const f = req.body;
     try {
         const pool = getPool();
@@ -678,7 +678,7 @@ app.post('/api/finance', async (req, res) => {
     }
 });
 
-app.delete('/api/finance/:id', async (req, res) => {
+app.delete('/sirila-v1/finance/:id', async (req, res) => {
     try {
         const pool = getPool();
         await pool.query('DELETE FROM finance_events WHERE id = ?', [req.params.id]);
@@ -689,7 +689,7 @@ app.delete('/api/finance/:id', async (req, res) => {
 });
 
 // CONFIG
-app.post('/api/config', async (req, res) => {
+app.post('/sirila-v1/config', async (req, res) => {
     const config = req.body;
     try {
         const pool = getPool();
@@ -705,13 +705,13 @@ app.post('/api/config', async (req, res) => {
 });
 
 // ATTENDANCE & GRADES (Update Student Wrapper or specific?)
-// Since we store attendance inside the Student JSON/Object in the frontend, updating the student calls POST /api/students.
+// Since we store attendance inside the Student JSON/Object in the frontend, updating the student calls POST /sirila-v1/students.
 // But for efficiency, we might want a specific attendance endpoint.
-// For now, let's rely on POST /api/students to update the whole student record (including new attendance).
+// For now, let's rely on POST /sirila-v1/students to update the whole student record (including new attendance).
 // This generates more traffic but ensures consistency with the current frontend 'Student' object structure.
 
 // NOTIFICATIONS
-app.get('/api/notifications', async (req, res) => {
+app.get('/sirila-v1/notifications', async (req, res) => {
     try {
         const pool = getPool();
         const { studentId } = req.query; // If provided, filter by student + global
@@ -741,7 +741,7 @@ app.get('/api/notifications', async (req, res) => {
     }
 });
 
-app.post('/api/notifications', async (req, res) => {
+app.post('/sirila-v1/notifications', async (req, res) => {
     const { id, studentId, title, message, date, type } = req.body;
     try {
         const pool = getPool();
@@ -755,7 +755,7 @@ app.post('/api/notifications', async (req, res) => {
     }
 });
 
-app.delete('/api/notifications/:id', async (req, res) => {
+app.delete('/sirila-v1/notifications/:id', async (req, res) => {
     try {
         const pool = getPool();
         await pool.query('DELETE FROM notifications WHERE id = ?', [req.params.id]);
@@ -765,7 +765,7 @@ app.delete('/api/notifications/:id', async (req, res) => {
     }
 });
 
-app.put('/api/notifications/:id/read', async (req, res) => {
+app.put('/sirila-v1/notifications/:id/read', async (req, res) => {
     try {
         const pool = getPool();
         await pool.query('UPDATE notifications SET is_read = 1 WHERE id = ?', [req.params.id]);
@@ -775,7 +775,7 @@ app.put('/api/notifications/:id/read', async (req, res) => {
     }
 });
 
-app.post('/api/parent/login', async (req, res) => {
+app.post('/sirila-v1/parent/login', async (req, res) => {
     let { loginId } = req.body;
     loginId = (loginId || '').trim();
     if (!loginId) {
@@ -833,7 +833,7 @@ app.post('/api/parent/login', async (req, res) => {
 });
 
 // PARENT MESSAGES
-app.get('/api/parent/messages', async (req, res) => {
+app.get('/sirila-v1/parent/messages', async (req, res) => {
     try {
         const { studentId } = req.query;
         const pool = getPool();
@@ -845,7 +845,7 @@ app.get('/api/parent/messages', async (req, res) => {
     }
 });
 
-app.post('/api/parent/messages', async (req, res) => {
+app.post('/sirila-v1/parent/messages', async (req, res) => {
     const { studentId, message, sender } = req.body;
     try {
         const pool = getPool();
@@ -858,7 +858,7 @@ app.post('/api/parent/messages', async (req, res) => {
     }
 });
 
-app.get('/api/parent/all-messages', async (req, res) => {
+app.get('/sirila-v1/parent/all-messages', async (req, res) => {
     try {
         const pool = getPool();
         const [rows] = await pool.query('SELECT * FROM parent_messages ORDER BY date ASC');
@@ -868,7 +868,7 @@ app.get('/api/parent/all-messages', async (req, res) => {
     }
 });
 
-app.put('/api/parent/messages/read', async (req, res) => {
+app.put('/sirila-v1/parent/messages/read', async (req, res) => {
     const { studentId } = req.body;
     try {
         const pool = getPool();
@@ -880,7 +880,7 @@ app.put('/api/parent/messages/read', async (req, res) => {
     }
 });
 
-app.delete('/api/parent/messages/:studentId', async (req, res) => {
+app.delete('/sirila-v1/parent/messages/:studentId', async (req, res) => {
     try {
         const pool = getPool();
         // Delete all messages for this conversation (thread)
@@ -894,7 +894,7 @@ app.delete('/api/parent/messages/:studentId', async (req, res) => {
 
 
 // STAFF TASKS
-app.get('/api/staff-tasks', async (req, res) => {
+app.get('/sirila-v1/staff-tasks', async (req, res) => {
     try {
         const pool = getPool();
         const [rows] = await pool.query('SELECT * FROM staff_tasks ORDER BY due_date ASC');
@@ -919,7 +919,7 @@ app.get('/api/staff-tasks', async (req, res) => {
     }
 });
 
-app.post('/api/staff-tasks', async (req, res) => {
+app.post('/sirila-v1/staff-tasks', async (req, res) => {
     const t = req.body;
     try {
         const pool = getPool();
@@ -940,7 +940,7 @@ app.post('/api/staff-tasks', async (req, res) => {
     }
 });
 
-app.delete('/api/staff-tasks/:id', async (req, res) => {
+app.delete('/sirila-v1/staff-tasks/:id', async (req, res) => {
     try {
         const pool = getPool();
         await pool.query('DELETE FROM staff_tasks WHERE id = ?', [req.params.id]);
@@ -951,7 +951,7 @@ app.delete('/api/staff-tasks/:id', async (req, res) => {
 });
 
 // BOOKS
-app.post('/api/books', async (req, res) => {
+app.post('/sirila-v1/books', async (req, res) => {
     const b = req.body;
     if (!useMySQL) {
         const data = readJSON();
@@ -975,7 +975,7 @@ app.post('/api/books', async (req, res) => {
     }
 });
 
-app.delete('/api/books/:id', async (req, res) => {
+app.delete('/sirila-v1/books/:id', async (req, res) => {
     if (!useMySQL) {
         const data = readJSON();
         data.books = data.books.filter(b => b.id !== req.params.id);

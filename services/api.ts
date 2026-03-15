@@ -29,7 +29,7 @@ const GET_BASE_URL = () => {
 
     // For all web access (Production Hostinger, Local Dev, LAN), relative path is safest
     // unless the user explicitly set a valid remote URL that isn't legacy.
-    return (stored && !isLegacy) ? stored : '/api';
+    return (stored && !isLegacy) ? stored : '/sirila-v1';
 };
 
 // --- OFFLINE QUEUE SYSTEM ---
@@ -96,9 +96,10 @@ export const api = {
                     relativePath = relativePath.replace(/^https?:\/\/[^\/]+/, '');
                 }
 
-                // 2. Strip '/api' prefix if present
-                // This ensures we have a clean path like '/assignments' or '/students'
-                if (relativePath.startsWith('/api')) {
+                // 2. Strip '/sirila-v1' or '/api' prefix if present
+                if (relativePath.startsWith('/sirila-v1')) {
+                    relativePath = relativePath.substring(10);
+                } else if (relativePath.startsWith('/api')) {
                     relativePath = relativePath.substring(4);
                 }
 
@@ -110,7 +111,7 @@ export const api = {
                 // 4. Construct final URL
                 // currentBase is usually '/api' or 'http://localhost:3001/api'
                 // relativePath is '/assignments'
-                // Result: '/api/assignments' -> CORRECT
+                // Result: '/sirila-v1/assignments' -> CORRECT
                 const finalUrl = `${currentBase}${relativePath}`;
 
                 const res = await fetch(finalUrl, {
@@ -176,9 +177,18 @@ export const api = {
 
     // Check if DB is empty / Alive Check
     checkStatus: async () => {
-        const res = await fetch(`${API_URL}/full-state?_t=${Date.now()}`);
-        if (!res.ok) throw new Error('Network error');
-        return await res.json();
+        const url = `${API_URL}/full-state?_t=${Date.now()}`;
+        try {
+            const res = await fetch(url);
+            if (!res.ok) {
+                console.error(`[API] checkStatus failed with status: ${res.status} (${res.statusText})`);
+                throw new Error(`Server error: ${res.status}`);
+            }
+            return await res.json();
+        } catch (e: any) {
+            console.error(`[API] checkStatus Network/URL Error: ${e.message}`, { url });
+            throw e;
+        }
     },
 
     // Perform full migration/sync
