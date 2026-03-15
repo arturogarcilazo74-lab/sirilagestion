@@ -51,19 +51,68 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
     const [activeDetail, setActiveDetail] = useState<'GRADES' | 'ATTENDANCE' | 'BEHAVIOR' | null>(null);
     const [honorRoll, setHonorRoll] = useState<any[]>([]);
 
-    // Load Assignments on Login
-    useEffect(() => {
-        if (isLoggedIn) {
-            api.getAssignments().then((res: any) => {
-                if (Array.isArray(res)) setAssignments(res);
-                else if (res.assignments) setAssignments(res.assignments);
-                else setAssignments([]);
-            }).catch(err => {
-                console.error("Failed to load assignments", err);
-                setAssignments([]);
+    const loadAssignments = useCallback(async (groupId?: string) => {
+        if (!groupId) return;
+        try {
+            const all = await api.getAssignments();
+            const studentGroup = groupId.toUpperCase().trim();
+            
+            const filtered = all.filter(a => {
+                // 1. Check basic visibility flag
+                if (a.isVisibleInParentsPortal === false) return false;
+
+                // 2. Global assignments (null, GLOBAL, TODOS, or empty)
+                const target = (a.targetGroup || '').toUpperCase().trim();
+                if (!target || target === 'GLOBAL' || target === 'TODOS' || target === '') return true;
+
+                // 3. Direct match
+                if (target === studentGroup) return true;
+
+                // 4. Normalized match (e.g., "4TO A" vs "4 A")
+                const normalizedTarget = target.replace(/[^A-Z0-9]/g, '');
+                const normalizedStudent = studentGroup.replace(/[^A-Z0-9]/g, '');
+                if (normalizedTarget === normalizedStudent) return true;
+
+                // 5. Grade match (if only grade is specified)
+                const targetGrade = target.match(/(\d+)/)?.[0];
+                const studentGrade = studentGroup.match(/(\d+)/)?.[0];
+                const targetLetter = target.match(/[A-F]/)?.[0];
+                const studentLetter = studentGroup.match(/[A-F]/)?.[0];
+
+                if (targetGrade && studentGrade && targetGrade === studentGrade) {
+                    if (targetLetter && studentLetter) {
+                        return targetLetter === studentLetter;
+                    }
+                    return !targetLetter; // If target has no letter, it matches the whole grade
+                }
+
+                return false;
             });
+
+            console.log(`[ParentsPortal] Loaded ${filtered.length}/${all.length} assignments for group ${groupId}`);
+            setAssignments(filtered.sort((a, b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime()));
+        } catch (e) {
+            console.error('[ParentsPortal] Error loading assignments:', e);
         }
-    }, [isLoggedIn]);
+    }, []);
+
+    // Polling for new messages and notifications
+    useEffect(() => {
+        if (!isLoggedIn || !student) return;
+
+        // Initial load of assignments when student is set
+        loadAssignments(student.group);
+
+        const interval = setInterval(() => {
+            loadMessages(student.id);
+            loadNotifications(student.id);
+            loadHonorRoll();
+            refreshStudentData(); // Keep progress in sync
+            loadAssignments(student.group);   // Check for new tasks
+        }, 15000);
+
+        return () => clearInterval(interval);
+    }, [isLoggedIn, student, loginId, loadAssignments]);
 
     const handleStartQuiz = async (assignment: Assignment) => {
         // --- ATTEMPT LIMIT CHECK ---
@@ -160,9 +209,9 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                     setActiveHtmlGame(null); // Close game
 
                     // Refresh data
-                    const updatedAssignments: any = await api.getAssignments();
-                    if (Array.isArray(updatedAssignments)) setAssignments(updatedAssignments);
-                    else if (updatedAssignments.assignments) setAssignments(updatedAssignments.assignments);
+                    if (student?.group) {
+                        loadAssignments(student.group);
+                    }
 
                 } catch (e) {
                     console.error("Error submitting game score", e);
@@ -173,7 +222,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
 
         window.addEventListener('message', handleGameMessage);
         return () => window.removeEventListener('message', handleGameMessage);
-    }, [activeHtmlGame, student, loginId]);
+    }, [activeHtmlGame, student, loginId, loadAssignments]);
 
     const handleCompleteWorksheet = async () => {
         if (!activeWorksheet || !student) return;
@@ -427,6 +476,9 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
             setDrawMode('PEN');
             setSelectedZoneIds([]);
             setMatchedPairs([]);
+            if (student?.group) {
+                loadAssignments(student.group); // Refresh assignments after completion
+            }
         }
     };
 
@@ -460,7 +512,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
 
         const rect = canvas.getBoundingClientRect();
         const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
-        const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
+        const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.TouchEvent).clientY;
 
         // Correct offset calculation with scaling
         const scaleX = canvas.width / rect.width;
@@ -607,6 +659,9 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                 setActiveQuiz(null);
             }
         }
+        if (student?.group) {
+            loadAssignments(student.group); // Refresh assignments after completion
+        }
     };
     const [messages, setMessages] = useState<any[]>([]);
     const [newMessage, setNewMessage] = useState('');
@@ -625,7 +680,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
         loadNotifications(selStudent.id);
         loadEvents();
         loadMessages(selStudent.id);
-        loadAssignments(selStudent); // Fetch assignments with context
+        loadAssignments(selStudent.group); // Fetch assignments with context
 
         // Fetch Behavior Logs
         api.getStudentBehaviorLogs(selStudent.id).then(logs => setBehaviorLogs(logs)).catch(err => console.error(err));
@@ -680,21 +735,6 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
         } catch (e) { console.error("Refresh failed", e); }
     };
 
-    // Polling for new messages and notifications
-    useEffect(() => {
-        if (!isLoggedIn || !student) return;
-
-        const interval = setInterval(() => {
-            loadMessages(student.id);
-            loadNotifications(student.id);
-            loadHonorRoll();
-            refreshStudentData(); // Keep progress in sync
-            loadAssignments();   // Check for new tasks
-        }, 15000);
-
-        return () => clearInterval(interval);
-    }, [isLoggedIn, student, loginId]);
-
     const loadNotifications = async (studentId: string) => {
         try {
             const notifs = await api.getNotifications(studentId);
@@ -725,58 +765,6 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
         }
     };
 
-    const loadAssignments = async (currentStudent?: Student | null) => {
-        const targetStudent = currentStudent || student;
-        if (!targetStudent) return;
-
-        try {
-            const allAssignments = await api.getAssignments();
-            // Safety: Ensure it's an array for filtering
-            const rawList = Array.isArray(allAssignments) ? allAssignments : (allAssignments.assignments || []);
-            
-            console.log(`[ParentPortal] Loaded ${rawList.length} total. Filtering for student group: "${targetStudent.group}"`);
-
-            const filtered = rawList.filter((a: Assignment) => {
-                // 1. Explicit visibility check (Toggle icon in teacher panel)
-                if (a.isVisibleInParentsPortal === false) return false;
-
-                // 2. Technical filter: Ignore teacher-only diagnostic tools (NEM Agent)
-                // @ts-ignore
-                if (a.assignmentType === 'NEM_EVALUATION' || (a.interactiveData as any)?.forTeacherOnly) return false;
-
-                // 3. Group Normalization & Matching
-                const targetGroupRaw = (a.targetGroup || '').toUpperCase().trim();
-                const studentGroupRaw = (targetStudent.group || '').toUpperCase().trim();
-
-                // 4. Global assignments (Empty target, 'GLOBAL', 'TODOS', 'TODAS')
-                if (!targetGroupRaw || targetGroupRaw === 'GLOBAL' || targetGroupRaw === 'TODOS' || targetGroupRaw === 'TODAS') return true;
-
-                // 5. Exact Match (Normalized)
-                const sGroupNormalized = studentGroupRaw.replace(/[^A-Z0-9]/g, '');
-                const aGroupNormalized = targetGroupRaw.replace(/[^A-Z0-9]/g, '');
-                if (sGroupNormalized === aGroupNormalized) return true;
-
-                // 6. Robust Grade/Letter Match (e.g., "4 A" matches "4TO A")
-                const sGrade = studentGroupRaw.match(/(\d+)/)?.[0];
-                const sLetter = studentGroupRaw.match(/[A-F]/)?.[0];
-                const aGrade = targetGroupRaw.match(/(\d+)/)?.[0];
-                const aLetter = targetGroupRaw.match(/[A-F]/)?.[0];
-
-                if (sGrade && aGrade && sGrade === aGrade) {
-                    // If activity specifies a letter (A-F), student group must have the same letter
-                    if (aLetter) return sLetter === aLetter;
-                    // If activity ONLY specifies grade (no letter), all students in that grade see it
-                    return true;
-                }
-
-                return false;
-            });
-
-            console.log(`[ParentPortal] Found ${filtered.length} relevant assignments.`);
-            setAssignments(filtered);
-        } catch (e) { 
-            console.error("[ParentPortal] Failed to load assignments", e); 
-        }
     };
 
     const loadMessages = async (studentId: string) => {

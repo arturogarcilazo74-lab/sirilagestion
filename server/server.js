@@ -497,6 +497,10 @@ app.delete('/sirila-v1/students/:id', async (req, res) => {
 
 // ASSIGNMENTS
 app.get('/sirila-v1/assignments', async (req, res) => {
+    if (!useMySQL) {
+        const data = readJSON();
+        return res.json(data.assignments || []);
+    }
     try {
         const pool = getPool();
         const [rows] = await pool.query('SELECT * FROM assignments');
@@ -573,6 +577,10 @@ app.delete('/sirila-v1/assignments/:id', async (req, res) => {
 
 // EVENTS
 app.get('/sirila-v1/events', async (req, res) => {
+    if (!useMySQL) {
+        const data = readJSON();
+        return res.json(data.events || []);
+    }
     try {
         const pool = getPool();
         const [rows] = await pool.query('SELECT * FROM events');
@@ -646,6 +654,11 @@ app.delete('/sirila-v1/behavior/:id', async (req, res) => {
 });
 
 app.get('/sirila-v1/behavior/student/:studentId', async (req, res) => {
+    if (!useMySQL) {
+        const data = readJSON();
+        const logs = (data.behaviorLogs || []).filter(l => l.studentId === req.params.studentId);
+        return res.json(logs);
+    }
     try {
         const pool = getPool();
         const [rows] = await pool.query('SELECT * FROM behavior_logs WHERE student_id = ? ORDER BY date DESC', [req.params.studentId]);
@@ -712,6 +725,12 @@ app.post('/sirila-v1/config', async (req, res) => {
 
 // NOTIFICATIONS
 app.get('/sirila-v1/notifications', async (req, res) => {
+    if (!useMySQL) {
+        const data = readJSON();
+        const { studentId } = req.query;
+        let list = (data.notifications || []).filter(n => !n.studentId || n.studentId === studentId);
+        return res.json(list);
+    }
     try {
         const pool = getPool();
         const { studentId } = req.query; // If provided, filter by student + global
@@ -783,6 +802,20 @@ app.post('/sirila-v1/parent/login', async (req, res) => {
     }
     const loginIdUpper = loginId.toUpperCase();
     console.log(`[Parent Login] Attempt for: "${loginId}" (Upper: "${loginIdUpper}")`);
+
+    if (!useMySQL) {
+        const data = readJSON();
+        const matches = (data.students || []).filter(s => 
+            s.id === loginId || 
+            (s.curp || '').toUpperCase() === loginIdUpper || 
+            s.guardianPhone === loginId
+        );
+        if (matches.length > 0) {
+            if (matches.length === 1) return res.json({ success: true, student: matches[0] });
+            return res.json({ success: true, multiple: true, students: matches });
+        }
+        return res.status(401).json({ success: false, message: 'No se encontraron alumnos vinculados.' });
+    }
 
     try {
         const pool = getPool();
