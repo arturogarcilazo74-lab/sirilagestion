@@ -559,13 +559,9 @@ export const useAppStore = () => {
         const newAssignmentList = [...assignments, newAssignment];
         setAssignments(newAssignmentList);
         api.saveAssignment(newAssignment);
-
-        // Update student totals
-        setStudents(prev => prev.map(s => {
-            const updated = { ...s, totalAssignments: newAssignmentList.length };
-            api.saveStudent(updated); // Sync to DB
-            return updated;
-        }));
+        
+        // Removed: Automatic update of student totals (Saturates server with ~40 requests).
+        // Total assignments can be calculated on-the-fly in views.
     };
 
     const handleUpdateAssignment = (id: string, updatedData: Partial<Assignment>) => {

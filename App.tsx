@@ -176,23 +176,27 @@ const App: React.FC = () => {
     const userLetter = userGroupStr.match(/[A-F]/)?.[0];
 
     visibleAssignments = store.assignments.filter(a => {
-      if (!a.targetGroup || a.targetGroup === 'GLOBAL') {
-        return userGrade === '4' && userLetter === 'A';
+      // 1. GLOBAL assignments are visible to everyone
+      if (!a.targetGroup || a.targetGroup === 'GLOBAL' || a.targetGroup === 'TODOS') {
+        return true;
       }
 
-      const assignmentGroupStr = (a.targetGroup || '').toUpperCase().trim();
+      // 2. Normalize both strings (remove spaces, etc.) for robust comparison
+      const userGroupStr = (currentUser.group || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+      const assignmentGroupStr = (a.targetGroup || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+      if (userGroupStr === assignmentGroupStr) return true;
+
+      // 3. Extract grade and letter for partial or specific matches (e.g., "4 A" matches "4TO A")
+      const userGrade = userGroupStr.match(/(\d+)/)?.[0];
+      const userLetter = userGroupStr.match(/[A-F]/)?.[0];
       const assignmentGrade = assignmentGroupStr.match(/(\d+)/)?.[0];
       const assignmentLetter = assignmentGroupStr.match(/[A-F]/)?.[0];
 
       if (userGrade && assignmentGrade) {
         return assignmentGrade === userGrade && assignmentLetter === userLetter;
       }
-      if ((userGrade && !assignmentGrade) || (!userGrade && assignmentGrade)) {
-        return false;
-      }
-      if (!userGrade && !assignmentGrade) {
-        return userGroupStr === assignmentGroupStr;
-      }
+
       return false;
     });
   }
