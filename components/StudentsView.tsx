@@ -81,20 +81,24 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
 
     const trimAvgs = (s.grades || []).map(getTrimesterAvg);
     const activeTrims = trimAvgs.filter(a => a > 0);
-    const academicAvg = activeTrims.length > 0 ? activeTrims.reduce((a, b) => a + b, 0) / activeTrims.length : 0;
+    // Academic Average: Average of non-zero trimester scores. Capped at 10.
+    const academicAvg = activeTrims.length > 0 ? Math.min(10, activeTrims.reduce((a, b) => a + b, 0) / activeTrims.length) : 0;
     
-    const hwScore = s.totalAssignments > 0 ? (s.assignmentsCompleted / s.totalAssignments) * 10 : 0;
+    // Homework Score: Assignments completed vs Total. Capped at 10.
+    // Use the count from completedAssignmentIds if available for better consistency
+    const completedCount = Math.max(s.assignmentsCompleted || 0, (s.completedAssignmentIds || []).length);
+    const hwScore = s.totalAssignments > 0 ? Math.min(10, (completedCount / s.totalAssignments) * 10) : 0;
     
-    // behaviorScore: Base 8.0, +/- points. Capped at 10, min 5.
+    // Conduct Score: Base 8.0, +/- points. Capped at 10, min 5.
     const conductScore = Math.max(5, Math.min(10, 8 + ((s.behaviorPoints || 0) * 0.1)));
     
     // Weighted Average: 40% Academic, 40% Homework, 20% Conduct
-    // But if academicAvg is 0, we only use HW and Conduct to avoid 0 average for active students
-    let finalAvg = 0;
+    let calculatedAvg = 0;
     if (academicAvg > 0) {
-      finalAvg = (academicAvg * 0.4) + (hwScore * 0.4) + (conductScore * 0.2);
+      calculatedAvg = (academicAvg * 0.4) + (hwScore * 0.4) + (conductScore * 0.2);
     } else {
-      finalAvg = (hwScore * 0.6) + (conductScore * 0.4);
+      // If no academic grades yet, redistribute weight to HW and Conduct
+      calculatedAvg = (hwScore * 0.6) + (conductScore * 0.4);
     }
 
     return { 
@@ -102,7 +106,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
       academicAvg, 
       hwScore, 
       conductScore,
-      finalAvg: academicAvg > 0 || hwScore > 0 ? Math.min(10, finalAvg).toFixed(1) : '-' 
+      finalAvg: academicAvg > 0 || hwScore > 0 ? Math.min(10, calculatedAvg).toFixed(1) : '-' 
     };
   };
 
