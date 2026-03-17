@@ -765,6 +765,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
         }
     };
 
+
     const loadMessages = async (studentId: string) => {
         try {
             const msgs = await api.getParentMessages(studentId);
