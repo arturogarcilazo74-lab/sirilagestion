@@ -249,18 +249,22 @@ export const DashboardView: React.FC<DashboardProps> = ({
           return 0;
         }).filter(v => v > 0);
 
-        const academicAvg = validGrades.length > 0 ? validGrades.reduce((a, b) => a + b, 0) / validGrades.length : 0;
-        const hwScore = s.totalAssignments > 0 ? (s.assignmentsCompleted / s.totalAssignments) * 10 : 0;
+        const academicAvg = validGrades.length > 0 ? Math.min(10, validGrades.reduce((a, b) => a + b, 0) / validGrades.length) : 0;
+        
+        const completedCount = Math.max(s.assignmentsCompleted || 0, (s.completedAssignmentIds || []).length);
+        const cappedCompleted = Math.min(s.totalAssignments, completedCount);
+        const hwScore = s.totalAssignments > 0 ? (cappedCompleted / s.totalAssignments) * 10 : 0;
+
         const conductScore = Math.max(5, Math.min(10, 8 + ((s.behaviorPoints || 0) * 0.1)));
         
         let calculatedAvg = 0;
         if (academicAvg > 0) {
-          calculatedAvg = (academicAvg * 0.4) + (hwScore * 0.4) + (conductScore * 0.2);
+          calculatedAvg = (academicAvg * 0.3) + (hwScore * 0.55) + (conductScore * 0.15);
         } else {
-          calculatedAvg = (hwScore * 0.6) + (conductScore * 0.4);
+          calculatedAvg = (hwScore * 0.75) + (conductScore * 0.25);
         }
         
-        const finalAvg = Math.min(10, calculatedAvg).toFixed(1);
+        const finalAvg = (academicAvg > 0 || hwScore > 0) ? Math.min(10, calculatedAvg).toFixed(1) : '-';
         const attendanceCount = Object.values(s.attendance || {}).filter(x => x === 'Presente').length;
         return [
           s.id,
@@ -913,9 +917,23 @@ export const DashboardView: React.FC<DashboardProps> = ({
                     return 0;
                   };
 
-                  const avg = grades.length > 0
-                    ? grades.reduce((acc, g) => acc + getGradeValue(g), 0) / grades.length
+                  const academicAvg = grades.length > 0
+                    ? Math.min(10, grades.reduce((acc, g) => acc + getGradeValue(g), 0) / grades.length)
                     : 0;
+
+                  const completedCount = Math.max(student.assignmentsCompleted || 0, (student.completedAssignmentIds || []).length);
+                  const cappedCompleted = Math.min(student.totalAssignments, completedCount);
+                  const hwScore = student.totalAssignments > 0 ? (cappedCompleted / student.totalAssignments) * 10 : 0;
+                  const conductScore = Math.max(5, Math.min(10, 8 + ((student.behaviorPoints || 0) * 0.1)));
+
+                  let calculatedAvg = 0;
+                  if (academicAvg > 0) {
+                    calculatedAvg = (academicAvg * 0.3) + (hwScore * 0.55) + (conductScore * 0.15);
+                  } else {
+                    calculatedAvg = (hwScore * 0.75) + (conductScore * 0.25);
+                  }
+
+                  const avg = (academicAvg > 0 || hwScore > 0) ? Math.min(10, calculatedAvg) : 0;
 
                   return (
                     <tr
@@ -1087,25 +1105,44 @@ export const DashboardView: React.FC<DashboardProps> = ({
                   <div className="flex justify-around text-center">
                     <div>
                       <div className="text-2xl font-bold text-slate-800">
-                        {(selectedStudent.grades.length > 0
-                          ? (selectedStudent.grades.reduce((acc, g: any) => {
-                            const val = typeof g === 'number' ? g : (Number(g.lenguajes || 0) + Number(g.saberes || 0) + Number(g.etica || 0) + Number(g.humano || 0)) / 4;
-                            return acc + val;
-                          }, 0) / selectedStudent.grades.length)
-                          : 0
-                        ).toFixed(1)}
+                        {(() => {
+                           const academicAvg = selectedStudent.grades.length > 0
+                             ? Math.min(10, selectedStudent.grades.reduce((acc, g: any) => {
+                                 const val = typeof g === 'number' ? g : (Number(g.lenguajes || 0) + Number(g.saberes || 0) + Number(g.etica || 0) + Number(g.humano || 0)) / 4;
+                                 return acc + val;
+                               }, 0) / selectedStudent.grades.length)
+                             : 0;
+                           
+                           const completedCount = Math.max(selectedStudent.assignmentsCompleted || 0, (selectedStudent.completedAssignmentIds || []).length);
+                           const cappedCompleted = Math.min(selectedStudent.totalAssignments, completedCount);
+                           const hwScore = selectedStudent.totalAssignments > 0 ? (cappedCompleted / selectedStudent.totalAssignments) * 10 : 0;
+                           const conductScore = Math.max(5, Math.min(10, 8 + ((selectedStudent.behaviorPoints || 0) * 0.1)));
+
+                           let calculatedAvg = 0;
+                           if (academicAvg > 0) {
+                             calculatedAvg = (academicAvg * 0.3) + (hwScore * 0.55) + (conductScore * 0.15);
+                           } else {
+                             calculatedAvg = (hwScore * 0.75) + (conductScore * 0.25);
+                           }
+                           
+                           return (academicAvg > 0 || hwScore > 0) ? Math.min(10, calculatedAvg).toFixed(1) : '-';
+                        })()}
                       </div>
                       <div className="text-xs text-slate-500">Promedio</div>
                     </div>
                     <div>
-                      <div className={`text - 2xl font - bold ${selectedStudent.behaviorPoints >= 0 ? 'text-green-600' : 'text-red-600'} `}>
+                      <div className={`text-2xl font-bold ${selectedStudent.behaviorPoints >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                         {selectedStudent.behaviorPoints > 0 ? '+' : ''}{selectedStudent.behaviorPoints}
                       </div>
                       <div className="text-xs text-slate-500">Conducta</div>
                     </div>
                     <div>
                       <div className="text-2xl font-bold text-slate-800">
-                        {Math.round((selectedStudent.assignmentsCompleted / selectedStudent.totalAssignments) * 100)}%
+                        {(() => {
+                           const comp = Math.max(selectedStudent.assignmentsCompleted || 0, (selectedStudent.completedAssignmentIds || []).length);
+                           const rate = selectedStudent.totalAssignments > 0 ? Math.min(100, (comp / selectedStudent.totalAssignments) * 100) : 0;
+                           return Math.round(rate);
+                        })()}%
                       </div>
                       <div className="text-xs text-slate-500">Tareas</div>
                     </div>

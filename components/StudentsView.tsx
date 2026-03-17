@@ -87,18 +87,20 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
     // Homework Score: Assignments completed vs Total. Capped at 10.
     // Use the count from completedAssignmentIds if available for better consistency
     const completedCount = Math.max(s.assignmentsCompleted || 0, (s.completedAssignmentIds || []).length);
-    const hwScore = s.totalAssignments > 0 ? Math.min(10, (completedCount / s.totalAssignments) * 10) : 0;
+    // Cap completed count at total to avoid > 100%
+    const cappedCompleted = Math.min(s.totalAssignments, completedCount);
+    const hwScore = s.totalAssignments > 0 ? (cappedCompleted / s.totalAssignments) * 10 : 0;
     
     // Conduct Score: Base 8.0, +/- points. Capped at 10, min 5.
     const conductScore = Math.max(5, Math.min(10, 8 + ((s.behaviorPoints || 0) * 0.1)));
     
-    // Weighted Average: 40% Academic, 40% Homework, 20% Conduct
+    // Weighted Average: 30% Academic, 55% Homework, 15% Conduct
     let calculatedAvg = 0;
     if (academicAvg > 0) {
-      calculatedAvg = (academicAvg * 0.4) + (hwScore * 0.4) + (conductScore * 0.2);
+      calculatedAvg = (academicAvg * 0.3) + (hwScore * 0.55) + (conductScore * 0.15);
     } else {
-      // If no academic grades yet, redistribute weight to HW and Conduct
-      calculatedAvg = (hwScore * 0.6) + (conductScore * 0.4);
+      // If no academic grades yet, redistribute weight (75% HW, 25% Conduct)
+      calculatedAvg = (hwScore * 0.75) + (conductScore * 0.25);
     }
 
     return { 

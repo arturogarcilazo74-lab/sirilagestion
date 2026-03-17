@@ -221,15 +221,19 @@ export const BehaviorView: React.FC<BehaviorViewProps> = ({ students, onLogBehav
 
                 const trimAvgs = (s.grades || []).map(getTrimesterAvg);
                 const activeTrims = trimAvgs.filter(a => a > 0);
-                const academicAvg = activeTrims.length > 0 ? activeTrims.reduce((a, b) => a + b, 0) / activeTrims.length : 0;
-                const hwScore = totalAssignmentCount > 0 ? ((s.completedAssignmentIds?.length || 0) / totalAssignmentCount) * 10 : 0;
+                const academicAvg = activeTrims.length > 0 ? Math.min(10, activeTrims.reduce((a, b) => a + b, 0) / activeTrims.length) : 0;
+                
+                const completedCount = Math.max(s.assignmentsCompleted || 0, (s.completedAssignmentIds?.length || 0));
+                const cappedCompleted = Math.min(totalAssignmentCount, completedCount);
+                const hwScore = totalAssignmentCount > 0 ? (cappedCompleted / totalAssignmentCount) * 10 : 0;
+                
                 const conductScore = Math.max(5, Math.min(10, 8 + ((s.behaviorPoints || 0) * 0.1)));
                 
                 let finalAvg = 0;
                 if (academicAvg > 0) {
-                  finalAvg = (academicAvg * 0.4) + (hwScore * 0.4) + (conductScore * 0.2);
+                  finalAvg = (academicAvg * 0.3) + (hwScore * 0.55) + (conductScore * 0.15);
                 } else {
-                  finalAvg = (hwScore * 0.6) + (conductScore * 0.4);
+                  finalAvg = (hwScore * 0.75) + (conductScore * 0.25);
                 }
                 
                 return { ...s, calculatedAvg: Math.min(10, finalAvg) };

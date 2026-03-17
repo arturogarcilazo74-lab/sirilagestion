@@ -1008,15 +1008,19 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                               return 0;
                                             };
                                             const activeTrims = student.grades.map(getTrimesterAvg).filter(a => a > 0);
-                                            const academicAvg = activeTrims.length > 0 ? activeTrims.reduce((a, b) => a + b, 0) / activeTrims.length : 0;
-                                            const hwScore = assignments.length > 0 ? ((student.completedAssignmentIds?.length || 0) / assignments.length) * 10 : 0;
+                                            const academicAvg = activeTrims.length > 0 ? Math.min(10, activeTrims.reduce((a, b) => a + b, 0) / activeTrims.length) : 0;
+                                            
+                                            const completedCount = Math.max(student.assignmentsCompleted || 0, (student.completedAssignmentIds?.length || 0));
+                                            const cappedCompleted = Math.min(assignments.length, completedCount);
+                                            const hwScore = assignments.length > 0 ? (cappedCompleted / assignments.length) * 10 : 0;
+                                            
                                             const conductScore = Math.max(5, Math.min(10, 8 + ((student.behaviorPoints || 0) * 0.1)));
                                             
                                             let finalAvg = 0;
                                             if (academicAvg > 0) {
-                                              finalAvg = (academicAvg * 0.4) + (hwScore * 0.4) + (conductScore * 0.2);
+                                              finalAvg = (academicAvg * 0.3) + (hwScore * 0.55) + (conductScore * 0.15);
                                             } else {
-                                              finalAvg = (hwScore * 0.6) + (conductScore * 0.4);
+                                              finalAvg = (hwScore * 0.75) + (conductScore * 0.25);
                                             }
                                             return Math.min(10, finalAvg).toFixed(1);
                                         })()
