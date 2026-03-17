@@ -249,34 +249,83 @@ app.get('/sirila-v1/students/avatars', async (req, res) => {
 // NEW: Endpoint to fetch Honor Roll (Top performers by behavior points)
 app.get('/sirila-v1/honor-roll', async (req, res) => {
     try {
+        let students = [];
+        let totalAssignmentsCount = 0;
+
         if (!useMySQL) {
             const data = readJSON();
-            const honorRoll = [...data.students]
-                .sort((a, b) => (b.behaviorPoints || 0) - (a.behaviorPoints || 0))
-                .slice(0, 10) // Top 10
-                .map(s => ({ id: s.id, name: s.name, avatar: s.avatar, behaviorPoints: s.behaviorPoints || 0 }));
-            res.json(honorRoll);
-            return;
+            students = data.students || [];
+            totalAssignmentsCount = (data.assignments || []).length;
+        } else {
+            const pool = getPool();
+            const [rows] = await pool.query('SELECT id, name, avatar, behavior_points, data_json FROM students');
+            const [aRows] = await pool.query('SELECT COUNT(*) as count FROM assignments');
+            totalAssignmentsCount = aRows[0].count;
+            
+            students = rows.map(r => {
+                let base = {};
+                try {
+                    base = typeof r.data_json === 'string' ? JSON.parse(r.data_json) : (r.data_json || {});
+                } catch (e) { }
+                return {
+                    ...base,
+                    id: r.id,
+                    name: r.name,
+                    avatar: r.avatar,
+                    behaviorPoints: r.behavior_points || 0
+                };
+            });
         }
 
-        const pool = getPool();
-        const [rows] = await pool.query('SELECT id, name, avatar, behavior_points, data_json FROM students ORDER BY behavior_points DESC LIMIT 10');
-
-        const honorRoll = rows.map(r => {
-            let avatar = r.avatar;
-            if ((!avatar || avatar === "PENDING_LOAD") && r.data_json) {
-                try {
-                    const parsed = typeof r.data_json === 'string' ? JSON.parse(r.data_json) : (r.data_json || {});
-                    avatar = parsed.avatar;
-                } catch (e) { }
-            }
-            return {
-                id: r.id,
-                name: r.name,
-                avatar: (avatar && avatar.length > 100) ? avatar : "",
-                behaviorPoints: r.behavior_points || 0
+        const calculateAvg = (s) => {
+            const getTrimesterAvg = (g) => {
+                if (!g) return 0;
+                if (typeof g === 'number') return g;
+                if (typeof g === 'object') {
+                    const fields = [g.lenguajes, g.saberes, g.etica, g.humano].map(v => Number(v) || 0);
+                    const valid = fields.filter(v => v > 0);
+                    return valid.length > 0 ? valid.reduce((a, b) => a + b, 0) / valid.length : 0;
+                }
+                return 0;
             };
-        });
+
+            const trimAvgs = (s.grades || []).map(getTrimesterAvg);
+            const activeTrims = trimAvgs.filter(a => a > 0);
+            const academicAvg = activeTrims.length > 0 ? activeTrims.reduce((a, b) => a + b, 0) / activeTrims.length : 0;
+            const hwScore = totalAssignmentsCount > 0 ? ((s.completedAssignmentIds?.length || 0) / totalAssignmentsCount) * 10 : 0;
+            const conductScore = Math.max(5, Math.min(10, 8 + ((s.behaviorPoints || 0) * 0.1)));
+
+            let finalAvg = 0;
+            if (academicAvg > 0) {
+                finalAvg = (academicAvg * 0.4) + (hwScore * 0.4) + (conductScore * 0.2);
+            } else {
+                finalAvg = (hwScore * 0.6) + (conductScore * 0.4);
+            }
+            return Math.min(10, finalAvg);
+        };
+
+        const honorRoll = students
+            .filter(s => s.status !== 'BAJA')
+            .map(s => {
+                const avg = calculateAvg(s);
+                let avatar = s.avatar;
+                if ((!avatar || avatar === "PENDING_LOAD") && s.data_json) {
+                    try {
+                        const parsed = typeof s.data_json === 'string' ? JSON.parse(s.data_json) : (s.data_json || {});
+                        avatar = parsed.avatar;
+                    } catch (e) { }
+                }
+                return {
+                    id: s.id,
+                    name: s.name,
+                    avatar: (avatar && avatar.length > 100) ? avatar : "",
+                    behaviorPoints: s.behaviorPoints || 0,
+                    average: Number(avg.toFixed(1))
+                };
+            })
+            .sort((a, b) => b.average - a.average)
+            .slice(0, 10);
+
         res.json(honorRoll);
     } catch (error) {
         console.error("Honor Roll fetch error:", error);

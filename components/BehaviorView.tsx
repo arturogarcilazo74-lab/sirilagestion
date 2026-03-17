@@ -202,11 +202,41 @@ export const BehaviorView: React.FC<BehaviorViewProps> = ({ students, onLogBehav
           <div className="bg-indigo-600 rounded-[2rem] p-5 text-white shadow-lg shadow-indigo-200 flex flex-col gap-3 shrink-0">
             <div className="flex items-center gap-2">
               <Trophy size={20} className="text-indigo-200" />
-              <h3 className="font-bold">Cuadro de Honor</h3>
+              <h3 className="font-bold">Cuadro de Honor (Promedio Gral.)</h3>
             </div>
 
             <div className="space-y-3">
-              {[...students].sort((a, b) => b.behaviorPoints - a.behaviorPoints).slice(0, 3).map((s, idx) => (
+              {[...students].map(s => {
+                const getTrimesterAvg = (g: any) => {
+                  if (!g) return 0;
+                  if (typeof g === 'number') return g;
+                  if (typeof g === 'string') return parseFloat(g) || 0;
+                  if (typeof g === 'object') {
+                    const fields = [g.lenguajes, g.saberes, g.etica, g.humano].map(v => Number(v) || 0);
+                    const validFields = fields.filter(v => v > 0);
+                    return validFields.length > 0 ? validFields.reduce((a, b) => a + b, 0) / validFields.length : 0;
+                  }
+                  return 0;
+                };
+
+                const trimAvgs = (s.grades || []).map(getTrimesterAvg);
+                const activeTrims = trimAvgs.filter(a => a > 0);
+                const academicAvg = activeTrims.length > 0 ? activeTrims.reduce((a, b) => a + b, 0) / activeTrims.length : 0;
+                const hwScore = totalAssignmentCount > 0 ? ((s.completedAssignmentIds?.length || 0) / totalAssignmentCount) * 10 : 0;
+                const conductScore = Math.max(5, Math.min(10, 8 + ((s.behaviorPoints || 0) * 0.1)));
+                
+                let finalAvg = 0;
+                if (academicAvg > 0) {
+                  finalAvg = (academicAvg * 0.4) + (hwScore * 0.4) + (conductScore * 0.2);
+                } else {
+                  finalAvg = (hwScore * 0.6) + (conductScore * 0.4);
+                }
+                
+                return { ...s, calculatedAvg: Math.min(10, finalAvg) };
+              })
+              .sort((a, b) => b.calculatedAvg - a.calculatedAvg)
+              .slice(0, 3)
+              .map((s, idx) => (
                 <div key={s.id} className="flex items-center justify-between bg-white/10 p-2 rounded-xl backdrop-blur-md">
                   <div className="flex items-center gap-3">
                     <span className="font-black text-indigo-200 w-4">{idx + 1}</span>
@@ -215,10 +245,13 @@ export const BehaviorView: React.FC<BehaviorViewProps> = ({ students, onLogBehav
                       className="w-8 h-8 rounded-full border border-white/20"
                       alt=""
                     />
-                    <span className="text-xs font-bold truncate max-w-[120px]">{s.name}</span>
+                    <div className="flex flex-col">
+                      <span className="text-xs font-bold truncate max-w-[120px]">{s.name}</span>
+                      <span className="text-[9px] text-indigo-200 font-medium">Conducta: {s.behaviorPoints}</span>
+                    </div>
                   </div>
                   <span className="font-black bg-white text-indigo-600 px-2 py-0.5 rounded-lg text-xs">
-                    {s.behaviorPoints}
+                    {s.calculatedAvg.toFixed(1)}
                   </span>
                 </div>
               ))}

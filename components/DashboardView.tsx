@@ -251,7 +251,16 @@ export const DashboardView: React.FC<DashboardProps> = ({
 
         const academicAvg = validGrades.length > 0 ? validGrades.reduce((a, b) => a + b, 0) / validGrades.length : 0;
         const hwScore = s.totalAssignments > 0 ? (s.assignmentsCompleted / s.totalAssignments) * 10 : 0;
-        const finalAvg = academicAvg > 0 ? ((academicAvg + hwScore) / 2).toFixed(1) : '0';
+        const conductScore = Math.max(5, Math.min(10, 8 + ((s.behaviorPoints || 0) * 0.1)));
+        
+        let calculatedAvg = 0;
+        if (academicAvg > 0) {
+          calculatedAvg = (academicAvg * 0.4) + (hwScore * 0.4) + (conductScore * 0.2);
+        } else {
+          calculatedAvg = (hwScore * 0.6) + (conductScore * 0.4);
+        }
+        
+        const finalAvg = Math.min(10, calculatedAvg).toFixed(1);
         const attendanceCount = Object.values(s.attendance || {}).filter(x => x === 'Presente').length;
         return [
           s.id,

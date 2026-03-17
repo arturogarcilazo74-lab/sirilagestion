@@ -84,9 +84,26 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
     const academicAvg = activeTrims.length > 0 ? activeTrims.reduce((a, b) => a + b, 0) / activeTrims.length : 0;
     
     const hwScore = s.totalAssignments > 0 ? (s.assignmentsCompleted / s.totalAssignments) * 10 : 0;
-    const finalAvg = academicAvg > 0 ? (academicAvg + hwScore) / 2 : 0;
+    
+    // behaviorScore: Base 8.0, +/- points. Capped at 10, min 5.
+    const conductScore = Math.max(5, Math.min(10, 8 + ((s.behaviorPoints || 0) * 0.1)));
+    
+    // Weighted Average: 40% Academic, 40% Homework, 20% Conduct
+    // But if academicAvg is 0, we only use HW and Conduct to avoid 0 average for active students
+    let finalAvg = 0;
+    if (academicAvg > 0) {
+      finalAvg = (academicAvg * 0.4) + (hwScore * 0.4) + (conductScore * 0.2);
+    } else {
+      finalAvg = (hwScore * 0.6) + (conductScore * 0.4);
+    }
 
-    return { trimAvgs, academicAvg, hwScore, finalAvg: finalAvg > 0 ? finalAvg.toFixed(1) : '-' };
+    return { 
+      trimAvgs, 
+      academicAvg, 
+      hwScore, 
+      conductScore,
+      finalAvg: academicAvg > 0 || hwScore > 0 ? Math.min(10, finalAvg).toFixed(1) : '-' 
+    };
   };
 
   const filteredStudents = students

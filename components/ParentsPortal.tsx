@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
 import { Student, SchoolEvent, Notification, Assignment, DraggableItem, InteractiveZone, BehaviorLog } from '../types';
 import { Bell, Calendar as CalendarIcon, LogOut, MessageCircle, User, CheckCircle, Smartphone, Send, Play, Trophy, HelpCircle, X, Check, AlertCircle, BookOpen, Circle, Move, Trash2, LayoutDashboard, Medal, Star, Award, Users, ChevronRight } from 'lucide-react';
@@ -765,8 +765,6 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
         }
     };
 
-    };
-
     const loadMessages = async (studentId: string) => {
         try {
             const msgs = await api.getParentMessages(studentId);
@@ -996,10 +994,31 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                 </div>
                                 <span className="text-2xl font-bold text-slate-800">
                                     {student?.grades && student.grades.length > 0 ? (
-                                        (student.grades.reduce((acc: number, g: any) => {
-                                            if (typeof g === 'number') return acc + g;
-                                            return acc + ((Number(g.lenguajes || 0) + Number(g.saberes || 0) + Number(g.etica || 0) + Number(g.humano || 0)) / 4);
-                                        }, 0) / student.grades.length).toFixed(1)
+                                        (() => {
+                                            const getTrimesterAvg = (g: any) => {
+                                              if (!g) return 0;
+                                              if (typeof g === 'number') return g;
+                                              if (typeof g === 'string') return parseFloat(g) || 0;
+                                              if (typeof g === 'object') {
+                                                const fields = [g.lenguajes, g.saberes, g.etica, g.humano].map(v => Number(v) || 0);
+                                                const validFields = fields.filter(v => v > 0);
+                                                return validFields.length > 0 ? validFields.reduce((a, b) => a + b, 0) / validFields.length : 0;
+                                              }
+                                              return 0;
+                                            };
+                                            const activeTrims = student.grades.map(getTrimesterAvg).filter(a => a > 0);
+                                            const academicAvg = activeTrims.length > 0 ? activeTrims.reduce((a, b) => a + b, 0) / activeTrims.length : 0;
+                                            const hwScore = assignments.length > 0 ? ((student.completedAssignmentIds?.length || 0) / assignments.length) * 10 : 0;
+                                            const conductScore = Math.max(5, Math.min(10, 8 + ((student.behaviorPoints || 0) * 0.1)));
+                                            
+                                            let finalAvg = 0;
+                                            if (academicAvg > 0) {
+                                              finalAvg = (academicAvg * 0.4) + (hwScore * 0.4) + (conductScore * 0.2);
+                                            } else {
+                                              finalAvg = (hwScore * 0.6) + (conductScore * 0.4);
+                                            }
+                                            return Math.min(10, finalAvg).toFixed(1);
+                                        })()
                                     ) : '-'}
                                 </span>
                                 <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">Promedio</span>
@@ -1087,16 +1106,18 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                                 </div>
                                                 <div>
                                                     <p className="font-bold text-sm">Tu Lugar actual</p>
-                                                    <p className="text-xs text-indigo-100">Basado en puntos de conducta</p>
+                                                    <p className="text-xs text-indigo-100">Basado en tu promedio general</p>
                                                 </div>
                                             </div>
 
                                             <div className="text-right">
-                                                <div className="flex items-center justify-end gap-1 text-yellow-300">
-                                                    <Star size={12} fill="currentColor" />
-                                                    <span className="text-xl font-black">{student?.behaviorPoints || 0}</span>
+                                                <div className="flex flex-col items-end">
+                                                    <div className="flex items-center gap-1 text-yellow-300">
+                                                        <Medal size={14} fill="currentColor" />
+                                                        <span className="text-xl font-black">{honorRoll.find(h => h.id === student?.id)?.average || '-'}</span>
+                                                    </div>
+                                                    <p className="text-[10px] uppercase font-bold tracking-widest text-indigo-200">Promedio</p>
                                                 </div>
-                                                <p className="text-[10px] uppercase font-bold tracking-widest text-indigo-200">Puntos</p>
                                             </div>
                                         </div>
 
@@ -1109,7 +1130,10 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                                         className="w-6 h-6 rounded-full"
                                                         alt=""
                                                     />
-                                                    <span className="text-[10px] font-bold truncate max-w-[60px]">{h.id === student?.id ? 'Tú' : h.name.split(' ')[0]}</span>
+                                                    <div className="flex flex-col">
+                                                        <span className="text-[10px] font-bold truncate max-w-[60px]">{h.id === student?.id ? 'Tú' : h.name.split(' ')[0]}</span>
+                                                        {h.average && <span className="text-[8px] opacity-80 font-black">{Number(h.average).toFixed(1)}</span>}
+                                                    </div>
                                                 </div>
                                             ))}
                                         </div>
