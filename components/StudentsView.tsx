@@ -96,11 +96,19 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
     
     // Weighted Average: 30% Academic, 55% Homework, 15% Conduct
     let calculatedAvg = 0;
-    if (academicAvg > 0) {
+    const hasAcademic = academicAvg > 0;
+    const hasHomework = s.totalAssignments > 0;
+
+    if (hasAcademic && hasHomework) {
       calculatedAvg = (academicAvg * 0.3) + (hwScore * 0.55) + (conductScore * 0.15);
+    } else if (hasAcademic) {
+      // If no assignments, academic counts for 85% and conduct 15%
+      calculatedAvg = (academicAvg * 0.85) + (conductScore * 0.15);
+    } else if (hasHomework) {
+      // If no academic grades, homework counts for 85% and conduct 15%
+      calculatedAvg = (hwScore * 0.85) + (conductScore * 0.15);
     } else {
-      // If no academic grades yet, redistribute weight (75% HW, 25% Conduct)
-      calculatedAvg = (hwScore * 0.75) + (conductScore * 0.25);
+      calculatedAvg = conductScore;
     }
 
     return { 
@@ -108,7 +116,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
       academicAvg, 
       hwScore, 
       conductScore,
-      finalAvg: academicAvg > 0 || hwScore > 0 ? Math.min(10, calculatedAvg).toFixed(1) : '-' 
+      finalAvg: hasAcademic || hasHomework ? Math.min(10, calculatedAvg).toFixed(1) : conductScore.toFixed(1) 
     };
   };
 
@@ -1471,11 +1479,9 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
                   <div className="grid grid-cols-3 gap-2 text-center">
                     <div className="bg-slate-50 p-2 rounded border border-slate-200">
                       <div className="text-xl font-bold text-indigo-700">
-                        {calculateStudentMetrics(reportStudent).academicAvg > 0
-                          ? calculateStudentMetrics(reportStudent).academicAvg.toFixed(1)
-                          : '-'}
+                        {calculateStudentMetrics(reportStudent).finalAvg}
                       </div>
-                      <div className="text-[10px] uppercase font-bold text-slate-500">Promedio</div>
+                      <div className="text-[10px] uppercase font-bold text-slate-500">Promedio Gral.</div>
                     </div>
                     <div className="bg-slate-50 p-2 rounded border border-slate-200">
                       <div className="text-xl font-bold text-slate-700">

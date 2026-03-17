@@ -300,10 +300,17 @@ app.get('/sirila-v1/honor-roll', async (req, res) => {
             const conductScore = Math.max(5, Math.min(10, 8 + ((s.behaviorPoints || 0) * 0.1)));
 
             let finalAvg = 0;
-            if (academicAvg > 0) {
+            const hasAcademic = academicAvg > 0;
+            const hasHomework = totalAssignmentsCount > 0;
+
+            if (hasAcademic && hasHomework) {
                 finalAvg = (academicAvg * 0.3) + (hwScore * 0.55) + (conductScore * 0.15);
+            } else if (hasAcademic) {
+                finalAvg = (academicAvg * 0.85) + (conductScore * 0.15);
+            } else if (hasHomework) {
+                finalAvg = (hwScore * 0.85) + (conductScore * 0.15);
             } else {
-                finalAvg = (hwScore * 0.75) + (conductScore * 0.25);
+                finalAvg = conductScore;
             }
             return Math.min(10, finalAvg);
         };

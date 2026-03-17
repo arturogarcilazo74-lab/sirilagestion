@@ -258,13 +258,20 @@ export const DashboardView: React.FC<DashboardProps> = ({
         const conductScore = Math.max(5, Math.min(10, 8 + ((s.behaviorPoints || 0) * 0.1)));
         
         let calculatedAvg = 0;
-        if (academicAvg > 0) {
+        const hasAcademic = academicAvg > 0;
+        const hasHomework = s.totalAssignments > 0;
+
+        if (hasAcademic && hasHomework) {
           calculatedAvg = (academicAvg * 0.3) + (hwScore * 0.55) + (conductScore * 0.15);
+        } else if (hasAcademic) {
+          calculatedAvg = (academicAvg * 0.85) + (conductScore * 0.15);
+        } else if (hasHomework) {
+          calculatedAvg = (hwScore * 0.85) + (conductScore * 0.15);
         } else {
-          calculatedAvg = (hwScore * 0.75) + (conductScore * 0.25);
+          calculatedAvg = conductScore;
         }
         
-        const finalAvg = (academicAvg > 0 || hwScore > 0) ? Math.min(10, calculatedAvg).toFixed(1) : '-';
+        const finalAvg = (hasAcademic || hasHomework) ? Math.min(10, calculatedAvg).toFixed(1) : conductScore.toFixed(1);
         const attendanceCount = Object.values(s.attendance || {}).filter(x => x === 'Presente').length;
         return [
           s.id,
@@ -927,13 +934,20 @@ export const DashboardView: React.FC<DashboardProps> = ({
                   const conductScore = Math.max(5, Math.min(10, 8 + ((student.behaviorPoints || 0) * 0.1)));
 
                   let calculatedAvg = 0;
-                  if (academicAvg > 0) {
+                  const hasAcademic = academicAvg > 0;
+                  const hasHomework = student.totalAssignments > 0;
+
+                  if (hasAcademic && hasHomework) {
                     calculatedAvg = (academicAvg * 0.3) + (hwScore * 0.55) + (conductScore * 0.15);
+                  } else if (hasAcademic) {
+                    calculatedAvg = (academicAvg * 0.85) + (conductScore * 0.15);
+                  } else if (hasHomework) {
+                    calculatedAvg = (hwScore * 0.85) + (conductScore * 0.15);
                   } else {
-                    calculatedAvg = (hwScore * 0.75) + (conductScore * 0.25);
+                    calculatedAvg = conductScore;
                   }
 
-                  const avg = (academicAvg > 0 || hwScore > 0) ? Math.min(10, calculatedAvg) : 0;
+                  const avg = Math.min(10, calculatedAvg);
 
                   return (
                     <tr
@@ -1119,13 +1133,20 @@ export const DashboardView: React.FC<DashboardProps> = ({
                            const conductScore = Math.max(5, Math.min(10, 8 + ((selectedStudent.behaviorPoints || 0) * 0.1)));
 
                            let calculatedAvg = 0;
-                           if (academicAvg > 0) {
+                           const hasAcademic = academicAvg > 0;
+                           const hasHomework = selectedStudent.totalAssignments > 0;
+
+                           if (hasAcademic && hasHomework) {
                              calculatedAvg = (academicAvg * 0.3) + (hwScore * 0.55) + (conductScore * 0.15);
+                           } else if (hasAcademic) {
+                             calculatedAvg = (academicAvg * 0.85) + (conductScore * 0.15);
+                           } else if (hasHomework) {
+                             calculatedAvg = (hwScore * 0.85) + (conductScore * 0.15);
                            } else {
-                             calculatedAvg = (hwScore * 0.75) + (conductScore * 0.25);
+                             calculatedAvg = conductScore;
                            }
                            
-                           return (academicAvg > 0 || hwScore > 0) ? Math.min(10, calculatedAvg).toFixed(1) : '-';
+                           return Math.min(10, calculatedAvg).toFixed(1);
                         })()}
                       </div>
                       <div className="text-xs text-slate-500">Promedio</div>

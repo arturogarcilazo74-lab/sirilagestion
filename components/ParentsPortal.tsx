@@ -1017,16 +1017,23 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                             const conductScore = Math.max(5, Math.min(10, 8 + ((student.behaviorPoints || 0) * 0.1)));
                                             
                                             let finalAvg = 0;
-                                            if (academicAvg > 0) {
+                                            const hasAcademic = academicAvg > 0;
+                                            const hasHomework = assignments.length > 0;
+
+                                            if (hasAcademic && hasHomework) {
                                               finalAvg = (academicAvg * 0.3) + (hwScore * 0.55) + (conductScore * 0.15);
+                                            } else if (hasAcademic) {
+                                              finalAvg = (academicAvg * 0.85) + (conductScore * 0.15);
+                                            } else if (hasHomework) {
+                                              finalAvg = (hwScore * 0.85) + (conductScore * 0.15);
                                             } else {
-                                              finalAvg = (hwScore * 0.75) + (conductScore * 0.25);
+                                              finalAvg = conductScore;
                                             }
                                             return Math.min(10, finalAvg).toFixed(1);
                                         })()
                                     ) : '-'}
                                 </span>
-                                <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">Promedio</span>
+                                <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">Promedio Gral.</span>
                             </div>
 
                             {/* Attendance Card */}
