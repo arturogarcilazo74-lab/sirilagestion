@@ -528,7 +528,7 @@ export const api = {
         }
 
         // 4. Update core counters
-        updatedStudent.assignmentsCompleted = updatedStudent.completedAssignmentIds.length;
+        updatedStudent.assignmentsCompleted = [...new Set(updatedStudent.completedAssignmentIds)].length;
         updatedStudent.assignmentResults[assignmentId] = result.score;
         updatedStudent.assignmentAttempts[assignmentId] = (updatedStudent.assignmentAttempts[assignmentId] || 0) + 1;
 

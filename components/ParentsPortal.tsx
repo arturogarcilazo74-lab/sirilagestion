@@ -878,19 +878,46 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                     ) : (
                         <form onSubmit={handleLogin} className="space-y-4">
                             <div>
-                                <label className="block text-sm font-bold text-slate-700 mb-1">CURP, ID o Teléfono</label>
-                                <input
-                                    type="text"
-                                    value={loginId}
-                                    onChange={e => setLoginId(e.target.value)}
-                                    className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium text-slate-900"
-                                    placeholder="Ingresa los datos..."
-                                />
+                                <label className="block text-sm font-bold text-slate-700 mb-2">CURP, ID o Teléfono</label>
+                                {/* PIN-style numeric input */}
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        value={loginId}
+                                        onChange={e => {
+                                            const val = e.target.value.trim().toUpperCase();
+                                            setLoginId(val);
+                                            // Auto-submit if exactly 4 digits (numeric PIN)
+                                            if (/^\d{4}$/.test(val)) {
+                                                setTimeout(() => {
+                                                    const form = e.target.closest('form');
+                                                    if (form) form.requestSubmit();
+                                                }, 150);
+                                            }
+                                        }}
+                                        onKeyDown={e => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                handleLogin(e as any);
+                                            }
+                                        }}
+                                        autoFocus
+                                        className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium text-slate-900 text-lg tracking-widest text-center"
+                                        placeholder="ID, CURP o PIN..."
+                                        autoComplete="off"
+                                    />
+                                    {loading && (
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                                            <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                                        </div>
+                                    )}
+                                </div>
+                                <p className="text-center text-[10px] text-slate-400 mt-2">Si usas PIN de 4 dígitos, ingresará automáticamente al completarlo</p>
                             </div>
 
                             {error && (
                                 <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg font-medium flex items-center gap-2">
-                                    <CheckCircle size={16} className="text-red-500" />
+                                    <AlertCircle size={16} className="text-red-500" />
                                     {error}
                                 </div>
                             )}
@@ -1072,13 +1099,13 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                 onClick={() => setActiveDetail('BEHAVIOR')}
                                 className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center text-center cursor-pointer hover:shadow-md transition-all active:scale-95"
                             >
-                                <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mb-2">
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${student?.behaviorPoints !== undefined && student.behaviorPoints < 0 ? 'bg-red-50 text-red-500' : 'bg-emerald-50 text-emerald-600'}`}>
                                     <CheckCircle size={20} />
                                 </div>
                                 <span className={`text-2xl font-bold ${student?.behaviorPoints && student.behaviorPoints < 0 ? 'text-red-500' : 'text-slate-800'}`}>
-                                    {student?.behaviorPoints !== undefined ? student.behaviorPoints : 0}
+                                    {student?.behaviorPoints !== undefined ? (student.behaviorPoints > 0 ? '+' : '') + student.behaviorPoints : '0'}
                                 </span>
-                                <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">Puntos</span>
+                                <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">Conducta</span>
                             </div>
                         </div>
 
@@ -1161,6 +1188,55 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                 </div>
                             );
                         })()}
+
+                        {/* Behavior Summary Section (New) */}
+                        {behaviorLogs.filter(l => l.studentId === student?.id).length > 0 && (
+                            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                                <div className="flex justify-between items-center p-4 border-b border-slate-50">
+                                    <h3 className="font-bold text-slate-800 flex items-center gap-2 text-sm">
+                                        <CheckCircle size={16} className={student?.behaviorPoints !== undefined && student.behaviorPoints < 0 ? 'text-red-500' : 'text-emerald-500'} />
+                                        Conducta Registrada
+                                    </h3>
+                                    <span className={`text-sm font-black px-3 py-1 rounded-full ${student?.behaviorPoints !== undefined && student.behaviorPoints < 0 ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                                        {student?.behaviorPoints !== undefined ? (student.behaviorPoints > 0 ? '+' : '') + student.behaviorPoints : '0'} pts
+                                    </span>
+                                </div>
+                                <div className="divide-y divide-slate-50 max-h-48 overflow-y-auto">
+                                    {behaviorLogs
+                                        .filter(l => l.studentId === student?.id)
+                                        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                                        .slice(0, 5)
+                                        .map((log, idx) => (
+                                            <div key={log.id || idx} className="flex items-start gap-3 p-3">
+                                                <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 text-xs font-black ${
+                                                    log.type === 'POSITIVE' ? 'bg-emerald-100 text-emerald-600' :
+                                                    log.type === 'NEGATIVE' ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-600'
+                                                }`}>
+                                                    {log.type === 'POSITIVE' ? '+' : log.type === 'NEGATIVE' ? '-' : '•'}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-xs font-bold text-slate-700 leading-tight">{log.description}</p>
+                                                    <p className="text-[10px] text-slate-400 mt-0.5">{new Date(log.date).toLocaleDateString('es-MX')}</p>
+                                                </div>
+                                                <span className={`text-xs font-black flex-shrink-0 ${
+                                                    log.points > 0 ? 'text-emerald-600' : log.points < 0 ? 'text-red-600' : 'text-slate-400'
+                                                }`}>
+                                                    {log.points > 0 ? '+' : ''}{log.points}
+                                                </span>
+                                            </div>
+                                        ))
+                                    }
+                                </div>
+                                {behaviorLogs.filter(l => l.studentId === student?.id).length > 5 && (
+                                    <button
+                                        onClick={() => setActiveDetail('BEHAVIOR')}
+                                        className="w-full p-3 text-center text-xs font-bold text-indigo-600 hover:bg-indigo-50 transition-colors border-t border-slate-50"
+                                    >
+                                        Ver todas las incidencias ({behaviorLogs.filter(l => l.studentId === student?.id).length})
+                                    </button>
+                                )}
+                            </div>
+                        )}
 
                         {/* Recent Events Preview */}
                         <div>
@@ -2187,43 +2263,84 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
 
             {activeDetail === 'BEHAVIOR' && (
                 <div className="fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn" onClick={() => setActiveDetail(null)}>
-                    <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
-                        <div className="bg-emerald-500 p-4 text-white flex justify-between items-center">
+                    <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                        <div className={`p-4 text-white flex justify-between items-center flex-shrink-0 ${student?.behaviorPoints !== undefined && student.behaviorPoints < 0 ? 'bg-red-500' : 'bg-emerald-500'}`}>
                             <h3 className="font-bold flex items-center gap-2">
                                 <CheckCircle size={20} /> Reporte de Conducta
                             </h3>
                             <button onClick={() => setActiveDetail(null)} className="p-1 hover:bg-white/20 rounded-full transition-colors"><X size={20} /></button>
                         </div>
-                        <div className="p-4 max-h-[70vh] overflow-y-auto">
-                            <div className="text-center mb-6">
-                                <span className={`text-4xl font-black ${student?.behaviorPoints && student.behaviorPoints < 0 ? 'text-red-500' : 'text-emerald-500'}`}>
-                                    {student?.behaviorPoints !== undefined ? (student.behaviorPoints > 0 ? '+' + student.behaviorPoints : student.behaviorPoints) : 0}
-                                </span>
-                                <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">Puntos Totales</p>
+                        <div className="p-4 overflow-y-auto flex-1">
+                            {/* Summary Stats */}
+                            <div className="flex items-center justify-between bg-slate-50 rounded-xl p-4 mb-4 border border-slate-100">
+                                <div className="text-center">
+                                    <div className={`text-3xl font-black ${student?.behaviorPoints !== undefined && student.behaviorPoints < 0 ? 'text-red-500' : 'text-emerald-500'}`}>
+                                        {student?.behaviorPoints !== undefined ? (student.behaviorPoints > 0 ? '+' + student.behaviorPoints : student.behaviorPoints) : '0'}
+                                    </div>
+                                    <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Puntos Totales</p>
+                                </div>
+                                <div className="flex gap-4">
+                                    <div className="text-center">
+                                        <div className="text-xl font-bold text-emerald-600">
+                                            {behaviorLogs.filter(l => l.studentId === student?.id && l.type === 'POSITIVE').length}
+                                        </div>
+                                        <p className="text-[10px] text-slate-400 font-bold uppercase">Positivos</p>
+                                    </div>
+                                    <div className="text-center">
+                                        <div className="text-xl font-bold text-red-500">
+                                            {behaviorLogs.filter(l => l.studentId === student?.id && l.type === 'NEGATIVE').length}
+                                        </div>
+                                        <p className="text-[10px] text-slate-400 font-bold uppercase">Negativos</p>
+                                    </div>
+                                </div>
                             </div>
 
-                            <h4 className="font-bold text-slate-800 text-sm mb-3 border-b border-slate-100 pb-2">Historial de Incidencias</h4>
-                            <div className="space-y-3">
-                                {behaviorLogs.length === 0 ? (
-                                    <div className="text-center py-4 text-slate-400">
-                                        <p>✨ Sin incidencias registradas.</p>
-                                    </div>
-                                ) : (
-                                    behaviorLogs.map(log => (
-                                        <div key={log.id} className="flex gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100">
-                                            <div className={`w-1 shrink-0 rounded-full ${log.type === 'POSITIVE' ? 'bg-emerald-400' : 'bg-red-400'}`}></div>
-                                            <div>
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border uppercase ${log.type === 'POSITIVE' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-red-100 text-red-700 border-red-200'}`}>
-                                                        {log.type === 'POSITIVE' ? 'Positivo' : 'Negativo'}
+                            <h4 className="font-bold text-slate-800 text-sm mb-3 border-b border-slate-100 pb-2">Registros de Incidencias</h4>
+                            <div className="space-y-2">
+                                {(() => {
+                                    const studentLogs = behaviorLogs
+                                        .filter(l => l.studentId === student?.id)
+                                        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+                                    if (studentLogs.length === 0) {
+                                        return (
+                                            <div className="text-center py-8 text-slate-400">
+                                                <CheckCircle size={40} className="mx-auto mb-2 text-emerald-300" />
+                                                <p className="font-medium">✨ Sin incidencias registradas.</p>
+                                                <p className="text-xs mt-1">¡Excelente comportamiento!</p>
+                                            </div>
+                                        );
+                                    }
+
+                                    return studentLogs.map((log, idx) => (
+                                        <div key={log.id || idx} className={`flex gap-3 p-3 rounded-xl border ${
+                                            log.type === 'POSITIVE' ? 'bg-emerald-50 border-emerald-100' :
+                                            log.type === 'NEGATIVE' ? 'bg-red-50 border-red-100' :
+                                            'bg-slate-50 border-slate-100'
+                                        }`}>
+                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 font-black text-sm ${
+                                                log.type === 'POSITIVE' ? 'bg-emerald-200 text-emerald-700' :
+                                                log.type === 'NEGATIVE' ? 'bg-red-200 text-red-700' :
+                                                'bg-slate-200 text-slate-700'
+                                            }`}>
+                                                {log.points > 0 ? '+' : ''}{log.points}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2 mb-0.5">
+                                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase ${
+                                                        log.type === 'POSITIVE' ? 'bg-emerald-100 text-emerald-700' :
+                                                        log.type === 'NEGATIVE' ? 'bg-red-100 text-red-700' :
+                                                        'bg-slate-100 text-slate-600'
+                                                    }`}>
+                                                        {log.type === 'POSITIVE' ? 'Positivo' : log.type === 'NEGATIVE' ? 'Negativo' : 'Neutro'}
                                                     </span>
-                                                    <span className="text-[10px] text-slate-400">{new Date(log.date).toLocaleDateString()}</span>
+                                                    <span className="text-[10px] text-slate-400">{new Date(log.date).toLocaleDateString('es-MX')}</span>
                                                 </div>
-                                                <p className="text-xs text-slate-700 font-medium leading-relaxed">{log.description}</p>
+                                                <p className="text-xs font-medium text-slate-700 leading-relaxed">{log.description}</p>
                                             </div>
                                         </div>
-                                    ))
-                                )}
+                                    ));
+                                })()}
                             </div>
                         </div>
                     </div>

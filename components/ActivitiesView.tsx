@@ -1467,8 +1467,9 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {students.map(student => {
-                    const completedCount = assignments.filter(a => student.completedAssignmentIds?.includes(a.id)).length;
-                    const progress = Math.round((completedCount / assignments.length) * 100);
+                    const completedCount = assignments.filter(a => (student.completedAssignmentIds || []).includes(a.id)).length;
+                    const totalCount = assignments.length || 1;
+                    const progress = Math.min(100, Math.round((completedCount / totalCount) * 100));
 
                     return (
                       <tr key={student.id} className="hover:bg-slate-50 transition-colors group">
@@ -1548,8 +1549,9 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                 <Users size={14} /> Seguimiento por Alumno
               </h3>
               {students.map(student => {
-                const completedCount = assignments.filter(a => student.completedAssignmentIds?.includes(a.id)).length;
-                const progress = Math.round((completedCount / assignments.length) * 100);
+                const completedCount = assignments.filter(a => (student.completedAssignmentIds || []).includes(a.id)).length;
+                const totalCount = assignments.length || 1;
+                const progress = Math.min(100, Math.round((completedCount / totalCount) * 100));
                 const isExpanded = expandedStudentId === student.id;
 
                 return (

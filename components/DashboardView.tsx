@@ -61,6 +61,12 @@ export const DashboardView: React.FC<DashboardProps> = ({
   const [loadingAi, setLoadingAi] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
 
+  useEffect(() => {
+    if (selectedStudent) {
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
+  }, [selectedStudent]);
+
   // Official Notices State
   const [officialNotices, setOfficialNotices] = useState<any[]>([]);
 
@@ -238,22 +244,26 @@ export const DashboardView: React.FC<DashboardProps> = ({
     const csvContent = [
       headers.join(','),
       ...sortedStudents.map(s => {
-        const validGrades = (s.grades || []).map(g => {
+        // Get trimester averages first (same as StudentsView)
+        const getTrimesterAvg = (g: any) => {
+          if (!g) return 0;
           if (typeof g === 'number') return g;
           if (typeof g === 'string') return parseFloat(g) || 0;
           if (typeof g === 'object') {
             const fields = [g.lenguajes, g.saberes, g.etica, g.humano].map(v => Number(v) || 0);
-            const valid = fields.filter(v => v > 0);
-            return valid.length > 0 ? valid.reduce((a, b) => a + b, 0) / valid.length : 0;
+            const validFields = fields.filter(v => v > 0);
+            return validFields.length > 0 ? validFields.reduce((a, b) => a + b, 0) / validFields.length : 0;
           }
           return 0;
-        }).filter(v => v > 0);
+        };
 
-        const academicAvg = validGrades.length > 0 ? Math.min(10, validGrades.reduce((a, b) => a + b, 0) / validGrades.length) : 0;
+        const activeTrims = (s.grades || []).map(getTrimesterAvg).filter(a => a > 0);
+        const academicAvg = activeTrims.length > 0 ? Math.min(10, activeTrims.reduce((a, b) => a + b, 0) / activeTrims.length) : 0;
         
-        const completedCount = Math.max(s.assignmentsCompleted || 0, (s.completedAssignmentIds || []).length);
-        const cappedCompleted = Math.min(s.totalAssignments, completedCount);
-        const hwScore = s.totalAssignments > 0 ? (cappedCompleted / s.totalAssignments) * 10 : 0;
+        const studentAssignments = assignments.filter(a => !a.targetGroup || a.targetGroup === s.group);
+        const completedCount = studentAssignments.filter(a => (s.completedAssignmentIds || []).includes(a.id)).length;
+        const actualTotalAssignments = studentAssignments.length;
+        const hwScore = actualTotalAssignments > 0 ? (completedCount / actualTotalAssignments) * 10 : 0;
 
         const conductScore = Math.max(5, Math.min(10, 8 + ((s.behaviorPoints || 0) * 0.1)));
         
@@ -311,7 +321,9 @@ export const DashboardView: React.FC<DashboardProps> = ({
     setLoadingRisk(true);
 
     // Calculate risk reasons
-    const assignmentRate = selectedStudent.totalAssignments > 0 ? (selectedStudent.assignmentsCompleted / selectedStudent.totalAssignments) : 1;
+    const uniqueCompletedIds = [...new Set(selectedStudent.completedAssignmentIds || [])];
+    const relevantCompletedIds = uniqueCompletedIds.filter(id => assignments.some(a => a.id === id));
+    const assignmentRate = assignments.length > 0 ? Math.min(1, relevantCompletedIds.length / assignments.length) : 1;
     const attendanceRate = Object.values(selectedStudent.attendance || {}).length > 0
       ? Object.values(selectedStudent.attendance || {}).filter(st => st === 'Presente').length / Object.values(selectedStudent.attendance || {}).length
       : 1;
@@ -582,7 +594,9 @@ export const DashboardView: React.FC<DashboardProps> = ({
       {(() => {
         const atRiskStudents = sortedStudents.filter(s => {
           const totalAssignments = assignments.length;
-          const completedCount = s.completedAssignmentIds?.length || 0;
+          const uniqueCompletedIds = [...new Set(s.completedAssignmentIds || [])];
+          const relevantCompletedIds = uniqueCompletedIds.filter(id => assignments.some(a => a.id === id));
+          const completedCount = Math.min(totalAssignments, relevantCompletedIds.length);
           const assignmentRate = totalAssignments > 0 ? (completedCount / totalAssignments) : 1;
           const attendanceRate = Object.values(s.attendance || {}).length > 0
             ? Object.values(s.attendance || {}).filter(st => st === 'Presente').length / Object.values(s.attendance || {}).length
@@ -602,11 +616,13 @@ export const DashboardView: React.FC<DashboardProps> = ({
             <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-2 md:gap-4">
               {atRiskStudents.map(s => {
                 const totalAssignments = assignments.length;
-                const completedCount = s.completedAssignmentIds?.length || 0;
+                const uniqueCompletedIds = [...new Set(s.completedAssignmentIds || [])];
+                const relevantCompletedIds = uniqueCompletedIds.filter(id => assignments.some(a => a.id === id));
+                const completedCount = Math.min(totalAssignments, relevantCompletedIds.length);
                 const assignmentRate = totalAssignments > 0 ? (completedCount / totalAssignments) : 1;
                 const attendanceRate = Object.values(s.attendance || {}).length > 0
-                  ? Object.values(s.attendance || {}).filter(st => st === 'Presente').length / Object.values(s.attendance || {}).length
-                  : 1;
+                   ? Object.values(s.attendance || {}).filter(st => st === 'Presente').length / Object.values(s.attendance || {}).length
+                   : 1;
 
                 let reasons = [];
                 if (assignmentRate < 0.5) reasons.push("Bajo cumplimiento");
@@ -677,7 +693,7 @@ export const DashboardView: React.FC<DashboardProps> = ({
                   const monthName = MONTH_NAMES[monthIdx] || "---";
                   const month = monthName.substring(0, 3);
                   return (
-                    <div key={evt.id} className="flex gap-4 p-3 hover:bg-slate-50 rounded-xl transition-colors border border-transparent hover:border-slate-100 group">
+                    <div key={evt.id} className="flex gap-4 p-3 hover:bg-slate-50 rounded-xl transition-colors border border-transparent hover:border-100 group">
                       <div className="flex flex-col items-center justify-center bg-slate-100 text-slate-600 rounded-lg w-14 h-14 shrink-0 font-bold border border-slate-200">
                         <span className="text-xs uppercase">{month}</span>
                         <span className="text-xl leading-none">{day}</span>
@@ -821,7 +837,7 @@ export const DashboardView: React.FC<DashboardProps> = ({
             <span className="text-slate-500 text-sm font-medium">Tareas Entregadas</span>
           </div>
           <div className="text-2xl font-bold text-slate-800">
-            {students.reduce((acc, s) => acc + (s.completedAssignmentIds || []).length, 0)}
+            {students.reduce((acc, s) => acc + Math.min(assignments.length, [...new Set(s.completedAssignmentIds || [])].filter(id => assignments.some(a => a.id === id)).length), 0)}
           </div>
         </div>
       </div>
@@ -919,7 +935,9 @@ export const DashboardView: React.FC<DashboardProps> = ({
                     if (typeof g === 'number') return g;
                     if (typeof g === 'string' && !isNaN(parseFloat(g))) return parseFloat(g);
                     if (typeof g === 'object' && g !== null) {
-                      return (Number(g.lenguajes || 0) + Number(g.saberes || 0) + Number(g.etica || 0) + Number(g.humano || 0)) / 4;
+                      const fields = [g.lenguajes, g.saberes, g.etica, g.humano].map(v => Number(v) || 0);
+                      const validFields = fields.filter(v => v > 0);
+                      return validFields.length > 0 ? validFields.reduce((a, b) => a + b, 0) / validFields.length : 0;
                     }
                     return 0;
                   };
@@ -928,14 +946,17 @@ export const DashboardView: React.FC<DashboardProps> = ({
                     ? Math.min(10, grades.reduce((acc, g) => acc + getGradeValue(g), 0) / grades.length)
                     : 0;
 
-                  const completedCount = Math.max(student.assignmentsCompleted || 0, (student.completedAssignmentIds || []).length);
-                  const cappedCompleted = Math.min(student.totalAssignments, completedCount);
-                  const hwScore = student.totalAssignments > 0 ? (cappedCompleted / student.totalAssignments) * 10 : 0;
+                  const studentAssignments = assignments.filter(a => 
+                    !a.targetGroup || a.targetGroup === student.group
+                  );
+                  const completedCount = studentAssignments.filter(a => (student.completedAssignmentIds || []).includes(a.id)).length;
+                  const actualTotalAssignments = studentAssignments.length;
+                  const hwScore = actualTotalAssignments > 0 ? Math.min(10, (completedCount / actualTotalAssignments) * 10) : 0;
                   const conductScore = Math.max(5, Math.min(10, 8 + ((student.behaviorPoints || 0) * 0.1)));
 
                   let calculatedAvg = 0;
                   const hasAcademic = academicAvg > 0;
-                  const hasHomework = student.totalAssignments > 0;
+                  const hasHomework = actualTotalAssignments > 0;
 
                   if (hasAcademic && hasHomework) {
                     calculatedAvg = (academicAvg * 0.3) + (hwScore * 0.55) + (conductScore * 0.15);
@@ -1009,7 +1030,7 @@ export const DashboardView: React.FC<DashboardProps> = ({
 
       {/* Student Detail Modal */}
       {selectedStudent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn" onClick={() => setSelectedStudent(null)}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn" style={{ top: 0, left: 0 }} onClick={() => setSelectedStudent(null)}>
           <div
             className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col"
             onClick={(e) => e.stopPropagation()}
@@ -1122,32 +1143,42 @@ export const DashboardView: React.FC<DashboardProps> = ({
                         {(() => {
                            const academicAvg = selectedStudent.grades.length > 0
                              ? Math.min(10, selectedStudent.grades.reduce((acc, g: any) => {
-                                 const val = typeof g === 'number' ? g : (Number(g.lenguajes || 0) + Number(g.saberes || 0) + Number(g.etica || 0) + Number(g.humano || 0)) / 4;
+                                 let val = 0;
+                                 if (typeof g === 'number') val = g;
+                                 else if (typeof g === 'object' && g !== null) {
+                                   const fields = [g.lenguajes, g.saberes, g.etica, g.humano].map(v => Number(v) || 0);
+                                   const validFields = fields.filter(v => v > 0);
+                                   val = validFields.length > 0 ? validFields.reduce((a, b) => a + b, 0) / validFields.length : 0;
+                                 }
                                  return acc + val;
                                }, 0) / selectedStudent.grades.length)
                              : 0;
-                           
-                           const completedCount = Math.max(selectedStudent.assignmentsCompleted || 0, (selectedStudent.completedAssignmentIds || []).length);
-                           const cappedCompleted = Math.min(selectedStudent.totalAssignments, completedCount);
-                           const hwScore = selectedStudent.totalAssignments > 0 ? (cappedCompleted / selectedStudent.totalAssignments) * 10 : 0;
-                           const conductScore = Math.max(5, Math.min(10, 8 + ((selectedStudent.behaviorPoints || 0) * 0.1)));
 
-                           let calculatedAvg = 0;
-                           const hasAcademic = academicAvg > 0;
-                           const hasHomework = selectedStudent.totalAssignments > 0;
+                             const studentAssignments = assignments.filter(a => 
+                               !a.targetGroup || a.targetGroup === selectedStudent.group
+                             );
+                             const completedAssignments = studentAssignments.filter(a => (selectedStudent.completedAssignmentIds || []).includes(a.id));
+                             const completedCount = completedAssignments.length;
+                             const actualTotalAssignments = studentAssignments.length;
+                             const hwScore = actualTotalAssignments > 0 ? Math.min(10, (completedCount / actualTotalAssignments) * 10) : 0;
+                            const conductScore = Math.max(5, Math.min(10, 8 + ((selectedStudent.behaviorPoints || 0) * 0.1)));
 
-                           if (hasAcademic && hasHomework) {
-                             calculatedAvg = (academicAvg * 0.3) + (hwScore * 0.55) + (conductScore * 0.15);
-                           } else if (hasAcademic) {
-                             calculatedAvg = (academicAvg * 0.85) + (conductScore * 0.15);
-                           } else if (hasHomework) {
-                             calculatedAvg = (hwScore * 0.85) + (conductScore * 0.15);
-                           } else {
-                             calculatedAvg = conductScore;
-                           }
-                           
-                           return Math.min(10, calculatedAvg).toFixed(1);
-                        })()}
+                            let calculatedAvg = 0;
+                            const hasAcademic = academicAvg > 0;
+                            const hasHomework = actualTotalAssignments > 0;
+
+                            if (hasAcademic && hasHomework) {
+                              calculatedAvg = (academicAvg * 0.3) + (hwScore * 0.55) + (conductScore * 0.15);
+                            } else if (hasAcademic) {
+                              calculatedAvg = (academicAvg * 0.85) + (conductScore * 0.15);
+                            } else if (hasHomework) {
+                              calculatedAvg = (hwScore * 0.85) + (conductScore * 0.15);
+                            } else {
+                              calculatedAvg = conductScore;
+                            }
+                            
+                            return Math.min(10, calculatedAvg).toFixed(1);
+                         })()}
                       </div>
                       <div className="text-xs text-slate-500">Promedio</div>
                     </div>
@@ -1160,9 +1191,13 @@ export const DashboardView: React.FC<DashboardProps> = ({
                     <div>
                       <div className="text-2xl font-bold text-slate-800">
                         {(() => {
-                           const comp = Math.max(selectedStudent.assignmentsCompleted || 0, (selectedStudent.completedAssignmentIds || []).length);
-                           const rate = selectedStudent.totalAssignments > 0 ? Math.min(100, (comp / selectedStudent.totalAssignments) * 100) : 0;
-                           return Math.round(rate);
+                            const studentAssignments = assignments.filter(a => 
+                               !a.targetGroup || a.targetGroup === selectedStudent.group
+                            );
+                            const completedCount = studentAssignments.filter(a => (selectedStudent.completedAssignmentIds || []).includes(a.id)).length;
+                            const actualTotal = studentAssignments.length;
+                            const rate = actualTotal > 0 ? (completedCount / actualTotal) * 100 : 0;
+                            return Math.round(Math.min(100, rate));
                         })()}%
                       </div>
                       <div className="text-xs text-slate-500">Tareas</div>
@@ -1179,10 +1214,20 @@ export const DashboardView: React.FC<DashboardProps> = ({
                 </h4>
                 <div className="space-y-3">
                   <div className="w-full bg-slate-100 rounded-full h-2 mb-4">
-                    <div
-                      className="bg-blue-500 h-2 rounded-full transition-all duration-500"
-                      style={{ width: `${(selectedStudent.assignmentsCompleted / selectedStudent.totalAssignments) * 100}% ` }}
-                    />
+                    {(() => {
+                        const studentAssignments = assignments.filter(a => 
+                          !a.targetGroup || a.targetGroup === selectedStudent.group
+                        );
+                        const comp = studentAssignments.filter(a => (selectedStudent.completedAssignmentIds || []).includes(a.id)).length;
+                        const actualTotal = studentAssignments.length;
+                        const rate = actualTotal > 0 ? Math.min(100, (comp / actualTotal) * 100) : 0;
+                        return (
+                          <div
+                            className="bg-blue-500 h-2 rounded-full transition-all duration-500"
+                            style={{ width: `${rate}%` }}
+                          />
+                        );
+                    })()}
                   </div>
                   {getStudentAssignments(selectedStudent).map((assignment, idx) => (
                     <div key={idx} className="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-lg hover:shadow-sm transition-shadow">

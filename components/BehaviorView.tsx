@@ -223,7 +223,7 @@ export const BehaviorView: React.FC<BehaviorViewProps> = ({ students, onLogBehav
                 const activeTrims = trimAvgs.filter(a => a > 0);
                 const academicAvg = activeTrims.length > 0 ? Math.min(10, activeTrims.reduce((a, b) => a + b, 0) / activeTrims.length) : 0;
                 
-                const completedCount = Math.max(s.assignmentsCompleted || 0, (s.completedAssignmentIds?.length || 0));
+                const completedCount = (s.completedAssignmentIds || []).length;
                 const cappedCompleted = Math.min(totalAssignmentCount, completedCount);
                 const hwScore = totalAssignmentCount > 0 ? (cappedCompleted / totalAssignmentCount) * 10 : 0;
                 

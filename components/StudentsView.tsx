@@ -46,6 +46,8 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
   const [qrStudent, setQrStudent] = useState<Student | null>(null);
   const [reportStudent, setReportStudent] = useState<Student | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [isGeneratingAll, setIsGeneratingAll] = useState(false);
+  const [generateAllProgress, setGenerateAllProgress] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -63,8 +65,9 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
     if (reportStudent) {
       const updated = students.find(s => s.id === reportStudent.id);
       if (updated) setReportStudent(updated);
+      window.scrollTo({ top: 0, behavior: 'instant' });
     }
-  }, [students]);
+  }, [reportStudent, students]);
 
   const calculateStudentMetrics = (s: Student) => {
     const getTrimesterAvg = (g: any) => {
@@ -85,11 +88,12 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
     const academicAvg = activeTrims.length > 0 ? Math.min(10, activeTrims.reduce((a, b) => a + b, 0) / activeTrims.length) : 0;
     
     // Homework Score: Assignments completed vs Total. Capped at 10.
-    // Use the count from completedAssignmentIds if available for better consistency
-    const completedCount = Math.max(s.assignmentsCompleted || 0, (s.completedAssignmentIds || []).length);
-    // Cap completed count at total to avoid > 100%
-    const cappedCompleted = Math.min(s.totalAssignments, completedCount);
-    const hwScore = s.totalAssignments > 0 ? (cappedCompleted / s.totalAssignments) * 10 : 0;
+    const studentAssignments = assignments.filter(a => 
+      !a.targetGroup || a.targetGroup === s.group
+    );
+    const completedCount = studentAssignments.filter(a => (s.completedAssignmentIds || []).includes(a.id)).length;
+    const actualTotalAssignments = studentAssignments.length;
+    const hwScore = actualTotalAssignments > 0 ? Math.min(10, (completedCount / actualTotalAssignments) * 10) : 0;
     
     // Conduct Score: Base 8.0, +/- points. Capped at 10, min 5.
     const conductScore = Math.max(5, Math.min(10, 8 + ((s.behaviorPoints || 0) * 0.1)));
@@ -145,6 +149,60 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
     return age;
   };
 
+  // Generate all report cards with a small delay between each to avoid browser freeze
+  const handleGenerateAllReportCards = async () => {
+    if (isGeneratingAll) return;
+    const targetStudents = filteredStudents.length > 0 ? filteredStudents : students;
+    if (targetStudents.length === 0) return;
+    if (!window.confirm(`¿Generar boletas PDF para ${targetStudents.length} alumnos? Se descargará un archivo por alumno.`)) return;
+
+    setIsGeneratingAll(true);
+    setGenerateAllProgress(`Generando 0/${targetStudents.length}...`);
+
+    for (let i = 0; i < targetStudents.length; i++) {
+      const st = targetStudents[i];
+      setGenerateAllProgress(`Generando ${i + 1}/${targetStudents.length}: ${st.name.split(' ')[0]}...`);
+      try {
+        await generateReportCard(st, config);
+      } catch (e) {
+        console.error('Error generando boleta para', st.name, e);
+      }
+      // Small delay between PDFs to avoid overwhelming the browser
+      await new Promise(r => setTimeout(r, 600));
+    }
+
+    setIsGeneratingAll(false);
+    setGenerateAllProgress(null);
+    setSuccessMessage(`¡${targetStudents.length} boletas generadas exitosamente!`);
+    setTimeout(() => setSuccessMessage(null), 4000);
+  };
+
+  const handleGenerateAllBehaviorReports = async () => {
+    if (isGeneratingAll) return;
+    const targetStudents = filteredStudents.length > 0 ? filteredStudents : students;
+    if (targetStudents.length === 0) return;
+    if (!window.confirm(`¿Generar informes de conducta para ${targetStudents.length} alumnos?`)) return;
+
+    setIsGeneratingAll(true);
+    setGenerateAllProgress(`Generando 0/${targetStudents.length}...`);
+
+    for (let i = 0; i < targetStudents.length; i++) {
+      const st = targetStudents[i];
+      setGenerateAllProgress(`Generando ${i + 1}/${targetStudents.length}: ${st.name.split(' ')[0]}...`);
+      try {
+        await generateBehaviorReport(st, logs.filter(l => l.studentId === st.id), config);
+      } catch (e) {
+        console.error('Error generando conducta para', st.name, e);
+      }
+      await new Promise(r => setTimeout(r, 600));
+    }
+
+    setIsGeneratingAll(false);
+    setGenerateAllProgress(null);
+    setSuccessMessage(`¡${targetStudents.length} informes generados exitosamente!`);
+    setTimeout(() => setSuccessMessage(null), 4000);
+  };
+
   const handleOpenModal = (student?: Student) => {
     if (readOnly) return;
     if (student) {
@@ -179,6 +237,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
       });
     }
     setIsModalOpen(true);
+    window.scrollTo({ top: 0, behavior: 'instant' });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -467,6 +526,27 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
           >
             <RectangleHorizontal size={20} />
             <span className="hidden md:inline">Credenciales</span>
+          </button>
+          {/* Batch PDF Buttons */}
+          <button
+            onClick={handleGenerateAllReportCards}
+            disabled={isGeneratingAll}
+            className="flex items-center justify-center gap-2 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-70 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-sm"
+            title="Generar boletas PDF para todos los alumnos mostrados"
+          >
+            <FileDown size={20} />
+            <span className="hidden lg:inline">{isGeneratingAll ? generateAllProgress || 'Generando...' : 'Boletas'}</span>
+            <span className="lg:hidden">{isGeneratingAll ? '...' : 'Boletas'}</span>
+          </button>
+          <button
+            onClick={handleGenerateAllBehaviorReports}
+            disabled={isGeneratingAll}
+            className="flex items-center justify-center gap-2 bg-rose-500 hover:bg-rose-600 disabled:opacity-70 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-sm"
+            title="Generar informes de conducta para todos los alumnos mostrados"
+          >
+            <AlertCircle size={20} />
+            <span className="hidden lg:inline">{isGeneratingAll ? '...' : 'Conducta'}</span>
+            <span className="lg:hidden">Cond.</span>
           </button>
           {!readOnly && (
             <button
@@ -785,7 +865,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
       {/* Create/Edit Modal - Extended */}
       {
         isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fadeIn print:hidden">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fadeIn print:hidden" style={{ top: 0, left: 0 }}>
             <div className="bg-white rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
               <div className="bg-slate-50 p-4 border-b border-slate-200 flex justify-between items-center flex-shrink-0">
                 <h3 className="font-bold text-lg text-slate-800">
@@ -1297,14 +1377,35 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
                   className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 text-sm flex-1 md:flex-none justify-center"
                 >
                   <FileDown size={18} />
-                  <span>Boleta</span>
+                  <span>Boleta PDF</span>
                 </button>
                 <button
-                  onClick={() => generateBehaviorReport(reportStudent, logs, config)}
+                  onClick={() => generateBehaviorReport(reportStudent, logs.filter(l => l.studentId === reportStudent.id), config)}
                   className="bg-rose-600 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-rose-700 transition-colors shadow-lg shadow-rose-200 text-sm flex-1 md:flex-none justify-center"
                 >
                   <AlertCircle size={18} />
-                  <span>Conducta</span>
+                  <span>Conducta PDF</span>
+                </button>
+                <button
+                  onClick={() => window.open('/padres', '_blank')}
+                  className="bg-emerald-600 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-200 text-sm flex-1 md:flex-none justify-center"
+                  title="Abrir Portal de Padres (para probar actividades)"
+                >
+                  <Users size={18} />
+                  <span className="hidden md:inline">Portal Padres</span>
+                  <span className="md:hidden">Portal</span>
+                </button>
+                <button
+                  onClick={() => {
+                    if (window.confirm(`¿Cerrar el reporte de ${reportStudent.name}?`)) {
+                      setReportStudent(null);
+                    }
+                  }}
+                  className="bg-slate-600 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-slate-700 transition-colors text-sm flex-1 md:flex-none justify-center"
+                  title="Eliminar/Cerrar esta vista de reporte"
+                >
+                  <Trash2 size={18} />
+                  <span className="hidden md:inline">Cerrar</span>
                 </button>
               </div>
             </div>
@@ -1491,9 +1592,15 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
                     </div>
                     <div className="bg-slate-50 p-2 rounded border border-slate-200">
                       <div className="text-xl font-bold text-blue-700">
-                        {reportStudent.totalAssignments > 0
-                          ? Math.round((reportStudent.assignmentsCompleted / reportStudent.totalAssignments) * 100)
-                          : 0}%
+                        {(() => {
+                          const studentAssignments = assignments.filter(a => 
+                            !a.targetGroup || a.targetGroup === reportStudent.group
+                          );
+                          const completedCount = studentAssignments.filter(a => (reportStudent.completedAssignmentIds || []).includes(a.id)).length;
+                          const actualTotal = studentAssignments.length;
+                          const rate = actualTotal > 0 ? (completedCount / actualTotal) * 100 : 0;
+                          return Math.round(Math.min(100, rate));
+                        })()}%
                       </div>
                       <div className="text-[10px] uppercase font-bold text-slate-500">Tareas</div>
                     </div>

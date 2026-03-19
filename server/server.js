@@ -294,8 +294,9 @@ app.get('/sirila-v1/honor-roll', async (req, res) => {
             const academicAvg = activeTrims.length > 0 ? Math.min(10, activeTrims.reduce((a, b) => a + b, 0) / activeTrims.length) : 0;
             
             const completedCount = Math.max(s.assignmentsCompleted || 0, (s.completedAssignmentIds?.length || 0));
-            const cappedCompleted = Math.min(totalAssignmentsCount, completedCount);
-            const hwScore = totalAssignmentsCount > 0 ? (cappedCompleted / totalAssignmentsCount) * 10 : 0;
+            const actualTotal = Math.max(totalAssignmentsCount, s.totalAssignments || 0);
+            const cappedCompleted = Math.min(actualTotal, completedCount);
+            const hwScore = actualTotal > 0 ? (cappedCompleted / actualTotal) * 10 : 0;
             
             const conductScore = Math.max(5, Math.min(10, 8 + ((s.behaviorPoints || 0) * 0.1)));
 

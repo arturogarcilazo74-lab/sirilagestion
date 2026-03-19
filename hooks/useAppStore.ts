@@ -525,7 +525,7 @@ export const useAppStore = () => {
                     if (score !== undefined) {
                         newResults[assignmentId] = score;
                     }
-                    // Optionally increment attempts if not already completed? 
+                    // Optionally increment attempts if not already completed?
                     // Usually handled by the portal, but keeping track here is safer.
                 }
 
@@ -535,7 +535,8 @@ export const useAppStore = () => {
                     assignmentResults: newResults,
                     assignmentAttempts: newAttempts,
                     assignmentsCompleted: newCompletedIds.length,
-                    totalAssignments: assignments.length
+                    // Respect group-filtered totalAssignments if it already exists correctly
+                    totalAssignments: student.totalAssignments || assignments.length
                 };
                 return updatedStudent;
             }
@@ -581,24 +582,31 @@ export const useAppStore = () => {
 
     const handleDeleteAssignment = async (id: string) => {
         const previousAssignments = [...assignments];
+        const previousStudents = [...students];
         const newAssignmentList = assignments.filter(a => a.id !== id);
 
         // Optimistic Update
         setAssignments(newAssignmentList);
 
         // Update student totals (Optimistic)
-        const previousStudents = [...students];
-        setStudents(prev => prev.map(s => ({ ...s, totalAssignments: newAssignmentList.length })));
+        setStudents(prev => prev.map(s => {
+          if ((s.totalAssignments || 0) > 0) {
+            const assignment = previousAssignments.find(a => a.id === id);
+            const target = (assignment?.targetGroup || '').toUpperCase().trim();
+            const studentG = (s.group || '').toUpperCase().trim();
+            const isRelevant = !target || target === 'GLOBAL' || target === 'TODOS' || target === studentG;
+            if (isRelevant) return { ...s, totalAssignments: Math.max(0, (s.totalAssignments || 0) - 1) };
+          }
+          return s;
+        }));
 
         try {
             await api.deleteAssignment(id);
-            // Also sync student totals to DB
-            const updatedStudents = students.map(s => ({ ...s, totalAssignments: newAssignmentList.length }));
-            // We can batch save or just let it be. But to be safe, we should save the affected students.
-            // Actually, saving all students is heavy. 
-            // Ideally the backend should handle this derivation.
-            // But for now, let's stick to the existing logic but inside try block.
-            updatedStudents.forEach(s => api.saveStudent(s));
+            // Sync with backend
+            setStudents(current => {
+              current.forEach(student => api.saveStudent(student));
+              return current;
+            });
         } catch (error: any) {
             console.error("Failed to delete assignment:", error);
             alert("Error al eliminar la actividad: " + (error.message || "Error desconocido"));
