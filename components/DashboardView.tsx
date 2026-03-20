@@ -912,38 +912,36 @@ export const DashboardView: React.FC<DashboardProps> = ({
                       <span className="font-bold text-orange-800 text-xs leading-tight">{n.title}</span>
                       <div className="flex items-center gap-2">
                         <span className="text-[9px] text-orange-600 opacity-70 whitespace-nowrap">{new Date(n.date).toLocaleDateString()}</span>
-                        {(!currentUser || currentUser?.role === 'Director') && (
-                          <div className="flex opacity-0 group-hover:opacity-100 transition-opacity gap-1">
-                            <button
-                               onClick={() => {
-                                   setEditingNotif(n);
-                                   setEditTitle(n.title);
-                                   setEditMessage(n.message);
-                               }}
-                               className="text-slate-400 hover:text-indigo-500 p-0.5 rounded transition-colors"
-                               title="Editar aviso"
-                            >
-                               <Edit2 size={12} />
-                            </button>
-                            <button
-                               onClick={async (e) => {
-                                   e.stopPropagation();
-                                   if (confirm('¿Eliminar este boletín oficial?')) {
-                                       try {
-                                            await api.deleteNotification(n.id);
-                                            loadOfficialNotices();
-                                       } catch (e) {
-                                            console.error(e);
-                                       }
-                                   }
-                               }}
-                               className="text-slate-400 hover:text-red-500 p-0.5 rounded transition-colors"
-                               title="Eliminar aviso"
-                            >
-                               <Trash2 size={12} />
-                            </button>
-                          </div>
-                        )}
+                        <div className="flex opacity-0 group-hover:opacity-100 transition-opacity gap-1">
+                          <button
+                             onClick={() => {
+                                 setEditingNotif(n);
+                                 setEditTitle(n.title);
+                                 setEditMessage(n.message);
+                             }}
+                             className="text-slate-400 hover:text-indigo-500 p-0.5 rounded transition-colors"
+                             title="Editar aviso"
+                          >
+                             <Edit2 size={12} />
+                          </button>
+                          <button
+                             onClick={async (e) => {
+                                 e.stopPropagation();
+                                 if (confirm('¿Eliminar este boletín oficial?')) {
+                                     try {
+                                          await api.deleteNotification(n.id);
+                                          loadOfficialNotices();
+                                     } catch (e) {
+                                          console.error(e);
+                                     }
+                                 }
+                             }}
+                             className="text-slate-400 hover:text-red-500 p-0.5 rounded transition-colors"
+                             title="Eliminar aviso"
+                          >
+                             <Trash2 size={12} />
+                          </button>
+                        </div>
                       </div>
                     </div>
                     <p className="text-xs text-slate-600 leading-relaxed line-clamp-4">{n.message}</p>
