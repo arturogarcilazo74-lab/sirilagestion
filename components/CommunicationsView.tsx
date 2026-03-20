@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { Student, Notification } from '../types';
-import { Send, Users, AlertTriangle, Info, Calendar, History, Trash2, CheckCircle, Search, MessageCircle, User } from 'lucide-react';
+import { Send, Users, AlertTriangle, Info, Calendar, History, Trash2, CheckCircle, Search, MessageCircle, User, Edit2, Save, X as XIcon } from 'lucide-react';
 import { sendWhatsAppMessage, getEventMessage, getChatReplyMessage, getStaffNoticeMessage } from '../whatsappUtils';
 
 interface CommunicationsViewProps {
@@ -17,6 +17,9 @@ export const CommunicationsView: React.FC<CommunicationsViewProps> = ({ students
     const [targetStudentId, setTargetStudentId] = useState<string>(''); // Empty = All, or STAFF_ID
     const [isSending, setIsSending] = useState(false);
     const [history, setHistory] = useState<Notification[]>([]);
+    const [editingNotif, setEditingNotif] = useState<Notification | null>(null);
+    const [editTitle, setEditTitle] = useState('');
+    const [editMessage, setEditMessage] = useState('');
 
     // Inbox State
     const [viewMode, setViewMode] = useState<'NOTIFICATIONS' | 'INBOX' | 'STAFF_CHAT'>(directorMode ? 'NOTIFICATIONS' : 'INBOX');
@@ -514,6 +517,17 @@ export const CommunicationsView: React.FC<CommunicationsViewProps> = ({ students
                                                         </button>
                                                     )}
                                                     <button
+                                                        onClick={() => {
+                                                            setEditingNotif(notif);
+                                                            setEditTitle(notif.title);
+                                                            setEditMessage(notif.message);
+                                                        }}
+                                                        className="text-slate-300 hover:text-indigo-500 transition-colors p-1"
+                                                        title="Editar aviso"
+                                                    >
+                                                        <Edit2 size={16} />
+                                                    </button>
+                                                    <button
                                                         onClick={async (e) => {
                                                             e.stopPropagation();
                                                             if (confirm('¿Eliminar esta notificación?')) {
@@ -545,6 +559,70 @@ export const CommunicationsView: React.FC<CommunicationsViewProps> = ({ students
                                         </div>
                                     ))
                                 )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit Notification Modal */}
+            {editingNotif && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn" onClick={() => setEditingNotif(null)}>
+                    <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+                        <div className="p-6 bg-indigo-600 text-white flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                                <Edit2 size={22} />
+                                <h3 className="text-xl font-black">Editar Aviso</h3>
+                            </div>
+                            <button onClick={() => setEditingNotif(null)} title="Cerrar" className="p-2 hover:bg-white/20 rounded-xl transition-colors">
+                                <XIcon size={22} />
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-1">Título</label>
+                                <input
+                                    type="text"
+                                    value={editTitle}
+                                    onChange={e => setEditTitle(e.target.value)}
+                                    placeholder="Título del aviso"
+                                    className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-1">Mensaje</label>
+                                <textarea
+                                    value={editMessage}
+                                    onChange={e => setEditMessage(e.target.value)}
+                                    placeholder="Contenido del aviso"
+                                    className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none h-32 resize-none"
+                                />
+                            </div>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setEditingNotif(null)}
+                                    className="flex-1 py-3 rounded-xl font-bold border border-slate-300 text-slate-600 hover:bg-slate-50 transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    disabled={!editTitle.trim() || !editMessage.trim()}
+                                    onClick={async () => {
+                                        if (!editTitle.trim() || !editMessage.trim()) return;
+                                        try {
+                                            const updated = { ...editingNotif, title: editTitle.trim(), message: editMessage.trim() };
+                                            await api.saveNotification(updated);
+                                            setEditingNotif(null);
+                                            loadHistory();
+                                        } catch (e) {
+                                            console.error('Error al editar aviso', e);
+                                            alert('Error al guardar los cambios');
+                                        }
+                                    }}
+                                    className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black shadow-lg shadow-indigo-200 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                >
+                                    <Save size={18} /> Guardar Cambios
+                                </button>
                             </div>
                         </div>
                     </div>

@@ -3,7 +3,7 @@ import { Student, BehaviorLog } from '../types';
 import {
   ThumbsUp, ThumbsDown, AlertTriangle, Star, MessageCircle,
   X, Send, Trophy, Medal, Pen, Check, Search, Filter,
-  Clock, Flame, Award, Zap, ChevronRight, User
+  Clock, Flame, Award, Zap, ChevronRight, User, Trash2, Edit2, Save
 } from 'lucide-react';
 
 interface BehaviorViewProps {
@@ -12,6 +12,8 @@ interface BehaviorViewProps {
   logs: BehaviorLog[];
   onEditStudent: (id: string, data: Partial<Student>) => void;
   totalAssignmentCount: number;
+  onDeleteLog?: (id: string) => void;
+  onEditLog?: (id: string, data: Partial<BehaviorLog>) => void;
 }
 
 const POSITIVE_PRESETS = [
@@ -32,13 +34,15 @@ const NEGATIVE_PRESETS = [
   'Incumplimiento de normas'
 ];
 
-export const BehaviorView: React.FC<BehaviorViewProps> = ({ students, onLogBehavior, logs, onEditStudent, totalAssignmentCount }) => {
+export const BehaviorView: React.FC<BehaviorViewProps> = ({ students, onLogBehavior, logs, onEditStudent, totalAssignmentCount, onDeleteLog, onEditLog }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedGroup, setSelectedGroup] = useState('ALL');
   const [selectedStudentForAction, setSelectedStudentForAction] = useState<Student | null>(null);
   const [actionType, setActionType] = useState<'POSITIVE' | 'NEGATIVE' | null>(null);
   const [customNote, setCustomNote] = useState('');
   const [notification, setNotification] = useState<{ student: Student, message: string } | null>(null);
+  const [editingLog, setEditingLog] = useState<BehaviorLog | null>(null);
+  const [editingText, setEditingText] = useState('');
 
   // Groups for filtering
   const groups = useMemo(() => {
@@ -181,15 +185,79 @@ export const BehaviorView: React.FC<BehaviorViewProps> = ({ students, onLogBehav
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
               {logs.slice(-15).reverse().map((log) => (
-                <div key={log.id} className="flex gap-3 p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                <div key={log.id} className="group flex gap-3 p-2.5 rounded-xl bg-slate-50 border border-slate-100 hover:border-slate-200 transition-colors">
                   <div className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${log.type === 'POSITIVE' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'
                     }`}>
                     {log.type === 'POSITIVE' ? <ThumbsUp size={14} /> : <ThumbsDown size={14} />}
                   </div>
-                  <div className="overflow-hidden">
-                    <p className="text-xs font-bold text-slate-800 truncate">{log.studentName}</p>
-                    <p className="text-[10px] text-slate-500 line-clamp-1">{log.description}</p>
-                  </div>
+                  {editingLog?.id === log.id ? (
+                    <div className="flex-1 flex gap-1">
+                      <input
+                        autoFocus
+                        title="Editar descripción de incidencia"
+                        placeholder="Editar descripción..."
+                        value={editingText}
+                        onChange={(e) => setEditingText(e.target.value)}
+                        className="flex-1 text-xs bg-white border border-indigo-300 rounded-lg px-2 py-1 outline-none focus:ring-1 focus:ring-indigo-500"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && editingText.trim()) {
+                            onEditLog?.(log.id, { description: editingText.trim() });
+                            setEditingLog(null);
+                          }
+                          if (e.key === 'Escape') setEditingLog(null);
+                        }}
+                      />
+                      <button
+                        onClick={() => {
+                          if (editingText.trim()) {
+                            onEditLog?.(log.id, { description: editingText.trim() });
+                            setEditingLog(null);
+                          }
+                        }}
+                        className="shrink-0 p-1 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600"
+                        title="Guardar"
+                      >
+                        <Save size={12} />
+                      </button>
+                      <button
+                        onClick={() => setEditingLog(null)}
+                        className="shrink-0 p-1 bg-slate-200 text-slate-600 rounded-lg hover:bg-slate-300"
+                        title="Cancelar"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex-1 overflow-hidden">
+                      <p className="text-xs font-bold text-slate-800 truncate">{log.studentName}</p>
+                      <p className="text-[10px] text-slate-500 line-clamp-1">{log.description}</p>
+                      <p className="text-[9px] text-slate-400">{new Date(log.date).toLocaleDateString()}</p>
+                    </div>
+                  )}
+                  {editingLog?.id !== log.id && (onDeleteLog || onEditLog) && (
+                    <div className="shrink-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {onEditLog && (
+                        <button
+                          onClick={() => { setEditingLog(log); setEditingText(log.description); }}
+                          className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                          title="Editar"
+                        >
+                          <Edit2 size={12} />
+                        </button>
+                      )}
+                      {onDeleteLog && (
+                        <button
+                          onClick={() => {
+                            if (confirm(`¿Borrar incidencia de ${log.studentName}?`)) onDeleteLog(log.id);
+                          }}
+                          className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Eliminar"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
               {logs.length === 0 && (

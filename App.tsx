@@ -337,6 +337,8 @@ const App: React.FC = () => {
                 logs={visibleLogs}
                 onEditStudent={store.handleEditStudent}
                 totalAssignmentCount={visibleAssignments.length}
+                onDeleteLog={store.handleDeleteBehaviorLog}
+                onEditLog={store.handleUpdateBehaviorLog}
               />
             );
           })()}
