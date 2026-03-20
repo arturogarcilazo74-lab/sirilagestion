@@ -69,6 +69,13 @@ export const DashboardView: React.FC<DashboardProps> = ({
 
   // Official Notices State
   const [officialNotices, setOfficialNotices] = useState<any[]>([]);
+  const [editingNotif, setEditingNotif] = useState<any | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editMessage, setEditMessage] = useState("");
+
+  const loadOfficialNotices = () => {
+    api.getNotifications().then(setOfficialNotices).catch(console.error);
+  };
 
   // Notification Ref to avoid spam
   // Notification Ref to avoid spam (Persistent)
@@ -146,7 +153,7 @@ export const DashboardView: React.FC<DashboardProps> = ({
 
   useEffect(() => {
     // Load official global notifications
-    api.getNotifications().then(setOfficialNotices).catch(console.error);
+    loadOfficialNotices();
   }, []);
 
   // Calendar State
@@ -191,13 +198,16 @@ export const DashboardView: React.FC<DashboardProps> = ({
   }, [selectedStudent]);
 
   // Data prep
-  const attendanceStats = students.reduce((acc, curr) => {
-    const present = Object.values(curr.attendance || {}).filter(s => s === 'Presente').length;
-    return acc + present;
-  }, 0);
+  let totalDaysRecorded = 0;
+  let totalPresentCount = 0;
+  
+  students.forEach(student => {
+    const records = Object.values(student.attendance || {});
+    totalDaysRecorded += records.length;
+    totalPresentCount += records.filter(s => s === 'Presente').length;
+  });
 
-  const totalPossibleAttendance = students.length * 20; // Assuming 20 days context for demo
-  const attendanceRate = Math.round((attendanceStats / totalPossibleAttendance) * 100) || 0;
+  const attendanceRate = totalDaysRecorded > 0 ? Math.round((totalPresentCount / totalDaysRecorded) * 100) : 0;
 
   // Helper to get dummy assignments based on completion status for the selected student
   const getStudentAssignments = (student: Student) => {
@@ -897,10 +907,44 @@ export const DashboardView: React.FC<DashboardProps> = ({
                 </div>
               ) : (
                 officialNotices.map(n => (
-                  <div key={n.id} className="p-3 bg-orange-50/50 rounded-xl border border-orange-100 hover:bg-orange-50 transition-colors">
+                  <div key={n.id} className="p-3 bg-orange-50/50 rounded-xl border border-orange-100 hover:bg-orange-50 transition-colors relative group">
                     <div className="flex justify-between items-start mb-1 gap-2">
                       <span className="font-bold text-orange-800 text-xs leading-tight">{n.title}</span>
-                      <span className="text-[9px] text-orange-600 opacity-70 whitespace-nowrap">{new Date(n.date).toLocaleDateString()}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[9px] text-orange-600 opacity-70 whitespace-nowrap">{new Date(n.date).toLocaleDateString()}</span>
+                        {(!currentUser || currentUser?.role === 'Director') && (
+                          <div className="flex opacity-0 group-hover:opacity-100 transition-opacity gap-1">
+                            <button
+                               onClick={() => {
+                                   setEditingNotif(n);
+                                   setEditTitle(n.title);
+                                   setEditMessage(n.message);
+                               }}
+                               className="text-slate-400 hover:text-indigo-500 p-0.5 rounded transition-colors"
+                               title="Editar aviso"
+                            >
+                               <Edit2 size={12} />
+                            </button>
+                            <button
+                               onClick={async (e) => {
+                                   e.stopPropagation();
+                                   if (confirm('¿Eliminar este boletín oficial?')) {
+                                       try {
+                                            await api.deleteNotification(n.id);
+                                            loadOfficialNotices();
+                                       } catch (e) {
+                                            console.error(e);
+                                       }
+                                   }
+                               }}
+                               className="text-slate-400 hover:text-red-500 p-0.5 rounded transition-colors"
+                               title="Eliminar aviso"
+                            >
+                               <Trash2 size={12} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <p className="text-xs text-slate-600 leading-relaxed line-clamp-4">{n.message}</p>
                   </div>
@@ -1455,6 +1499,70 @@ export const DashboardView: React.FC<DashboardProps> = ({
             </form>
           </div>
         </div>
+      )}
+
+      {/* Edit Notification Modal */}
+      {editingNotif && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn" onClick={() => setEditingNotif(null)}>
+              <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+                  <div className="p-6 bg-indigo-600 text-white flex justify-between items-center">
+                      <div className="flex items-center gap-3">
+                          <Edit2 size={22} />
+                          <h3 className="text-xl font-black">Editar Aviso Oficial</h3>
+                      </div>
+                      <button onClick={() => setEditingNotif(null)} title="Cerrar" className="p-2 hover:bg-white/20 rounded-xl transition-colors">
+                          <X size={22} />
+                      </button>
+                  </div>
+                  <div className="p-6 space-y-4">
+                      <div>
+                          <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-1">Título</label>
+                          <input
+                              type="text"
+                              value={editTitle}
+                              onChange={e => setEditTitle(e.target.value)}
+                              placeholder="Título del aviso"
+                              className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                          />
+                      </div>
+                      <div>
+                          <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-1">Mensaje</label>
+                          <textarea
+                              value={editMessage}
+                              onChange={e => setEditMessage(e.target.value)}
+                              placeholder="Contenido del aviso"
+                              className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none h-32 resize-none"
+                          />
+                      </div>
+                      <div className="flex gap-3">
+                          <button
+                              onClick={() => setEditingNotif(null)}
+                              className="flex-1 py-3 rounded-xl font-bold border border-slate-300 text-slate-600 hover:bg-slate-50 transition-colors"
+                          >
+                              Cancelar
+                          </button>
+                          <button
+                              disabled={!editTitle.trim() || !editMessage.trim()}
+                              onClick={async () => {
+                                  if (!editTitle.trim() || !editMessage.trim()) return;
+                                  try {
+                                      const updated = { ...editingNotif, title: editTitle.trim(), message: editMessage.trim() };
+                                      await api.saveNotification(updated);
+                                      setEditingNotif(null);
+                                      loadOfficialNotices();
+                                  } catch (e) {
+                                      console.error('Error al editar aviso', e);
+                                      alert('Error al guardar los cambios');
+                                  }
+                              }}
+                              className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black shadow-lg shadow-indigo-200 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                          >
+                              <Save size={18} /> Guardar Cambios
+                          </button>
+                      </div>
+                  </div>
+              </div>
+          </div>
       )}
     </div>
   );
