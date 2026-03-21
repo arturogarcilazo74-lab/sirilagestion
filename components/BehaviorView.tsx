@@ -290,13 +290,13 @@ export const BehaviorView: React.FC<BehaviorViewProps> = ({ students, onLogBehav
                 const trimAvgs = (s.grades || []).map(getTrimesterAvg);
                 const activeTrims = trimAvgs.filter(a => a > 0);
                 const academicAvg = activeTrims.length > 0 ? Math.min(10, activeTrims.reduce((a, b) => a + b, 0) / activeTrims.length) : 0;
-                
+
                 const completedCount = (s.completedAssignmentIds || []).length;
                 const cappedCompleted = Math.min(totalAssignmentCount, completedCount);
                 const hwScore = totalAssignmentCount > 0 ? (cappedCompleted / totalAssignmentCount) * 10 : 0;
-                
+
                 const conductScore = Math.max(5, Math.min(10, 8 + ((s.behaviorPoints || 0) * 0.1)));
-                
+
                 let finalAvg = 0;
                 const hasAcademic = academicAvg > 0;
                 const hasHomework = totalAssignmentCount > 0;
@@ -310,30 +310,30 @@ export const BehaviorView: React.FC<BehaviorViewProps> = ({ students, onLogBehav
                 } else {
                   finalAvg = conductScore;
                 }
-                
+
                 return { ...s, calculatedAvg: Math.min(10, finalAvg) };
               })
-              .sort((a, b) => b.calculatedAvg - a.calculatedAvg)
-              .slice(0, 3)
-              .map((s, idx) => (
-                <div key={s.id} className="flex items-center justify-between bg-white/10 p-2 rounded-xl backdrop-blur-md">
-                  <div className="flex items-center gap-3">
-                    <span className="font-black text-indigo-200 w-4">{idx + 1}</span>
-                    <img
-                      src={s.avatar === "PENDING_LOAD" ? `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=random` : (s.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=random`)}
-                      className="w-8 h-8 rounded-full border border-white/20"
-                      alt=""
-                    />
-                    <div className="flex flex-col">
-                      <span className="text-xs font-bold truncate max-w-[120px]">{s.name}</span>
-                      <span className="text-[9px] text-indigo-200 font-medium">Conducta: {s.behaviorPoints}</span>
+                .sort((a, b) => b.calculatedAvg - a.calculatedAvg)
+                .slice(0, 3)
+                .map((s, idx) => (
+                  <div key={s.id} className="flex items-center justify-between bg-white/10 p-2 rounded-xl backdrop-blur-md">
+                    <div className="flex items-center gap-3">
+                      <span className="font-black text-indigo-200 w-4">{idx + 1}</span>
+                      <img
+                        src={s.avatar === "PENDING_LOAD" ? `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=random` : (s.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.name)}&background=random`)}
+                        className="w-8 h-8 rounded-full border border-white/20"
+                        alt=""
+                      />
+                      <div className="flex flex-col">
+                        <span className="text-xs font-bold truncate max-w-[120px]">{s.name}</span>
+                        <span className="text-[9px] text-indigo-200 font-medium">Conducta: {s.behaviorPoints}</span>
+                      </div>
                     </div>
+                    <span className="font-black bg-white text-indigo-600 px-2 py-0.5 rounded-lg text-xs">
+                      {s.calculatedAvg.toFixed(1)}
+                    </span>
                   </div>
-                  <span className="font-black bg-white text-indigo-600 px-2 py-0.5 rounded-lg text-xs">
-                    {s.calculatedAvg.toFixed(1)}
-                  </span>
-                </div>
-              ))}
+                ))}
             </div>
           </div>
         </div>

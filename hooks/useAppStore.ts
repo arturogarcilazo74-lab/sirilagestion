@@ -133,8 +133,22 @@ export const useAppStore = () => {
     }, [students]);
 
     useEffect(() => {
-        try { localStorage.setItem('SIRILA_CACHE_ASSIGNMENTS', JSON.stringify(assignments)); }
-        catch (e) { console.warn("Cache Assignments failed", e); }
+        try { 
+            const serialized = JSON.stringify(assignments);
+            if (serialized.length > 4 * 1024 * 1024) {
+               console.warn("Assignments array too large for localStorage. Clearing large HTML content from cache to prevent crash.");
+               const optimized = assignments.map(a => {
+                   if (a.interactiveData?.type === 'HTML_GAME' && a.interactiveData.htmlContent && a.interactiveData.htmlContent.length > 500000) {
+                      return { ...a, interactiveData: { ...a.interactiveData, htmlContent: undefined, hasContent: true } };
+                   }
+                   return a;
+               });
+               localStorage.setItem('SIRILA_CACHE_ASSIGNMENTS', JSON.stringify(optimized));
+            } else {
+               localStorage.setItem('SIRILA_CACHE_ASSIGNMENTS', serialized); 
+            }
+        }
+        catch (e) { console.warn("Cache Assignments failed (Storage Full?)", e); }
     }, [assignments]);
 
     useEffect(() => {

@@ -17,6 +17,17 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json({ limit: '500mb' }));
 
+// --- API ALIAS / BACKWARD COMPATIBILITY ---
+// Map /api requests to /sirila-v1 prefix
+app.use((req, res, next) => {
+    if (req.url.startsWith('/api/')) {
+        const oldUrl = req.url;
+        req.url = req.url.replace('/api/', '/sirila-v1/');
+        console.log(`[API ALIAS] Remapped ${oldUrl} to ${req.url}`);
+    }
+    next();
+});
+
 // --- SERVE STATIC FRONTEND ---
 const STATIC_ROOT = path.resolve(__dirname, '../dist-app');
 
@@ -575,9 +586,46 @@ app.get('/sirila-v1/assignments', async (req, res) => {
                     d = { id: r.id, title: "Error de carga (Datos truncados)", corrupt: true };
                 }
             }
+
+            // OPTIMIZATION: Strip huge payloads from the list view
+            // The frontend (ParentsPortal) lazily loads detail via getAssignmentById
+            if (d.interactiveData && d.interactiveData.htmlContent && d.interactiveData.htmlContent.length > 50000) {
+                d.interactiveData.htmlContent = undefined;
+                d.interactiveData.hasContent = true;
+                d.isOptimized = true;
+            }
+
             return { ...d, id: r.id }; // Ensure ID from column is used
         });
         res.json(assignments);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/sirila-v1/assignments/:id', async (req, res) => {
+    const id = req.params.id;
+    if (!useMySQL) {
+        const data = readJSON();
+        const a = (data.assignments || []).find(a => a.id === id);
+        return a ? res.json(a) : res.status(404).json({ error: 'No encontrado' });
+    }
+    try {
+        const pool = getPool();
+        const [rows] = await pool.query('SELECT * FROM assignments WHERE id = ?', [id]);
+        if (rows.length === 0) return res.status(404).json({ error: 'No encontrado' });
+        
+        const r = rows[0];
+        let d = r.data_json || {};
+        if (typeof (d || '') === 'string') {
+            try {
+                d = JSON.parse(d);
+            } catch (e) {
+                console.error(`[CRITICAL] JSON Parse failed for single assignment ${id}`, e.message);
+                return res.status(500).json({ error: "Datos corruptos en la base de datos" });
+            }
+        }
+        res.json({ ...d, id: r.id });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

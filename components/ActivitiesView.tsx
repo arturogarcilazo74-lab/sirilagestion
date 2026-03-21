@@ -244,12 +244,15 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
             newAssignment.type = 'TASK';
           }
           newAssignment.description = nemPlanResult;
-        } else if (activityType === 'HTML_GAME') {
-          if (!htmlGameContent && !htmlGameUrl) {
-            alert("Debes generar, subir el juego o especificar una URL antes de guardar.");
-            setIsSaving(false);
-            return;
+          // Size validation: Hostinger/Apache limits vary, but 1MB is a safe general threshold for JSON POSTs
+          if (htmlGameContent && htmlGameContent.length > 1.5 * 1024 * 1024) {
+            const proceed = confirm("⚠️ El archivo es muy pesado (>1.5MB). Esto puede fallar al guardarse en Hostinger o ralentizar tu dispositivo. ¿Deseas intentar guardarlo de todas formas?");
+            if (!proceed) {
+              setIsSaving(false);
+              return;
+            }
           }
+
           newAssignment.interactiveData = {
             type: 'HTML_GAME',
             htmlContent: htmlGameContent || '',
@@ -257,6 +260,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
             gameType: 'OTHER'
           };
         }
+
 
         await onAddAssignment(newAssignment);
 
@@ -276,6 +280,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
         setNewExternalLinks([]);
         setCurrentLinkInput('');
         setHtmlGameUrl('');
+        setHtmlGameContent(null);
         setNemPlanResult('');
         setAiContextText('');
         setWorksheetImage('');

@@ -24,20 +24,30 @@ const GET_BASE_URL = () => {
 
     // If running as file:// (Electron), we must use absolute URL if provided, or default local
     if (window.location.protocol === 'file:') {
-        return stored || 'http://localhost:3001/api';
+        return (stored && !isLegacy) ? stored : 'http://localhost:3001/sirila-v1';
     }
 
     // For all web access (Production Hostinger, Local Dev, LAN), relative path is safest
     // unless the user explicitly set a valid remote URL that isn't legacy.
+    // Ensure we use the same prefix as the server (/sirila-v1)
     return (stored && !isLegacy) ? stored : '/sirila-v1';
 };
 
 // --- OFFLINE QUEUE SYSTEM ---
 const OFFLINE_QUEUE_KEY = 'SIRILA_OFFLINE_QUEUE';
 
-const addToQueue = (endpoint: string, method: string, body: any) => {
+const addToQueue = (endpoint: string, method: string, data: any) => {
     try {
-        const queue = JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY) || '[]');
+        const queueStr = localStorage.getItem(OFFLINE_QUEUE_KEY) || '[]';
+        const queue = JSON.parse(queueStr);
+
+        // Payload size safety: don't queue objects larger than 1MB
+        // to avoid filling up the 5MB browser quota immediately.
+        const payloadSize = JSON.stringify(data).length;
+        if (payloadSize > 1.5 * 1024 * 1024) {
+            console.warn(`[OFFLINE] Payload too large to queue (${(payloadSize / 1024 / 1024).toFixed(2)}MB). Saving only to memory state.`);
+            return;
+        }
 
         // Prevent infinite growth
         if (queue.length > 200) {
@@ -45,27 +55,20 @@ const addToQueue = (endpoint: string, method: string, body: any) => {
             queue.shift();
         }
 
-        // AUTO-CORRECTION: Ensure we strictly store relative paths for new items
-        // This prevents the 'double prefix' bug from happening in the future
+        // AUTO-CORRECTION: Ensure relative paths
         let safeEndpoint = endpoint;
         if (safeEndpoint.startsWith('http')) {
-            // Strip domain
             safeEndpoint = safeEndpoint.replace(/^https?:\/\/[^\/]+/, '');
         }
         if (safeEndpoint.startsWith('/api')) {
-            // Strip /api prefix if present (we add it back dynamically)
             safeEndpoint = safeEndpoint.substring(4);
         }
 
-        queue.push({ endpoint: safeEndpoint, method, body, timestamp: Date.now() });
+        queue.push({ endpoint: safeEndpoint, method, data, timestamp: Date.now() });
         localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
         console.log(`Action queued for offline sync: ${method} ${safeEndpoint}`);
     } catch (e) {
-        console.error("CRITICAL: Failed to add to offline queue (Quota exceeded?)", e);
-        try {
-            localStorage.removeItem('SIRILA_CACHE_STUDENTS');
-            localStorage.removeItem('SIRILA_CACHE_BOOKS');
-        } catch (inner) { }
+        console.error("CRITICAL: Failed to add to offline queue", e);
     }
 };
 
@@ -117,7 +120,7 @@ export const api = {
                 const res = await fetch(finalUrl, {
                     method: item.method,
                     headers: { 'Content-Type': 'application/json' },
-                    body: item.body ? JSON.stringify(item.body) : null
+                    body: (item.data || item.body) ? JSON.stringify(item.data || item.body) : null
                 });
 
                 if (!res.ok) {
@@ -167,7 +170,11 @@ export const api = {
     setServerUrl: (url: string) => {
         try {
             let cleanUrl = url.replace(/\/$/, ""); // Remove trailing slash
-            if (!cleanUrl.endsWith('/api')) cleanUrl += '/api';
+            // Support both /api and /sirila-v1 or no prefix
+            if (!cleanUrl.endsWith('/api') && !cleanUrl.endsWith('/sirila-v1')) {
+                // Default to /sirila-v1 to match server.js
+                cleanUrl += '/sirila-v1';
+            }
             localStorage.setItem('SIRILA_SERVER_URL', cleanUrl);
             window.location.reload();
         } catch (e) {
@@ -370,11 +377,26 @@ export const api = {
         const res = await fetch(`${API_URL}/parent/login`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ loginId })
         });
+        
         if (!res.ok) {
-            const err = await res.json();
-            throw new Error(err.message || 'Login failed');
+            const text = await res.text();
+            try {
+                const err = JSON.parse(text);
+                throw new Error(err.message || err.error || 'Login failed');
+            } catch (e) {
+                // If it's HTML or other non-JSON, provide a clearer message
+                if (text.trim().startsWith('<')) {
+                    throw new Error(`Error del servidor (404/500). El servicio no parece estar activo en esta URL o se devolvió una página HTML en lugar de datos.`);
+                }
+                throw new Error(`Error del servidor: ${res.status}`);
+            }
         }
-        return await res.json();
+
+        try {
+            return await res.json();
+        } catch (e) {
+            throw new Error("El servidor no devolvió una respuesta válida en formato JSON. Verifica la configuración de la URL.");
+        }
     },
 
     getEvents: async () => {
