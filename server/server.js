@@ -160,13 +160,13 @@ app.get('/sirila-v1/full-state', async (req, res) => {
         const [assignmentRows] = await pool.query('SELECT id, title, due_date, data_json FROM assignments');
         const assignments = assignmentRows.map(r => {
             let d = r.data_json || {};
-            if (typeof d === 'string') { 
-                try { 
-                    d = JSON.parse(d); 
-                } catch (e) { 
+            if (typeof d === 'string') {
+                try {
+                    d = JSON.parse(d);
+                } catch (e) {
                     console.error(`[CRITICAL] JSON Parse failed for assignment ${r.id}. Data might be truncated.`, e.message);
                     d = { id: r.id, title: r.title || "ERROR: Datos Corruptos", corrupt: true };
-                } 
+                }
             }
 
             // Only keep lightweight assignment info for initial state
@@ -272,7 +272,7 @@ app.get('/sirila-v1/honor-roll', async (req, res) => {
             const [rows] = await pool.query('SELECT id, name, avatar, behavior_points, data_json FROM students');
             const [aRows] = await pool.query('SELECT COUNT(*) as count FROM assignments');
             totalAssignmentsCount = aRows[0].count;
-            
+
             students = rows.map(r => {
                 let base = {};
                 try {
@@ -303,12 +303,12 @@ app.get('/sirila-v1/honor-roll', async (req, res) => {
             const trimAvgs = (s.grades || []).map(getTrimesterAvg);
             const activeTrims = trimAvgs.filter(a => a > 0);
             const academicAvg = activeTrims.length > 0 ? Math.min(10, activeTrims.reduce((a, b) => a + b, 0) / activeTrims.length) : 0;
-            
+
             const completedCount = Math.max(s.assignmentsCompleted || 0, (s.completedAssignmentIds?.length || 0));
             const actualTotal = Math.max(totalAssignmentsCount, s.totalAssignments || 0);
             const cappedCompleted = Math.min(actualTotal, completedCount);
             const hwScore = actualTotal > 0 ? (cappedCompleted / actualTotal) * 10 : 0;
-            
+
             const conductScore = Math.max(5, Math.min(10, 8 + ((s.behaviorPoints || 0) * 0.1)));
 
             let finalAvg = 0;
@@ -579,9 +579,9 @@ app.get('/sirila-v1/assignments', async (req, res) => {
         const assignments = rows.map(r => {
             let d = r.data_json || {};
             if (typeof d === 'string') {
-                try { 
-                    d = JSON.parse(d); 
-                } catch (e) { 
+                try {
+                    d = JSON.parse(d);
+                } catch (e) {
                     console.error(`[CRITICAL] JSON Parse failed in /sirila-v1/assignments for ${r.id}`, e.message);
                     d = { id: r.id, title: "Error de carga (Datos truncados)", corrupt: true };
                 }
@@ -614,7 +614,7 @@ app.get('/sirila-v1/assignments/:id', async (req, res) => {
         const pool = getPool();
         const [rows] = await pool.query('SELECT * FROM assignments WHERE id = ?', [id]);
         if (rows.length === 0) return res.status(404).json({ error: 'No encontrado' });
-        
+
         const r = rows[0];
         let d = r.data_json || {};
         if (typeof (d || '') === 'string') {
@@ -625,6 +625,13 @@ app.get('/sirila-v1/assignments/:id', async (req, res) => {
                 return res.status(500).json({ error: "Datos corruptos en la base de datos" });
             }
         }
+
+        // DEBUG: Log if interactiveData is missing
+        if (!d.interactiveData) {
+            console.error(`[WARNING] Assignment ${id} "${r.title}" has NO interactiveData in database!`);
+            console.error(`[WARNING] Full data_json:`, d);
+        }
+
         res.json({ ...d, id: r.id });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -635,7 +642,7 @@ app.post('/sirila-v1/assignments', async (req, res) => {
     const a = req.body;
     const payloadSize = JSON.stringify(a).length;
     console.log(`[ASSIGNMENT] Attempting to save activity: "${a.title}" (ID: ${a.id}). Payload size: ${(payloadSize / 1024).toFixed(2)} KB`);
-    
+
     try {
         const pool = getPool();
         await pool.query(`
@@ -644,13 +651,13 @@ app.post('/sirila-v1/assignments', async (req, res) => {
       ON DUPLICATE KEY UPDATE
       title=VALUES(title), due_date=VALUES(due_date), data_json=VALUES(data_json)
     `, [a.id, a.title, a.dueDate || null, JSON.stringify(a)]);
-        
+
         console.log(`✅ Activity saved successfully: ${a.id}`);
         res.json({ success: true });
     } catch (error) {
         console.error(`❌ DB Error saving assignment ${a.id}:`, error.message);
         console.error('SQL State:', error.sqlState, 'Code:', error.code);
-        
+
         // Check for common MySQL errors
         if (error.code === 'ER_NET_PACKET_TOO_LARGE') {
             res.status(413).json({ error: 'La actividad es demasiado grande para el servidor (Límite de paquete excedido).' });
@@ -914,9 +921,9 @@ app.post('/sirila-v1/parent/login', async (req, res) => {
 
     if (!useMySQL) {
         const data = readJSON();
-        const matches = (data.students || []).filter(s => 
-            s.id === loginId || 
-            (s.curp || '').toUpperCase() === loginIdUpper || 
+        const matches = (data.students || []).filter(s =>
+            s.id === loginId ||
+            (s.curp || '').toUpperCase() === loginIdUpper ||
             s.guardianPhone === loginId
         );
         if (matches.length > 0) {

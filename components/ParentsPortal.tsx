@@ -154,6 +154,10 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                 if (data && data.interactiveData) {
                     fullAssignment = { ...assignment, interactiveData: data.interactiveData };
                     console.log('[handleStartQuiz] Full assignment loaded successfully');
+                } else if (data && data.type === 'INTERACTIVE' && !data.interactiveData) {
+                    console.error('[handleStartQuiz] Activity was created without interactiveData. Please delete and recreate it.');
+                    alert("⚠️ Esta actividad tiene datos corruptos. Pide a tu maestro que la elimine y la vuelva a crear.");
+                    return;
                 } else {
                     console.error('[handleStartQuiz] No interactiveData in response');
                     alert("Error: No se pudieron cargar los datos de esta actividad (datos vacíos).");
