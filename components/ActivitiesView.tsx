@@ -241,7 +241,8 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
               forTeacherOnly: false // Changed to false to allow visibility if toggle is on
             };
           } else {
-            newAssignment.type = 'TASK';
+            // HTML_GAME activities are also INTERACTIVE type
+            newAssignment.type = 'INTERACTIVE';
           }
           newAssignment.description = nemPlanResult;
           // Size validation: Hostinger/Apache limits vary, but 1MB is a safe general threshold for JSON POSTs
@@ -1335,7 +1336,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                         <div className="space-y-4">
                           <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
                             <h4 className="font-bold text-slate-700 mb-3 text-sm">Agregar Pregunta Manual</h4>
-                            
+
                             <div className="grid grid-cols-2 gap-2 mb-3">
                               {['Lenguajes', 'Saberes', 'Etica', 'Humano'].map(cat => (
                                 <button

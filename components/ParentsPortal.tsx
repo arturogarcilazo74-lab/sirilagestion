@@ -56,7 +56,10 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
         try {
             const all = await api.getAssignments();
             const studentGroup = groupId.toUpperCase().trim();
-            
+
+            console.log(`[ParentsPortal] Fetching assignments. Total from API: ${all.length}`);
+            console.log(`[ParentsPortal] Student group: ${studentGroup}`);
+
             const filtered = all.filter(a => {
                 // 1. Check basic visibility flag
                 if (a.isVisibleInParentsPortal === false) return false;
@@ -90,6 +93,9 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
             });
 
             console.log(`[ParentsPortal] Loaded ${filtered.length}/${all.length} assignments for group ${groupId}`);
+            if (filtered.length === 0) {
+                console.warn(`[ParentsPortal] No assignments found! Check targetGroup values. Available groups:`, [...new Set(all.map(a => a.targetGroup || 'N/A'))]);
+            }
             setAssignments(filtered.sort((a, b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime()));
         } catch (e) {
             console.error('[ParentsPortal] Error loading assignments:', e);
@@ -129,8 +135,8 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
         let fullAssignment = assignment;
 
         // Lazy load full data if missing or stripped (Optimized Load Support)
-        const isStripped = assignment.interactiveData && (assignment.interactiveData as any).hasContent && 
-            !(assignment.interactiveData as any).imageUrl && 
+        const isStripped = assignment.interactiveData && (assignment.interactiveData as any).hasContent &&
+            !(assignment.interactiveData as any).imageUrl &&
             !(assignment.interactiveData as any).questions &&
             !(assignment.interactiveData as any).htmlContent;
 
@@ -578,17 +584,17 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
 
         const total = activeQuiz.interactiveData.questions.length;
         let rawScore = total > 0 ? (correctCount / total) * 10 : 0;
-        
+
         // Calculate Area-Based Scores
         const areaScores: Record<string, { correct: number, total: number }> = {};
         activeQuiz.interactiveData.questions.forEach((q, idx) => {
-          const cat = q.category || 'General';
-          if (!areaScores[cat]) areaScores[cat] = { correct: 0, total: 0 };
-          areaScores[cat].total++;
-          const answerId = q.id || `q-${idx}`;
-          if (quizAnswers[answerId] === q.correctIndex) {
-            areaScores[cat].correct++;
-          }
+            const cat = q.category || 'General';
+            if (!areaScores[cat]) areaScores[cat] = { correct: 0, total: 0 };
+            areaScores[cat].total++;
+            const answerId = q.id || `q-${idx}`;
+            if (quizAnswers[answerId] === q.correctIndex) {
+                areaScores[cat].correct++;
+            }
         });
 
         // Check for late submission
@@ -614,9 +620,9 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
 
         const areaPercentageResults: Record<string, number> = {};
         if (areaScores) {
-          Object.entries(areaScores).forEach(([area, data]) => {
-            areaPercentageResults[area] = Math.round((data.correct / data.total) * 100);
-          });
+            Object.entries(areaScores).forEach(([area, data]) => {
+                areaPercentageResults[area] = Math.round((data.correct / data.total) * 100);
+            });
         }
 
         const newAttempts = { ...(student.assignmentAttempts || {}), [activeQuiz.id]: (student.assignmentAttempts?.[activeQuiz.id] || 0) + 1 };
@@ -1024,37 +1030,37 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                     {student?.grades && student.grades.length > 0 ? (
                                         (() => {
                                             const getTrimesterAvg = (g: any) => {
-                                              if (!g) return 0;
-                                              if (typeof g === 'number') return g;
-                                              if (typeof g === 'string') return parseFloat(g) || 0;
-                                              if (typeof g === 'object') {
-                                                const fields = [g.lenguajes, g.saberes, g.etica, g.humano].map(v => Number(v) || 0);
-                                                const validFields = fields.filter(v => v > 0);
-                                                return validFields.length > 0 ? validFields.reduce((a, b) => a + b, 0) / validFields.length : 0;
-                                              }
-                                              return 0;
+                                                if (!g) return 0;
+                                                if (typeof g === 'number') return g;
+                                                if (typeof g === 'string') return parseFloat(g) || 0;
+                                                if (typeof g === 'object') {
+                                                    const fields = [g.lenguajes, g.saberes, g.etica, g.humano].map(v => Number(v) || 0);
+                                                    const validFields = fields.filter(v => v > 0);
+                                                    return validFields.length > 0 ? validFields.reduce((a, b) => a + b, 0) / validFields.length : 0;
+                                                }
+                                                return 0;
                                             };
                                             const activeTrims = student.grades.map(getTrimesterAvg).filter(a => a > 0);
                                             const academicAvg = activeTrims.length > 0 ? Math.min(10, activeTrims.reduce((a, b) => a + b, 0) / activeTrims.length) : 0;
-                                            
+
                                             const completedCount = Math.max(student.assignmentsCompleted || 0, (student.completedAssignmentIds?.length || 0));
                                             const cappedCompleted = Math.min(assignments.length, completedCount);
                                             const hwScore = assignments.length > 0 ? (cappedCompleted / assignments.length) * 10 : 0;
-                                            
+
                                             const conductScore = Math.max(5, Math.min(10, 8 + ((student.behaviorPoints || 0) * 0.1)));
-                                            
+
                                             let finalAvg = 0;
                                             const hasAcademic = academicAvg > 0;
                                             const hasHomework = assignments.length > 0;
 
                                             if (hasAcademic && hasHomework) {
-                                              finalAvg = (academicAvg * 0.3) + (hwScore * 0.55) + (conductScore * 0.15);
+                                                finalAvg = (academicAvg * 0.3) + (hwScore * 0.55) + (conductScore * 0.15);
                                             } else if (hasAcademic) {
-                                              finalAvg = (academicAvg * 0.85) + (conductScore * 0.15);
+                                                finalAvg = (academicAvg * 0.85) + (conductScore * 0.15);
                                             } else if (hasHomework) {
-                                              finalAvg = (hwScore * 0.85) + (conductScore * 0.15);
+                                                finalAvg = (hwScore * 0.85) + (conductScore * 0.15);
                                             } else {
-                                              finalAvg = conductScore;
+                                                finalAvg = conductScore;
                                             }
                                             return Math.min(10, finalAvg).toFixed(1);
                                         })()
@@ -1208,19 +1214,17 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                         .slice(0, 5)
                                         .map((log, idx) => (
                                             <div key={log.id || idx} className="flex items-start gap-3 p-3">
-                                                <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 text-xs font-black ${
-                                                    log.type === 'POSITIVE' ? 'bg-emerald-100 text-emerald-600' :
+                                                <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 text-xs font-black ${log.type === 'POSITIVE' ? 'bg-emerald-100 text-emerald-600' :
                                                     log.type === 'NEGATIVE' ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-600'
-                                                }`}>
+                                                    }`}>
                                                     {log.type === 'POSITIVE' ? '+' : log.type === 'NEGATIVE' ? '-' : '•'}
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <p className="text-xs font-bold text-slate-700 leading-tight">{log.description}</p>
                                                     <p className="text-[10px] text-slate-400 mt-0.5">{new Date(log.date).toLocaleDateString('es-MX')}</p>
                                                 </div>
-                                                <span className={`text-xs font-black flex-shrink-0 ${
-                                                    log.points > 0 ? 'text-emerald-600' : log.points < 0 ? 'text-red-600' : 'text-slate-400'
-                                                }`}>
+                                                <span className={`text-xs font-black flex-shrink-0 ${log.points > 0 ? 'text-emerald-600' : log.points < 0 ? 'text-red-600' : 'text-slate-400'
+                                                    }`}>
                                                     {log.points > 0 ? '+' : ''}{log.points}
                                                 </span>
                                             </div>
@@ -1290,7 +1294,10 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                         </div>
                                     ) : (
                                         pendingAssignments.map(assign => {
-                                            const isInteractive = assign.type === 'INTERACTIVE';
+                                            // Check if interactive by type OR by having interactiveData with a recognized type
+                                            const isInteractive = assign.type === 'INTERACTIVE' ||
+                                                (assign.interactiveData &&
+                                                    ['QUIZ', 'WORKSHEET', 'HTML_GAME'].includes(assign.interactiveData.type));
                                             const dueEnd = new Date(assign.dueDate);
                                             dueEnd.setHours(23, 59, 59);
                                             const isLate = dueEnd < new Date();
@@ -1382,7 +1389,10 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                         </div>
                                     ) : (
                                         completedAssignments.map(assign => {
-                                            const isInteractive = assign.type === 'INTERACTIVE';
+                                            // Check if interactive by type OR by having interactiveData with a recognized type
+                                            const isInteractive = assign.type === 'INTERACTIVE' ||
+                                                (assign.interactiveData &&
+                                                    ['QUIZ', 'WORKSHEET', 'HTML_GAME'].includes(assign.interactiveData.type));
                                             const score = student?.assignmentResults?.[assign.id];
                                             return (
                                                 <div key={assign.id} className="bg-slate-50 p-4 rounded-xl border border-slate-200/50 relative overflow-hidden">
@@ -1704,28 +1714,28 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                     </p>
 
                                     {quizResult.areaScores && Object.keys(quizResult.areaScores).length > 0 && (
-                                      <div className="mb-6 max-w-sm mx-auto bg-slate-50 rounded-2xl p-4 border border-slate-100">
-                                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Resultados por Campo</h4>
-                                        <div className="space-y-2">
-                                          {Object.entries(quizResult.areaScores).map(([area, data]) => {
-                                            const pct = Math.round((data.correct / data.total) * 100);
-                                            return (
-                                              <div key={area} className="flex flex-col gap-1">
-                                                <div className="flex justify-between text-xs font-bold">
-                                                  <span className="text-slate-700">{area}</span>
-                                                  <span className={pct >= 60 ? 'text-indigo-600' : 'text-red-500'}>{data.correct}/{data.total} ({pct}%)</span>
-                                                </div>
-                                                <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                                                  <div 
-                                                    className={`h-full transition-all duration-1000 ${pct >= 60 ? 'bg-indigo-500' : 'bg-red-400'}`} 
-                                                    style={{ width: `${pct}%` }}
-                                                  ></div>
-                                                </div>
-                                              </div>
-                                            );
-                                          })}
+                                        <div className="mb-6 max-w-sm mx-auto bg-slate-50 rounded-2xl p-4 border border-slate-100">
+                                            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Resultados por Campo</h4>
+                                            <div className="space-y-2">
+                                                {Object.entries(quizResult.areaScores).map(([area, data]) => {
+                                                    const pct = Math.round((data.correct / data.total) * 100);
+                                                    return (
+                                                        <div key={area} className="flex flex-col gap-1">
+                                                            <div className="flex justify-between text-xs font-bold">
+                                                                <span className="text-slate-700">{area}</span>
+                                                                <span className={pct >= 60 ? 'text-indigo-600' : 'text-red-500'}>{data.correct}/{data.total} ({pct}%)</span>
+                                                            </div>
+                                                            <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                                                                <div
+                                                                    className={`h-full transition-all duration-1000 ${pct >= 60 ? 'bg-indigo-500' : 'bg-red-400'}`}
+                                                                    style={{ width: `${pct}%` }}
+                                                                ></div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
-                                      </div>
                                     )}
                                     <div className="flex justify-center gap-4">
                                         {!quizResult.passed && (
@@ -2313,25 +2323,22 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                     }
 
                                     return studentLogs.map((log, idx) => (
-                                        <div key={log.id || idx} className={`flex gap-3 p-3 rounded-xl border ${
-                                            log.type === 'POSITIVE' ? 'bg-emerald-50 border-emerald-100' :
+                                        <div key={log.id || idx} className={`flex gap-3 p-3 rounded-xl border ${log.type === 'POSITIVE' ? 'bg-emerald-50 border-emerald-100' :
                                             log.type === 'NEGATIVE' ? 'bg-red-50 border-red-100' :
-                                            'bg-slate-50 border-slate-100'
-                                        }`}>
-                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 font-black text-sm ${
-                                                log.type === 'POSITIVE' ? 'bg-emerald-200 text-emerald-700' :
-                                                log.type === 'NEGATIVE' ? 'bg-red-200 text-red-700' :
-                                                'bg-slate-200 text-slate-700'
+                                                'bg-slate-50 border-slate-100'
                                             }`}>
+                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 font-black text-sm ${log.type === 'POSITIVE' ? 'bg-emerald-200 text-emerald-700' :
+                                                log.type === 'NEGATIVE' ? 'bg-red-200 text-red-700' :
+                                                    'bg-slate-200 text-slate-700'
+                                                }`}>
                                                 {log.points > 0 ? '+' : ''}{log.points}
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-2 mb-0.5">
-                                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase ${
-                                                        log.type === 'POSITIVE' ? 'bg-emerald-100 text-emerald-700' :
+                                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase ${log.type === 'POSITIVE' ? 'bg-emerald-100 text-emerald-700' :
                                                         log.type === 'NEGATIVE' ? 'bg-red-100 text-red-700' :
-                                                        'bg-slate-100 text-slate-600'
-                                                    }`}>
+                                                            'bg-slate-100 text-slate-600'
+                                                        }`}>
                                                         {log.type === 'POSITIVE' ? 'Positivo' : log.type === 'NEGATIVE' ? 'Negativo' : 'Neutro'}
                                                     </span>
                                                     <span className="text-[10px] text-slate-400">{new Date(log.date).toLocaleDateString('es-MX')}</span>
