@@ -141,7 +141,10 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
         const isStripped = assignment.interactiveData && (assignment.interactiveData as any).hasContent &&
             !(assignment.interactiveData as any).imageUrl &&
             !(assignment.interactiveData as any).questions &&
-            !(assignment.interactiveData as any).htmlContent;
+            !(assignment.interactiveData as any).htmlContent &&
+            !(assignment.interactiveData as any).gameUrl &&
+            !(assignment.interactiveData as any).interactiveZones &&
+            !(assignment.interactiveData as any).draggableItems;
 
         const needsLoad = !assignment.interactiveData || isStripped;
         console.log('[handleStartQuiz] Needs lazy load:', needsLoad, 'isStripped:', isStripped);

@@ -233,41 +233,42 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
             videoUrl: videoUrl.trim() || undefined
           };
         } else if (activityType === 'PLANNING') {
-          if (questions.length > 0) {
-            newAssignment.type = 'INTERACTIVE';
+          newAssignment.description = nemPlanResult;
+          newAssignment.type = 'INTERACTIVE';
+
+          if (htmlGameContent || htmlGameUrl) {
+            // Size validation: Hostinger/Apache limits vary, but 1MB is a safe general threshold for JSON POSTs
+            if (htmlGameContent && htmlGameContent.length > 1.5 * 1024 * 1024) {
+              const proceed = confirm("⚠️ El archivo es muy pesado (>1.5MB). Esto puede fallar al guardarse en Hostinger o ralentizar tu dispositivo. ¿Deseas intentar guardarlo de todas formas?");
+              if (!proceed) {
+                setIsSaving(false);
+                return;
+              }
+            }
+            newAssignment.interactiveData = {
+              type: 'HTML_GAME',
+              htmlContent: htmlGameContent || '',
+              gameUrl: htmlGameUrl.trim() || undefined,
+              gameType: 'OTHER'
+            };
+            if (questions.length > 0) {
+              newAssignment.assignmentType = 'NEM_EVALUATION';
+            }
+            console.log('[ActivitiesView] PLANNING HTML_GAME data:', {
+              type: 'HTML_GAME',
+              hasContent: !!htmlGameContent,
+              contentLength: htmlGameContent?.length,
+              gameUrl: htmlGameUrl
+            });
+          } else if (questions.length > 0) {
             newAssignment.assignmentType = 'NEM_EVALUATION';
             newAssignment.interactiveData = {
               type: 'QUIZ',
               questions: questions,
               videoUrl: videoUrl.trim() || undefined,
-              forTeacherOnly: false // Changed to false to allow visibility if toggle is on
+              forTeacherOnly: false
             };
-          } else {
-            // HTML_GAME activities are also INTERACTIVE type
-            newAssignment.type = 'INTERACTIVE';
           }
-          newAssignment.description = nemPlanResult;
-          // Size validation: Hostinger/Apache limits vary, but 1MB is a safe general threshold for JSON POSTs
-          if (htmlGameContent && htmlGameContent.length > 1.5 * 1024 * 1024) {
-            const proceed = confirm("⚠️ El archivo es muy pesado (>1.5MB). Esto puede fallar al guardarse en Hostinger o ralentizar tu dispositivo. ¿Deseas intentar guardarlo de todas formas?");
-            if (!proceed) {
-              setIsSaving(false);
-              return;
-            }
-          }
-
-          newAssignment.interactiveData = {
-            type: 'HTML_GAME',
-            htmlContent: htmlGameContent || '',
-            gameUrl: htmlGameUrl.trim() || undefined,
-            gameType: 'OTHER'
-          };
-          console.log('[ActivitiesView] PLANNING HTML_GAME data:', {
-            type: 'HTML_GAME',
-            hasContent: !!htmlGameContent,
-            contentLength: htmlGameContent?.length,
-            gameUrl: htmlGameUrl
-          });
         } else if (activityType === 'HTML_GAME') {
           // Direct HTML_GAME type support
           newAssignment.type = 'INTERACTIVE';

@@ -169,11 +169,23 @@ app.get('/sirila-v1/full-state', async (req, res) => {
                 }
             }
 
-            // Only keep lightweight assignment info for initial state
+            // Keep lightweight assignment info for initial state, but preserve critical fields
             return {
                 ...d,
                 id: r.id,
-                interactiveData: d.interactiveData ? { type: d.interactiveData.type, hasContent: true } : null
+                interactiveData: d.interactiveData ? {
+                    type: d.interactiveData.type,
+                    hasContent: true,
+                    questions: d.interactiveData.questions,
+                    minScoreToPass: d.interactiveData.minScoreToPass,
+                    imageUrl: d.interactiveData.imageUrl && d.interactiveData.imageUrl.length > 100000 ? undefined : d.interactiveData.imageUrl,
+                    interactiveZones: d.interactiveData.interactiveZones,
+                    draggableItems: d.interactiveData.draggableItems,
+                    gradingCriteria: d.interactiveData.gradingCriteria,
+                    gameUrl: d.interactiveData.gameUrl,
+                    videoUrl: d.interactiveData.videoUrl,
+                    htmlContent: d.interactiveData.htmlContent && d.interactiveData.htmlContent.length > 50000 ? undefined : d.interactiveData.htmlContent
+                } : null
             };
         });
 
@@ -589,10 +601,17 @@ app.get('/sirila-v1/assignments', async (req, res) => {
 
             // OPTIMIZATION: Strip huge payloads from the list view
             // The frontend (ParentsPortal) lazily loads detail via getAssignmentById
-            if (d.interactiveData && d.interactiveData.htmlContent && d.interactiveData.htmlContent.length > 50000) {
-                d.interactiveData.htmlContent = undefined;
-                d.interactiveData.hasContent = true;
-                d.isOptimized = true;
+            if (d.interactiveData) {
+                if (d.interactiveData.htmlContent && d.interactiveData.htmlContent.length > 50000) {
+                    d.interactiveData.htmlContent = undefined;
+                    d.interactiveData.hasContent = true;
+                    d.isOptimized = true;
+                }
+                if (d.interactiveData.imageUrl && d.interactiveData.imageUrl.length > 100000) {
+                    d.interactiveData.imageUrl = undefined;
+                    d.interactiveData.hasContent = true;
+                    d.isOptimized = true;
+                }
             }
 
             return { ...d, id: r.id }; // Ensure ID from column is used

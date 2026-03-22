@@ -569,9 +569,12 @@ export const useAppStore = () => {
             type: assignmentData.type || 'TASK',
             interactiveData: assignmentData.interactiveData,
             isVisibleInParentsPortal: assignmentData.isVisibleInParentsPortal ?? true,
-            targetGroup: assignmentData.targetGroup, // Fixed: Persist privacy group
+            targetGroup: assignmentData.targetGroup,
             description: assignmentData.description,
-            assignmentType: assignmentData.assignmentType
+            assignmentType: assignmentData.assignmentType,
+            instructions: assignmentData.instructions,
+            externalLinks: assignmentData.externalLinks,
+            maxAttempts: assignmentData.maxAttempts
         };
 
         console.log('[useAppStore] handleAddAssignment received:', {
