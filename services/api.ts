@@ -125,15 +125,23 @@ export const api = {
 
                 if (!res.ok) {
                     // Special Handling for 404 (Resource not found)
-                    // If we try to delete something that doesn't exist, we should probably just drop it
                     if (res.status === 404 && item.method === 'DELETE') {
                         console.warn(`Dropping 404 DELETE item: ${item.endpoint}`);
-                        continue; // Don't add to remainingQueue
+                        continue;
                     }
                     // Special Handling for 409 (Conflict/Duplicate)
                     if (res.status === 409) {
                         console.warn(`Dropping 409 Conflict item: ${item.endpoint}`);
                         continue;
+                    }
+                    // Special Handling for 403 (Forbidden) - drop after too many retries
+                    if (res.status === 403) {
+                        const retryCount = (item.retryCount || 0) + 1;
+                        if (retryCount >= 3) {
+                            console.warn(`Dropping 403 item after ${retryCount} retries: ${item.endpoint}`);
+                            continue;
+                        }
+                        item.retryCount = retryCount;
                     }
 
                     throw new Error(`Server error: ${res.status}`);

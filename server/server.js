@@ -49,6 +49,12 @@ app.get('/health', (req, res) => {
     });
 });
 
+// Diagnostic: Test POST endpoint
+app.post('/sirila-v1/test-post', (req, res) => {
+    console.log('[TEST POST] Received:', JSON.stringify(req.body).substring(0, 200));
+    res.json({ success: true, receivedSize: JSON.stringify(req.body).length, timestamp: Date.now() });
+});
+
 // --- STORAGE STRATEGY ---
 let useMySQL = false;
 let pool = null;
