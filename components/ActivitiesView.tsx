@@ -205,6 +205,8 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
           externalLinks: (activityType === 'TASK' && newExternalLinks.length > 0) ? newExternalLinks : undefined
         };
 
+        console.log('[ActivitiesView] Creating activity:', activityType, 'Title:', newTitle);
+
         if (activityType === 'QUIZ') {
           if (questions.length === 0) {
             alert("Debes agregar al menos una pregunta para crear un Cuestionario Interactivo.");
@@ -260,7 +262,21 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
             gameUrl: htmlGameUrl.trim() || undefined,
             gameType: 'OTHER'
           };
+          console.log('[ActivitiesView] HTML_GAME data:', {
+            type: 'HTML_GAME',
+            hasContent: !!htmlGameContent,
+            contentLength: htmlGameContent?.length,
+            gameUrl: htmlGameUrl
+          });
         }
+
+
+        console.log('[ActivitiesView] Final assignment to save:', {
+          id: newAssignment.id,
+          title: newAssignment.title,
+          type: newAssignment.type,
+          interactiveDataType: newAssignment.interactiveData?.type
+        });
 
 
         await onAddAssignment(newAssignment);

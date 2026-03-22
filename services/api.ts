@@ -10,9 +10,9 @@ const GET_BASE_URL = () => {
     // it's likely a leftover from migration or dev testing.
     const isRemote = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
     const isLegacy = stored && (
-        stored.includes('localhost') || 
-        stored.includes('127.0.0.1') || 
-        stored.includes('orender.com') || 
+        stored.includes('localhost') ||
+        stored.includes('127.0.0.1') ||
+        stored.includes('orender.com') ||
         stored.includes('render.com')
     );
 
@@ -259,6 +259,15 @@ export const api = {
 
     saveAssignment: async (assignment: Assignment) => {
         try {
+            console.log('[api.saveAssignment] Sending assignment:', {
+                id: assignment.id,
+                title: assignment.title,
+                type: assignment.type,
+                interactiveDataType: assignment.interactiveData?.type,
+                hasInteractiveData: !!assignment.interactiveData,
+                payloadSize: JSON.stringify(assignment).length
+            });
+
             const res = await fetch(`${API_URL}/assignments`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(assignment)
             });
@@ -266,6 +275,7 @@ export const api = {
                 const errorData = await res.json().catch(() => ({ error: `Error ${res.status}` }));
                 throw new Error(errorData.error || `Error del servidor: ${res.status}`);
             }
+            console.log('[api.saveAssignment] Server responded successfully');
             return await res.json();
         } catch (e: any) {
             console.error("Save Assignment Error:", e);
@@ -273,7 +283,7 @@ export const api = {
             if (e.message.includes('servidor') || e.message.includes('grande') || e.message.includes('base de datos')) {
                 throw e;
             }
-            
+
             // Otherwise, attempt offline queue
             try {
                 addToQueue(`/assignments`, 'POST', assignment);
@@ -377,7 +387,7 @@ export const api = {
         const res = await fetch(`${API_URL}/parent/login`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ loginId })
         });
-        
+
         if (!res.ok) {
             const text = await res.text();
             try {

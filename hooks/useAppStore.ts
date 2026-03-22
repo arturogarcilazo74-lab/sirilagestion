@@ -133,19 +133,19 @@ export const useAppStore = () => {
     }, [students]);
 
     useEffect(() => {
-        try { 
+        try {
             const serialized = JSON.stringify(assignments);
             if (serialized.length > 4 * 1024 * 1024) {
-               console.warn("Assignments array too large for localStorage. Clearing large HTML content from cache to prevent crash.");
-               const optimized = assignments.map(a => {
-                   if (a.interactiveData?.type === 'HTML_GAME' && a.interactiveData.htmlContent && a.interactiveData.htmlContent.length > 500000) {
-                      return { ...a, interactiveData: { ...a.interactiveData, htmlContent: undefined, hasContent: true } };
-                   }
-                   return a;
-               });
-               localStorage.setItem('SIRILA_CACHE_ASSIGNMENTS', JSON.stringify(optimized));
+                console.warn("Assignments array too large for localStorage. Clearing large HTML content from cache to prevent crash.");
+                const optimized = assignments.map(a => {
+                    if (a.interactiveData?.type === 'HTML_GAME' && a.interactiveData.htmlContent && a.interactiveData.htmlContent.length > 500000) {
+                        return { ...a, interactiveData: { ...a.interactiveData, htmlContent: undefined, hasContent: true } };
+                    }
+                    return a;
+                });
+                localStorage.setItem('SIRILA_CACHE_ASSIGNMENTS', JSON.stringify(optimized));
             } else {
-               localStorage.setItem('SIRILA_CACHE_ASSIGNMENTS', serialized); 
+                localStorage.setItem('SIRILA_CACHE_ASSIGNMENTS', serialized);
             }
         }
         catch (e) { console.warn("Cache Assignments failed (Storage Full?)", e); }
@@ -573,10 +573,17 @@ export const useAppStore = () => {
             description: assignmentData.description,
             assignmentType: assignmentData.assignmentType
         };
-        
+
+        console.log('[useAppStore] handleAddAssignment received:', {
+            title: newAssignment.title,
+            type: newAssignment.type,
+            interactiveDataType: newAssignment.interactiveData?.type,
+            hasInteractiveData: !!newAssignment.interactiveData
+        });
+
         // Optimistic Update
         setAssignments(prev => [...prev, newAssignment]);
-        
+
         try {
             await api.saveAssignment(newAssignment);
             return { success: true };
@@ -604,22 +611,22 @@ export const useAppStore = () => {
 
         // Update student totals (Optimistic)
         setStudents(prev => prev.map(s => {
-          if ((s.totalAssignments || 0) > 0) {
-            const assignment = previousAssignments.find(a => a.id === id);
-            const target = (assignment?.targetGroup || '').toUpperCase().trim();
-            const studentG = (s.group || '').toUpperCase().trim();
-            const isRelevant = !target || target === 'GLOBAL' || target === 'TODOS' || target === studentG;
-            if (isRelevant) return { ...s, totalAssignments: Math.max(0, (s.totalAssignments || 0) - 1) };
-          }
-          return s;
+            if ((s.totalAssignments || 0) > 0) {
+                const assignment = previousAssignments.find(a => a.id === id);
+                const target = (assignment?.targetGroup || '').toUpperCase().trim();
+                const studentG = (s.group || '').toUpperCase().trim();
+                const isRelevant = !target || target === 'GLOBAL' || target === 'TODOS' || target === studentG;
+                if (isRelevant) return { ...s, totalAssignments: Math.max(0, (s.totalAssignments || 0) - 1) };
+            }
+            return s;
         }));
 
         try {
             await api.deleteAssignment(id);
             // Sync with backend
             setStudents(current => {
-              current.forEach(student => api.saveStudent(student));
-              return current;
+                current.forEach(student => api.saveStudent(student));
+                return current;
             });
         } catch (error: any) {
             console.error("Failed to delete assignment:", error);
