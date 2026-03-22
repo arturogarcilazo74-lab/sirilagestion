@@ -642,6 +642,12 @@ app.post('/sirila-v1/assignments', async (req, res) => {
     const a = req.body;
     const payloadSize = JSON.stringify(a).length;
     console.log(`[ASSIGNMENT] Attempting to save activity: "${a.title}" (ID: ${a.id}). Payload size: ${(payloadSize / 1024).toFixed(2)} KB`);
+    console.log(`[ASSIGNMENT] Activity type: ${a.type}`);
+    console.log(`[ASSIGNMENT] Has interactiveData: ${!!a.interactiveData}`);
+    if (a.interactiveData) {
+        console.log(`[ASSIGNMENT] interactiveData.type: ${a.interactiveData.type}`);
+        console.log(`[ASSIGNMENT] htmlContent length: ${a.interactiveData.htmlContent?.length || 0}`);
+    }
 
     try {
         const pool = getPool();

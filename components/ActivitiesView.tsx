@@ -305,6 +305,9 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
 
         await onAddAssignment(newAssignment);
 
+        console.log('[ActivitiesView] Assignment saved successfully!');
+        console.log('[ActivitiesView] Verify in console: The assignment should have interactiveData now');
+
         // Reset
         setNewTitle('');
         setIsAdding(false);
