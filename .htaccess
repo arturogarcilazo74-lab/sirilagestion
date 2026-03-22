@@ -1,0 +1,46 @@
+RewriteEngine On
+
+# Disable mod_security if available (Hostinger blocks POST with JSON)
+<IfModule mod_security.c>
+    SecFilterEngine Off
+    SecFilterScanPOST Off
+</IfModule>
+
+# Increase request body size limit for large HTML game files
+<IfModule mod_php.c>
+    php_value upload_max_filesize 200M
+    php_value post_max_size 200M
+    php_value memory_limit 256M
+</IfModule>
+
+# Apache 2.4+ limit settings
+<IfModule mod_reqtimeout.c>
+    RequestReadTimeout body=600
+</IfModule>
+
+# Allow all HTTP methods (GET, POST, PUT, DELETE)
+<Limit GET POST PUT DELETE OPTIONS>
+    Allow from all
+</Limit>
+
+# CORS headers for API
+<IfModule mod_headers.c>
+    Header always set Access-Control-Allow-Origin "*"
+    Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+    Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
+    Header always set Access-Control-Max-Age "86400"
+
+    # Handle preflight OPTIONS requests
+    RewriteCond %{REQUEST_METHOD} OPTIONS
+    RewriteRule ^(.*)$ $1 [R=200,L]
+</IfModule>
+
+# Forward all requests to Node.js app
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ http://127.0.0.1:3000/$1 [P,L]
+
+# Proxy settings
+<IfModule mod_proxy.c>
+    ProxyPassReverse / http://127.0.0.1:3000/
+</IfModule>

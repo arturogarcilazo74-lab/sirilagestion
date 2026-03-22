@@ -15,7 +15,14 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(cors());
-app.use(express.json({ limit: '500mb' }));
+
+// Request logging middleware (debug for 403 issue)
+app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} | Content-Type: ${req.headers['content-type'] || 'none'} | Content-Length: ${req.headers['content-length'] || '0'}`);
+    next();
+});
+
+app.use(express.json({ limit: '50mb' }));
 
 // --- API ALIAS / BACKWARD COMPATIBILITY ---
 // Map /api requests to /sirila-v1 prefix
