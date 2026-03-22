@@ -52,13 +52,17 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
     const [honorRoll, setHonorRoll] = useState<any[]>([]);
 
     const loadAssignments = useCallback(async (groupId?: string) => {
-        if (!groupId) return;
+        if (!groupId) {
+            console.warn('[ParentsPortal] loadAssignments: groupId is undefined/null! Student group missing.');
+            return;
+        }
         try {
             const all = await api.getAssignments();
             const studentGroup = groupId.toUpperCase().trim();
 
             console.log(`[ParentsPortal] Fetching assignments. Total from API: ${all.length}`);
-            console.log(`[ParentsPortal] Student group: ${studentGroup}`);
+            console.log(`[ParentsPortal] Student group: "${studentGroup}"`);
+            console.log(`[ParentsPortal] Available targetGroups:`, [...new Set(all.map((a: any) => a.targetGroup || 'N/A'))]);
 
             const filtered = all.filter(a => {
                 // 1. Check basic visibility flag
@@ -697,6 +701,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
 
 
     const completeLogin = (selStudent: Student, multiple: boolean = false) => {
+        console.log('[ParentsPortal] completeLogin - student:', selStudent.name, '| group:', selStudent.group, '| id:', selStudent.id);
         setStudent(selStudent);
         setIsLoggedIn(true);
         setStudentsToSelect(null);
@@ -706,6 +711,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
         loadNotifications(selStudent.id);
         loadEvents();
         loadMessages(selStudent.id);
+        console.log('[ParentsPortal] Calling loadAssignments with group:', selStudent.group);
         loadAssignments(selStudent.group); // Fetch assignments with context
 
         // Fetch Behavior Logs
@@ -727,6 +733,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
         setError('');
         try {
             const res = await api.parentLogin(trimmedId);
+            console.log('[ParentsPortal] Login response:', { success: res.success, multiple: res.multiple, studentGroup: res.student?.group, studentName: res.student?.name });
             if (res.success) {
                 if (res.multiple && res.students) {
                     setStudentsToSelect(res.students);
