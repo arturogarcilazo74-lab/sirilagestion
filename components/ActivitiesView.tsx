@@ -262,6 +262,30 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
             gameUrl: htmlGameUrl.trim() || undefined,
             gameType: 'OTHER'
           };
+          console.log('[ActivitiesView] PLANNING HTML_GAME data:', {
+            type: 'HTML_GAME',
+            hasContent: !!htmlGameContent,
+            contentLength: htmlGameContent?.length,
+            gameUrl: htmlGameUrl
+          });
+        } else if (activityType === 'HTML_GAME') {
+          // Direct HTML_GAME type support
+          newAssignment.type = 'INTERACTIVE';
+          // Size validation
+          if (htmlGameContent && htmlGameContent.length > 1.5 * 1024 * 1024) {
+            const proceed = confirm("⚠️ El archivo es muy pesado (>1.5MB). Esto puede fallar al guardarse en Hostinger o ralentizar tu dispositivo. ¿Deseas intentar guardarlo de todas formas?");
+            if (!proceed) {
+              setIsSaving(false);
+              return;
+            }
+          }
+
+          newAssignment.interactiveData = {
+            type: 'HTML_GAME',
+            htmlContent: htmlGameContent || '',
+            gameUrl: htmlGameUrl.trim() || undefined,
+            gameType: 'OTHER'
+          };
           console.log('[ActivitiesView] HTML_GAME data:', {
             type: 'HTML_GAME',
             hasContent: !!htmlGameContent,
