@@ -134,29 +134,42 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
 
         let fullAssignment = assignment;
 
+        console.log('[handleStartQuiz] Starting activity:', assignment.id, assignment.title);
+        console.log('[handleStartQuiz] Current interactiveData:', assignment.interactiveData);
+
         // Lazy load full data if missing or stripped (Optimized Load Support)
         const isStripped = assignment.interactiveData && (assignment.interactiveData as any).hasContent &&
             !(assignment.interactiveData as any).imageUrl &&
             !(assignment.interactiveData as any).questions &&
             !(assignment.interactiveData as any).htmlContent;
 
-        if (!assignment.interactiveData || isStripped) {
+        const needsLoad = !assignment.interactiveData || isStripped;
+        console.log('[handleStartQuiz] Needs lazy load:', needsLoad, 'isStripped:', isStripped);
+
+        if (needsLoad) {
             try {
+                console.log('[handleStartQuiz] Fetching full assignment data from API...');
                 const data = await api.getAssignmentById(assignment.id);
+                console.log('[handleStartQuiz] Received data:', data);
                 if (data && data.interactiveData) {
                     fullAssignment = { ...assignment, interactiveData: data.interactiveData };
+                    console.log('[handleStartQuiz] Full assignment loaded successfully');
                 } else {
-                    alert("Error: No se pudieron cargar los datos de esta actividad.");
+                    console.error('[handleStartQuiz] No interactiveData in response');
+                    alert("Error: No se pudieron cargar los datos de esta actividad (datos vacíos).");
                     return;
                 }
             } catch (e) {
-                console.error("Failed to load assignment detail", e);
-                alert("Error de conexión al cargar la actividad.");
+                console.error("[handleStartQuiz] Failed to load assignment detail", e);
+                alert("Error de conexión al cargar la actividad. Revisa la consola para más detalles.");
                 return;
             }
         }
 
+        console.log('[handleStartQuiz] Interactive data type:', fullAssignment.interactiveData?.type);
+
         if (fullAssignment.interactiveData?.type === 'HTML_GAME') {
+            console.log('[handleStartQuiz] Launching HTML_GAME');
             setActiveHtmlGame(fullAssignment);
             return;
         }
