@@ -24,6 +24,24 @@ app.use((req, res, next) => {
 
 app.use(express.json({ limit: '50mb' }));
 
+// Parse text/plain as JSON (bypasses Hostinger WAF that blocks large application/json POSTs)
+app.use((req, res, next) => {
+    if (req.headers['content-type'] === 'text/plain' && req.body === undefined) {
+        let body = '';
+        req.on('data', chunk => { body += chunk.toString(); });
+        req.on('end', () => {
+            try {
+                req.body = JSON.parse(body);
+            } catch (e) {
+                req.body = body;
+            }
+            next();
+        });
+    } else {
+        next();
+    }
+});
+
 // --- API ALIAS / BACKWARD COMPATIBILITY ---
 // Map /api requests to /sirila-v1 prefix
 app.use((req, res, next) => {

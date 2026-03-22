@@ -119,7 +119,7 @@ export const api = {
 
                 const res = await fetch(finalUrl, {
                     method: item.method,
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'text/plain' },
                     body: (item.data || item.body) ? JSON.stringify(item.data || item.body) : null
                 });
 
@@ -276,8 +276,10 @@ export const api = {
                 payloadSize: JSON.stringify(assignment).length
             });
 
+            // Use text/plain to bypass Hostinger WAF that blocks large application/json POSTs
+            const jsonBody = JSON.stringify(assignment);
             const res = await fetch(`${API_URL}/assignments`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(assignment)
+                method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: jsonBody
             });
             if (!res.ok) {
                 const errorData = await res.json().catch(() => ({ error: `Error ${res.status}` }));
