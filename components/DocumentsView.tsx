@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Student, SchoolConfig } from '../types';
 import { generateDocumentContent } from '../services/ai';
+import { generateStudentAnalysis } from '../services/ai';
 import { FileText, Download, Printer, Copy, CheckCircle, AlertTriangle, Calendar, User, FileOutput, Bus, Upload } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 
@@ -27,7 +28,7 @@ interface DocumentsViewProps {
     initialType?: DocumentType;
 }
 
-type DocumentType = 'INCIDENCIA' | 'CITATORIO' | 'FICHA_DESCRIPTIVA' | 'PLANEACION' | 'ACTA_HECHOS' | 'PERMISO_SALIDA' | 'AUTORIZACION_EVENTO' | 'PRESENTACION_RESULTADOS' | 'OBSERVACIONES_BOLETA';
+type DocumentType = 'INCIDENCIA' | 'CITATORIO' | 'FICHA_DESCRIPTIVA' | 'PLANEACION' | 'ACTA_HECHOS' | 'PERMISO_SALIDA' | 'AUTORIZACION_EVENTO' | 'PRESENTACION_RESULTADOS' | 'OBSERVACIONES_BOLETA' | 'INFORME_PADRES';
 
 export const DocumentsView: React.FC<DocumentsViewProps> = ({ students, config, initialType }) => {
     const [selectedType, setSelectedType] = useState<DocumentType>(initialType || 'INCIDENCIA');
@@ -96,6 +97,214 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({ students, config, 
         const studentName = student ? student.name : "Alumno General";
         const guardianName = student ? student.guardianName : "Padre/Tutor";
 
+        // --- INFORME PARA PADRES CON ANÁLISIS IA ---
+        if (selectedType === 'INFORME_PADRES') {
+            if (!student) {
+                setGeneratedContent('Error: Debes seleccionar un alumno para generar el informe.');
+                setIsGenerating(false);
+                return;
+            }
+
+            try {
+                // Build complete student data for AI analysis
+                const gradesData = (student.grades || []).map((g, idx) => {
+                    if (typeof g === 'object' && g !== null) {
+                        const leng = Number(g.lenguajes || 0);
+                        const sab = Number(g.saberes || 0);
+                        const eti = Number(g.etica || 0);
+                        const hum = Number(g.humano || 0);
+                        const validFields = [leng, sab, eti, hum].filter(v => v > 0);
+                        const avg = validFields.length > 0 ? validFields.reduce((a, b) => a + b, 0) / validFields.length : 0;
+                        return { trimester: idx + 1, lenguajes: leng, saberes: sab, etica: eti, humano: hum, promedio: Number(avg.toFixed(1)) };
+                    }
+                    return { trimester: idx + 1, lenguajes: 0, saberes: 0, etica: 0, humano: 0, promedio: 0 };
+                });
+
+                const attendance = student.attendance || {};
+                const studentLogs = (window as any).__appLogs || []; // Will be passed via props later
+
+                // Calculate overall average
+                const getGradeAvg = (g: any) => {
+                    if (typeof g === 'number') return g;
+                    if (!g) return 0;
+                    if (typeof g === 'object') {
+                        const fields = [Number(g.lenguajes || 0), Number(g.saberes || 0), Number(g.etica || 0), Number(g.humano || 0)];
+                        const valid = fields.filter(v => v > 0);
+                        return valid.length > 0 ? valid.reduce((a, b) => a + b, 0) / valid.length : 0;
+                    }
+                    return 0;
+                };
+                const gradesAvg = student.grades?.length
+                    ? student.grades.reduce((acc, g) => acc + getGradeAvg(g), 0) / student.grades.length
+                    : 0;
+
+                const analysis = await generateStudentAnalysis(student.name, {
+                    grades: gradesData,
+                    attendance: {
+                        presentes: Object.values(attendance).filter(s => s === 'Presente').length,
+                        faltas: Object.values(attendance).filter(s => s === 'Ausente').length,
+                        retardos: Object.values(attendance).filter(s => s === 'Retardo').length
+                    },
+                    behavior: {
+                        puntos: student.behaviorPoints || 0,
+                        positivos: 0,
+                        negativos: 0,
+                        incidentes: []
+                    },
+                    tareas: {
+                        completadas: student.assignmentsCompleted || 0,
+                        total: student.totalAssignments || 0,
+                        porcentaje: student.totalAssignments > 0 ? Math.round((student.assignmentsCompleted / student.totalAssignments) * 100) : 0
+                    },
+                    bap: student.bap || 'NINGUNA',
+                    usaer: student.usaer || false,
+                    repetidor: student.repeater || false,
+                    promedioGeneral: Number(gradesAvg.toFixed(1))
+                });
+
+                // Format the complete report
+                const date = new Date().toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                const cycle = config.schoolYear || `${new Date().getFullYear()}-${new Date().getFullYear() + 1}`;
+
+                const header = `
+═══════════════════════════════════════════════════════════════════
+
+                    ${config.schoolName.toUpperCase()}
+                    C.C.T: ${config.cct} | Zona: ${config.zone}
+                    Ciclo Escolar: ${cycle}
+
+═══════════════════════════════════════════════════════════════════
+
+              INFORME INDIVIDUAL DEL ALUMNO
+              Para entrega a Padres de Familia
+
+═══════════════════════════════════════════════════════════════════
+
+FICHA DE IDENTIFICACIÓN
+───────────────────────────────────────────────────────────────────
+Nombre del Alumno:     ${student.name}
+Clave:                 ${student.id}
+CURP:                  ${student.curp || 'No registrada'}
+Sexo:                  ${student.sex}
+Fecha de Nacimiento:   ${student.birthDate || 'No registrada'}
+Lugar de Nacimiento:   ${student.birthPlace || 'No registrado'}
+Grado y Grupo:         ${student.group || config.gradeGroup}
+Fecha de Inscripción:  ${student.enrollmentDate || 'No registrada'}
+Estatus:               ${student.status || 'INSCRITO'}
+Tutor Legal:           ${student.guardianName}
+Teléfono de Contacto:  ${student.guardianPhone}
+Domicilio:             ${student.address || 'No registrado'}
+Ocupación del Tutor:   ${student.guardianOccupation || 'No registrada'}
+
+${student.usaer ? '⚠ Recibe apoyo USAER\n' : ''}${student.bap && student.bap !== 'NINGUNA' ? '⚠ BAP: ' + student.bap + '\n' : ''}${student.repeater ? '⚠ Alumno repetidor\n' : ''}
+Docente Responsable:   ${config.teacherName}
+Director(a):           ${config.directorName || 'No registrado'}
+Fecha del Informe:     ${date}
+`;
+
+                // Grades table
+                let gradesSection = `
+═══════════════════════════════════════════════════════════════════
+
+  CALIFICACIONES POR CAMPO FORMATIVO (NEM)
+═══════════════════════════════════════════════════════════════════
+
+Modelo: Nueva Escuela Mexicana (NEM)
+Escala de evaluación: 5 a 10
+`;
+
+                if (gradesData.length > 0) {
+                    gradesSection += `
+┌─────────────┬───────────┬────────────┬──────────────┬──────────────┬──────────┐
+│  Trimestre  │Lenguajes  │Sab.P.Cient.│Ética Nat.Soc.│De lo Humano  │Promedio  │
+├─────────────┼───────────┼────────────┼──────────────┼──────────────┼──────────┤`;
+
+                    gradesData.forEach(g => {
+                        const getNivel = (p: number) => {
+                            if (p >= 9) return '★★★ Destacado';
+                            if (p >= 8) return '★★ Satisfactorio';
+                            if (p >= 6) return '★ Suficiente';
+                            return 'Insuficiente';
+                        };
+                        gradesSection += `
+│  Trimestre ${g.trimester} │   ${g.lenguajes.toFixed(1)}    │    ${g.saberes.toFixed(1)}     │     ${g.etica.toFixed(1)}      │     ${g.humano.toFixed(1)}      │  ${g.promedio.toFixed(1)}   │
+│             │           │            │              │              │ ${getNivel(g.promedio).padEnd(8)} │`;
+                    });
+
+                    gradesSection += `
+├─────────────┴───────────┴────────────┴──────────────┴──────────────┴──────────┤
+│  PROMEDIO GENERAL: ${gradesAvg.toFixed(1)}                                                       │
+└────────────────────────────────────────────────────────────────────────────────────┘
+
+Nivel de Desempeño General: ${gradesAvg >= 9 ? 'DESTACADO' : gradesAvg >= 8 ? 'SATISFACTORIO' : gradesAvg >= 6 ? 'SUFICIENTE' : 'INSUFICIENTE'}
+`;
+                } else {
+                    gradesSection += '\n  Sin calificaciones registradas.\n';
+                }
+
+                // Attendance and conduct
+                const attendCount = Object.values(attendance).filter(s => s === 'Presente').length;
+                const absCount = Object.values(attendance).filter(s => s === 'Ausente').length;
+                const tardCount = Object.values(attendance).filter(s => s === 'Retardo').length;
+                const totalDays = Object.keys(attendance).length;
+
+                let attendanceSection = `
+═══════════════════════════════════════════════════════════════════
+
+  ASISTENCIA Y CONDUCTA
+═══════════════════════════════════════════════════════════════════
+
+  Asistencias:  ${attendCount} de ${totalDays} días (${totalDays > 0 ? Math.round((attendCount / totalDays) * 100) : 0}%)
+  Faltas:       ${absCount}
+  Retardos:     ${tardCount}
+
+  Puntos de Conducta: ${student.behaviorPoints > 0 ? '+' : ''}${student.behaviorPoints || 0}
+  Evaluación de Conducta: ${student.behaviorPoints >= 5 ? 'EXCELENTE' : student.behaviorPoints >= 0 ? 'BUENA' : student.behaviorPoints >= -3 ? 'REGULAR' : 'REQUIERE ATENCIÓN'}
+
+  Tareas Completadas: ${student.assignmentsCompleted || 0} de ${student.totalAssignments || 0} (${student.totalAssignments > 0 ? Math.round((student.assignmentsCompleted / student.totalAssignments) * 100) : 0}%)
+`;
+
+                // AI Analysis section
+                let aiSection = `
+═══════════════════════════════════════════════════════════════════
+
+  ANÁLISIS INTEGRAL DEL ALUMNO
+  Generado con Inteligencia Artificial
+═══════════════════════════════════════════════════════════════════
+
+${analysis}
+`;
+
+                // Footer
+                const footer = `
+═══════════════════════════════════════════════════════════════════
+
+  FIRMAS
+═══════════════════════════════════════════════════════════════════
+
+
+
+  ________________________    ________________________    ________________________
+       Docente de Grupo            Director(a) de la            Firma del Padre
+      ${config.teacherName}         Escuela                        o Tutor
+
+
+
+  Documento generado automáticamente por el Sistema SIRILA
+  ${date}
+`;
+
+                setGeneratedContent(header + gradesSection + attendanceSection + aiSection + footer);
+            } catch (error) {
+                console.error("Error generando informe:", error);
+                setGeneratedContent(`Error al generar el informe: ${error instanceof Error ? error.message : String(error)}`);
+            } finally {
+                setIsGenerating(false);
+            }
+            return;
+        }
+
+        // --- Resto de tipos de documentos (lógica existente) ---
         // Calculate real stats for student
         const getGradeAvg = (g: any) => {
             if (typeof g === 'number') return g;
@@ -248,6 +457,7 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({ students, config, 
                         </h3>
                         <div className="space-y-2">
                             {[
+                                { id: 'INFORME_PADRES', label: 'Informe para Padres (Completo)', icon: FileText },
                                 { id: 'INCIDENCIA', label: 'Reporte de Incidencia', icon: AlertTriangle },
                                 { id: 'ACTA_HECHOS', label: 'Acta de Hechos', icon: FileText },
                                 { id: 'AUTORIZACION_EVENTO', label: 'Autorización Evento', icon: Bus },
@@ -278,17 +488,22 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({ students, config, 
                         <div className="space-y-4">
                             {selectedType !== 'PLANEACION' && selectedType !== 'PRESENTACION_RESULTADOS' && (
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Estudiante</label>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+                                        {selectedType === 'INFORME_PADRES' ? 'Alumno (Obligatorio)' : 'Estudiante'}
+                                    </label>
                                     <select
                                         value={selectedStudentId}
                                         onChange={(e) => setSelectedStudentId(e.target.value)}
-                                        className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white/80"
+                                        className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white/80 ${selectedType === 'INFORME_PADRES' && !selectedStudentId ? 'border-red-400 bg-red-50' : 'border-slate-300'}`}
                                     >
                                         <option value="">Seleccionar Alumno...</option>
                                         {students.map(s => (
                                             <option key={s.id} value={s.id}>{s.name}</option>
                                         ))}
                                     </select>
+                                    {selectedType === 'INFORME_PADRES' && !selectedStudentId && (
+                                        <p className="text-xs text-red-500 mt-1 font-medium">* Debes seleccionar un alumno para generar el informe</p>
+                                    )}
                                 </div>
                             )}
 
@@ -525,11 +740,11 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({ students, config, 
 
                             <button
                                 onClick={handleGenerate}
-                                disabled={isGenerating}
-                                className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-lg transition-all active:scale-95 disabled:opacity-70 flex items-center justify-center gap-2 mt-4"
+                                disabled={isGenerating || (selectedType === 'INFORME_PADRES' && !selectedStudentId)}
+                                className={`w-full py-3 rounded-xl font-bold shadow-lg transition-all active:scale-95 disabled:opacity-70 flex items-center justify-center gap-2 mt-4 ${selectedType === 'INFORME_PADRES' ? 'bg-teal-600 hover:bg-teal-700 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}
                             >
                                 {isGenerating ? <span className="animate-spin">✨</span> : <FileText size={18} />}
-                                {isGenerating ? 'Generando...' : 'Generar Documento'}
+                                {isGenerating ? 'Generando...' : selectedType === 'INFORME_PADRES' ? 'Generar Informe con Análisis IA' : 'Generar Documento'}
                             </button>
                         </div>
                     </div>
