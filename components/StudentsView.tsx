@@ -85,43 +85,29 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
 
     const trimAvgs = (s.grades || []).map(getTrimesterAvg);
     const activeTrims = trimAvgs.filter(a => a > 0);
-    // Academic Average: Average of non-zero trimester scores. Capped at 10.
-    const academicAvg = activeTrims.length > 0 ? Math.min(10, activeTrims.reduce((a, b) => a + b, 0) / activeTrims.length) : 0;
+    // Promedio académico: promedio simple de los trimestres con calificación > 0
+    const academicAvg = activeTrims.length > 0 ? activeTrims.reduce((a, b) => a + b, 0) / activeTrims.length : 0;
     
-    // Homework Score: Assignments completed vs Total. Capped at 10.
+    // Porcentaje de tareas completadas (solo informativo, NO afecta el promedio académico)
     const studentAssignments = assignments.filter(a => 
       !a.targetGroup || a.targetGroup === s.group
     );
     const completedCount = studentAssignments.filter(a => (s.completedAssignmentIds || []).includes(a.id)).length;
     const actualTotalAssignments = studentAssignments.length;
-    const hwScore = actualTotalAssignments > 0 ? Math.min(10, (completedCount / actualTotalAssignments) * 10) : 0;
+    const hwPercentage = actualTotalAssignments > 0 ? Math.round((completedCount / actualTotalAssignments) * 100) : 0;
     
-    // Conduct Score: Base 8.0, +/- points. Capped at 10, min 5.
-    const conductScore = Math.max(5, Math.min(10, 8 + ((s.behaviorPoints || 0) * 0.1)));
-    
-    // Weighted Average: 30% Academic, 55% Homework, 15% Conduct
-    let calculatedAvg = 0;
-    const hasAcademic = academicAvg > 0;
-    const hasHomework = s.totalAssignments > 0;
+    // Puntos de conducta (solo informativo, NO afecta el promedio académico)
+    const behaviorPoints = s.behaviorPoints || 0;
 
-    if (hasAcademic && hasHomework) {
-      calculatedAvg = (academicAvg * 0.3) + (hwScore * 0.55) + (conductScore * 0.15);
-    } else if (hasAcademic) {
-      // If no assignments, academic counts for 85% and conduct 15%
-      calculatedAvg = (academicAvg * 0.85) + (conductScore * 0.15);
-    } else if (hasHomework) {
-      // If no academic grades, homework counts for 85% and conduct 15%
-      calculatedAvg = (hwScore * 0.85) + (conductScore * 0.15);
-    } else {
-      calculatedAvg = conductScore;
-    }
+    // El promedio final es SOLO el académico (calificaciones NEM)
+    const finalAvg = academicAvg > 0 ? academicAvg.toFixed(1) : '-';
 
     return { 
       trimAvgs, 
       academicAvg, 
-      hwScore, 
-      conductScore,
-      finalAvg: hasAcademic || hasHomework ? Math.min(10, calculatedAvg).toFixed(1) : conductScore.toFixed(1) 
+      hwPercentage,
+      behaviorPoints,
+      finalAvg
     };
   };
 
