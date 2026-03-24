@@ -1437,3 +1437,215 @@ export const generateCompleteStudentReport = async (
 
     doc.save(`Informe_Completo_${student.name.replace(/\s+/g, '_')}.pdf`);
 };
+
+export const generateAttendanceListPDF = async (
+    students: Student[],
+    config: SchoolConfig,
+    options: {
+        meetingType: string;
+        date: string;
+        hour: string;
+        place: string;
+    }
+) => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.width;
+    const pageHeight = doc.internal.pageSize.height;
+
+    // Pre-load logo
+    let printConfig = { ...config };
+    if (config.schoolLogo && !config.schoolLogo.startsWith('data:')) {
+        const base64Logo = await getBase64ImageFromUrl(config.schoolLogo);
+        if (base64Logo) printConfig.schoolLogo = base64Logo;
+    }
+
+    // Header with logo
+    const margin = 15;
+    if (printConfig.schoolLogo && printConfig.schoolLogo.startsWith('data:')) {
+        try {
+            const imgFormat = printConfig.schoolLogo.includes('image/png') ? 'PNG' : 'JPEG';
+            doc.addImage(printConfig.schoolLogo, imgFormat, margin, 10, 20, 20);
+        } catch (e) {
+            console.warn('Logo error', e);
+        }
+    }
+
+    // School name
+    doc.setFontSize(14);
+    doc.setTextColor(COLORS.primary[0], COLORS.primary[1], COLORS.primary[2]);
+    doc.setFont('helvetica', 'bold');
+    doc.text(printConfig.schoolName.toUpperCase(), pageWidth / 2, 18, { align: 'center' });
+
+    // School info
+    doc.setFontSize(8);
+    doc.setTextColor(COLORS.secondary[0], COLORS.secondary[1], COLORS.secondary[2]);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`CCT: ${printConfig.cct} | Zona: ${printConfig.zone} | Sector: ${printConfig.sector || 'N/A'}`, pageWidth / 2, 23, { align: 'center' });
+    doc.text(`Ciclo Escolar: ${printConfig.schoolYear || new Date().getFullYear().toString()}`, pageWidth / 2, 27, { align: 'center' });
+
+    // Separator line
+    doc.setDrawColor(COLORS.primary[0], COLORS.primary[1], COLORS.primary[2]);
+    doc.setLineWidth(0.5);
+    doc.line(margin, 31, pageWidth - margin, 31);
+
+    // Title
+    doc.setFontSize(16);
+    doc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2]);
+    doc.setFont('helvetica', 'bold');
+    doc.text('LISTA DE ASISTENCIA', pageWidth / 2, 40, { align: 'center' });
+
+    // Meeting type
+    doc.setFontSize(11);
+    doc.setTextColor(COLORS.secondary[0], COLORS.secondary[1], COLORS.secondary[2]);
+    doc.text(options.meetingType || 'Junta de Padres de Familia', pageWidth / 2, 46, { align: 'center' });
+
+    // Meeting details
+    doc.setFontSize(9);
+    doc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2]);
+    doc.setFont('helvetica', 'normal');
+
+    const formattedDate = options.date
+        ? new Date(options.date + 'T00:00:00').toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+        : new Date().toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+    const teacherName = getTeacherForStudent(printConfig, printConfig.gradeGroup);
+
+    // Info box
+    doc.setFillColor(245, 247, 250);
+    doc.roundedRect(margin, 50, pageWidth - (margin * 2), 18, 2, 2, 'F');
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Grupo:', margin + 5, 56);
+    doc.setFont('helvetica', 'normal');
+    doc.text(printConfig.gradeGroup, margin + 20, 56);
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Docente:', margin + 60, 56);
+    doc.setFont('helvetica', 'normal');
+    doc.text(teacherName, margin + 80, 56);
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Fecha:', margin + 5, 63);
+    doc.setFont('helvetica', 'normal');
+    doc.text(formattedDate, margin + 20, 63);
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Hora:', margin + 100, 63);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`${options.hour || '13:00'} hrs.`, margin + 112, 63);
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Lugar:', margin + 140, 63);
+    doc.setFont('helvetica', 'normal');
+    doc.text(options.place || 'Aula', margin + 155, 63);
+
+    // Table
+    const sortedStudents = [...students].sort((a, b) => a.name.localeCompare(b.name));
+    const tableBody = sortedStudents.map((s, idx) => [
+        (idx + 1).toString(),
+        s.name,
+        s.guardianName || 'Sin registrar',
+        '',
+    ]);
+
+    autoTable(doc, {
+        startY: 72,
+        head: [['No.', 'Nombre del Alumno', 'Nombre del Padre/Tutor', 'Firma']],
+        body: tableBody,
+        theme: 'grid',
+        headStyles: {
+            fillColor: COLORS.primary,
+            fontSize: 8,
+            fontStyle: 'bold',
+            halign: 'center',
+        },
+        styles: {
+            fontSize: 7.5,
+            cellPadding: 3,
+        },
+        columnStyles: {
+            0: { cellWidth: 12, halign: 'center' },
+            1: { cellWidth: 65 },
+            2: { cellWidth: 60 },
+            3: { cellWidth: 45 },
+        },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+    });
+
+    let currentY = (doc as any).lastAutoTable.finalY + 8;
+
+    // Counters
+    doc.setFontSize(9);
+    doc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2]);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Total de Alumnos: ${sortedStudents.length}`, margin, currentY);
+    doc.text('Asistentes: ________', margin + 55, currentY);
+    doc.text('Ausentes: ________', margin + 120, currentY);
+    currentY += 12;
+
+    // Observations section
+    if (currentY > pageHeight - 80) {
+        doc.addPage();
+        currentY = 20;
+    }
+
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(COLORS.primary[0], COLORS.primary[1], COLORS.primary[2]);
+    doc.text('OBSERVACIONES DE LA JUNTA', margin, currentY);
+    currentY += 3;
+
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.3);
+    for (let i = 0; i < 4; i++) {
+        doc.line(margin, currentY + (i * 7) + 5, pageWidth - margin, currentY + (i * 7) + 5);
+    }
+    currentY += 34;
+
+    // Agreements section
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(COLORS.primary[0], COLORS.primary[1], COLORS.primary[2]);
+    doc.text('ACUERDOS TOMADOS', margin, currentY);
+    currentY += 3;
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2]);
+    for (let i = 0; i < 3; i++) {
+        doc.text(`${i + 1}.`, margin, currentY + (i * 8) + 5);
+        doc.line(margin + 6, currentY + (i * 8) + 5, pageWidth - margin, currentY + (i * 8) + 5);
+    }
+    currentY += 30;
+
+    // Signatures
+    const sigY = Math.max(currentY + 15, pageHeight - 40);
+
+    doc.setDrawColor(COLORS.secondary[0], COLORS.secondary[1], COLORS.secondary[2]);
+    doc.setLineWidth(0.5);
+
+    // Teacher signature
+    doc.line(margin + 10, sigY, margin + 70, sigY);
+    doc.setFontSize(8);
+    doc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2]);
+    doc.text(teacherName, margin + 40, sigY + 5, { align: 'center' });
+    doc.setFontSize(7);
+    doc.setTextColor(COLORS.lightText[0], COLORS.lightText[1], COLORS.lightText[2]);
+    doc.text('Docente de Grupo', margin + 40, sigY + 9, { align: 'center' });
+
+    // Director signature
+    doc.line(pageWidth / 2 + 10, sigY, pageWidth / 2 + 70, sigY);
+    doc.setFontSize(8);
+    doc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2]);
+    doc.text(printConfig.directorName || 'Director(a)', pageWidth / 2 + 40, sigY + 5, { align: 'center' });
+    doc.setFontSize(7);
+    doc.setTextColor(COLORS.lightText[0], COLORS.lightText[1], COLORS.lightText[2]);
+    doc.text('Director(a) de la Escuela', pageWidth / 2 + 40, sigY + 9, { align: 'center' });
+
+    // Footer
+    doc.setFontSize(6);
+    doc.setTextColor(COLORS.lightText[0], COLORS.lightText[1], COLORS.lightText[2]);
+    doc.text(`Documento generado por Sistema SIRILA - ${new Date().toLocaleDateString('es-MX')}`, pageWidth / 2, pageHeight - 5, { align: 'center' });
+
+    doc.save(`Lista_Asistencia_${options.meetingType.replace(/\s+/g, '_')}_${options.date || 'hoy'}.pdf`);
+};

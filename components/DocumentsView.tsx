@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Student, SchoolConfig, Assignment } from '../types';
 import { generateDocumentContent } from '../services/ai';
 import { generateStudentAnalysis } from '../services/ai';
-import { getTeacherForStudent } from '../services/pdfGenerator';
+import { getTeacherForStudent, generateAttendanceListPDF } from '../services/pdfGenerator';
 import { FileText, Download, Printer, Copy, CheckCircle, AlertTriangle, Calendar, User, FileOutput, Bus, Upload } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 
@@ -474,111 +474,19 @@ Docente:               ${student ? getTeacherForStudent(config, student.group) :
             return;
         }
 
-        // --- LISTA DE ASISTENCIA PARA JUNTA DE PADRES ---
+        // --- LISTA DE ASISTENCIA PARA JUNTA DE PADRES (PDF) ---
         if (selectedType === 'LISTA_ASISTENCIA_PADRES') {
             try {
-                const date = citationDate || new Date().toISOString().split('T')[0];
-                const formattedDate = new Date(date + 'T00:00:00').toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-                const hour = location || '13:00';
-                const place = eventLocation || 'Aula del grupo';
-                const meetingType = citationReason || 'Junta de Padres de Familia';
-                const cycle = config.schoolYear || `${new Date().getFullYear()}-${new Date().getFullYear() + 1}`;
-                const groupName = config.gradeGroup;
-
-                // Sort students alphabetically
-                const sortedStudents = [...students].sort((a, b) => a.name.localeCompare(b.name));
-
-                let report = `
-═══════════════════════════════════════════════════════════════════
-
-                    ${config.schoolName.toUpperCase()}
-                    C.C.T: ${config.cct} | Zona: ${config.zone} | Sector: ${config.sector || 'N/A'}
-                    Ciclo Escolar: ${cycle}
-
-═══════════════════════════════════════════════════════════════════
-
-              LISTA DE ASISTENCIA
-              ${meetingType.toUpperCase()}
-
-═══════════════════════════════════════════════════════════════════
-
-  Grupo:     ${groupName}
-  Docente:   ${getTeacherForStudent(config, groupName)}
-  Fecha:     ${formattedDate}
-  Hora:      ${hour} hrs.
-  Lugar:     ${place}
-
-═══════════════════════════════════════════════════════════════════
-
-  No. │ Nombre del Alumno              │ Nombre del Padre/Tutor        │ Firma
-──────┼────────────────────────────────┼───────────────────────────────┼───────────────
-`;
-
-                sortedStudents.forEach((s, idx) => {
-                    const num = (idx + 1).toString().padStart(3, ' ');
-                    const name = s.name.padEnd(30).substring(0, 30);
-                    const guardian = (s.guardianName || 'Sin registrar').padEnd(31).substring(0, 31);
-                    report += `  ${num} │ ${name}│ ${guardian}│ _______________
-──────┼────────────────────────────────┼───────────────────────────────┼───────────────
-`;
+                await generateAttendanceListPDF(students, config, {
+                    meetingType: citationReason || 'Junta de Padres de Familia',
+                    date: citationDate,
+                    hour: location || '13:00',
+                    place: eventLocation || 'Aula del grupo',
                 });
-
-                report += `
-
-  Total de Alumnos: ${sortedStudents.length}
-  Asistentes: ________
-  Ausentes:   ________
-
-═══════════════════════════════════════════════════════════════════
-
-  OBSERVACIONES DE LA JUNTA
-═══════════════════════════════════════════════════════════════════
-
-
-  __________________________________________________________________
-
-  __________________________________________________________________
-
-  __________________________________________________________________
-
-  __________________________________________________________________
-
-
-═══════════════════════════════════════════════════════════════════
-
-  ACUERDOS TOMADOS
-═══════════════════════════════════════════════════════════════════
-
-
-  1. __________________________________________________________________
-
-  2. __________________________________________________________________
-
-  3. __________________________________________________________________
-
-
-
-═══════════════════════════════════════════════════════════════════
-
-  FIRMAS
-═══════════════════════════════════════════════════════════════════
-
-
-
-  ________________________    ________________________
-       Docente de Grupo            Director(a) de la
-      ${getTeacherForStudent(config, groupName)}         Escuela
-
-
-
-  Documento generado automáticamente por el Sistema SIRILA
-  ${new Date().toLocaleDateString('es-MX')}
-`;
-
-                setGeneratedContent(report);
+                setGeneratedContent('✅ PDF generado y descargado exitosamente.\n\nRevisa tu carpeta de descargas.');
             } catch (error) {
-                console.error("Error generando lista de asistencia:", error);
-                setGeneratedContent(`Error al generar la lista: ${error instanceof Error ? error.message : String(error)}`);
+                console.error("Error generando PDF:", error);
+                setGeneratedContent(`Error al generar el PDF: ${error instanceof Error ? error.message : String(error)}`);
             } finally {
                 setIsGenerating(false);
             }
