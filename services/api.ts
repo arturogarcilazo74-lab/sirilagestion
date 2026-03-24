@@ -72,10 +72,6 @@ const addToQueue = (endpoint: string, method: string, data: any) => {
     }
 };
 
-const clearQueue = () => {
-    localStorage.removeItem(OFFLINE_QUEUE_KEY);
-};
-
 const API_URL = GET_BASE_URL(); // Initial load
 
 export const api = {
@@ -481,6 +477,7 @@ export const api = {
 
     getParentMessages: async (studentId: string) => {
         const res = await fetch(`${API_URL}/parent/messages?studentId=${studentId}`);
+        if (!res.ok) throw new Error(`Error del servidor: ${res.status}`);
         return await res.json();
     },
 
@@ -497,6 +494,7 @@ export const api = {
 
     getAllMessages: async () => {
         const res = await fetch(`${API_URL}/parent/all-messages`);
+        if (!res.ok) throw new Error(`Error del servidor: ${res.status}`);
         return await res.json();
     },
 

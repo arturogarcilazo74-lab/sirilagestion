@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Student, SchoolConfig, BehaviorLog, Assignment } from '../types';
-import { generateReportCard, generateBehaviorReport, generateStudentCredentials } from '../services/pdfGenerator';
+import { generateReportCard, generateBehaviorReport, generateStudentCredentials, generateCompleteStudentReport } from '../services/pdfGenerator';
 import { Plus, Search, Edit2, Trash2, X, Save, User, Phone, Image as ImageIcon, QrCode, Download, FileText, Printer, Building2, Calendar, MapPin, Hash, GraduationCap, AlertCircle, Upload, FileSpreadsheet, Cake, CheckCircle, FileDown, Users, RectangleHorizontal, PieChart, CheckCircle2, Circle, RotateCcw } from 'lucide-react';
 import { GroupAnalysisModal } from './GroupAnalysisModal';
 
@@ -1380,6 +1380,14 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
                   <span>Boleta PDF</span>
                 </button>
                 <button
+                  onClick={() => generateCompleteStudentReport(reportStudent, config, logs, assignments)}
+                  className="bg-teal-600 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-teal-700 transition-colors shadow-lg shadow-teal-200 text-sm flex-1 md:flex-none justify-center"
+                  title="Generar informe completo para padres de familia"
+                >
+                  <FileText size={18} />
+                  <span>Informe Completo</span>
+                </button>
+                <button
                   onClick={() => generateBehaviorReport(reportStudent, logs.filter(l => l.studentId === reportStudent.id), config)}
                   className="bg-rose-600 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-rose-700 transition-colors shadow-lg shadow-rose-200 text-sm flex-1 md:flex-none justify-center"
                 >
@@ -1608,36 +1616,50 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
                 </div>
               </div>
 
-              {/* Grades Table */}
+              {/* Grades Table - Detailed components */}
               <div className="mb-8">
-                <h3 className="text-sm font-bold uppercase text-slate-600 border-b border-slate-200 pb-1 mb-4">Historial de Evaluaciones</h3>
+                <h3 className="text-sm font-bold uppercase text-slate-600 border-b border-slate-200 pb-1 mb-4">Historial de Evaluaciones por Campo Formativo</h3>
                 <table className="w-full text-sm border-collapse border border-slate-200">
                   <thead className="bg-slate-100">
                     <tr>
-                      <th className="border border-slate-200 p-2 text-left">Concepto / Periodo</th>
-                      <th className="border border-slate-200 p-2 text-center w-32">Calificación</th>
-                      <th className="border border-slate-200 p-2 text-center w-48">Nivel de Desempeño</th>
+                      <th className="border border-slate-200 p-2 text-left">Periodo</th>
+                      <th className="border border-slate-200 p-2 text-center">Lenguajes</th>
+                      <th className="border border-slate-200 p-2 text-center">Saberes y P.C.</th>
+                      <th className="border border-slate-200 p-2 text-center">Ética, Nat. y Soc.</th>
+                      <th className="border border-slate-200 p-2 text-center">De lo Humano</th>
+                      <th className="border border-slate-200 p-2 text-center font-bold">Promedio</th>
+                      <th className="border border-slate-200 p-2 text-center">Nivel</th>
                     </tr>
                   </thead>
                   <tbody>
                     {reportStudent.grades.length === 0 ? (
-                      <tr><td colSpan={3} className="p-4 text-center text-slate-400">Sin calificaciones registradas</td></tr>
+                      <tr><td colSpan={7} className="p-4 text-center text-slate-400">Sin calificaciones registradas</td></tr>
                     ) : (
                       reportStudent.grades.map((grade, idx) => {
                         const metrics = calculateStudentMetrics(reportStudent);
                         const score = metrics.trimAvgs[idx] || 0;
+                        const isObj = typeof grade === 'object' && grade !== null;
+                        const leng = isObj ? Number(grade.lenguajes || 0) : Number(grade) || 0;
+                        const sab = isObj ? Number(grade.saberes || 0) : Number(grade) || 0;
+                        const eti = isObj ? Number(grade.etica || 0) : Number(grade) || 0;
+                        const hum = isObj ? Number(grade.humano || 0) : Number(grade) || 0;
 
                         return (
                           <tr key={idx}>
-                            <td className="border border-slate-200 p-2">Evaluación Parcial {idx + 1}</td>
-                            <td className="border border-slate-200 p-2 text-center font-bold">{score.toFixed(1)}</td>
+                            <td className="border border-slate-200 p-2 font-medium">Trimestre {idx + 1}</td>
+                            <td className="border border-slate-200 p-2 text-center">{leng > 0 ? leng.toFixed(1) : '-'}</td>
+                            <td className="border border-slate-200 p-2 text-center">{sab > 0 ? sab.toFixed(1) : '-'}</td>
+                            <td className="border border-slate-200 p-2 text-center">{eti > 0 ? eti.toFixed(1) : '-'}</td>
+                            <td className="border border-slate-200 p-2 text-center">{hum > 0 ? hum.toFixed(1) : '-'}</td>
+                            <td className="border border-slate-200 p-2 text-center font-bold">{score > 0 ? score.toFixed(1) : '-'}</td>
                             <td className="border border-slate-200 p-2 text-center text-xs">
                               {(() => {
+                                if (score <= 0) return '-';
                                 const val = Number(score);
-                                if (val >= 9) return 'DESTACADO';
-                                if (val >= 8) return 'SATISFACTORIO';
-                                if (val >= 6) return 'SUFICIENTE';
-                                return 'INSUFICIENTE';
+                                if (val >= 9) return <span className="px-2 py-0.5 rounded-full bg-green-50 text-green-700 font-bold">DESTACADO</span>;
+                                if (val >= 8) return <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-bold">SATISFACTORIO</span>;
+                                if (val >= 6) return <span className="px-2 py-0.5 rounded-full bg-yellow-50 text-yellow-700 font-bold">SUFICIENTE</span>;
+                                return <span className="px-2 py-0.5 rounded-full bg-red-50 text-red-700 font-bold">INSUFICIENTE</span>;
                               })()}
                             </td>
                           </tr>
@@ -1646,6 +1668,76 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
                     )}
                   </tbody>
                 </table>
+              </div>
+
+              {/* Observations and Suggestions Section */}
+              <div className="mb-8">
+                <h3 className="text-sm font-bold uppercase text-slate-600 border-b border-slate-200 pb-1 mb-4">Observaciones y Sugerencias</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Academic Observations */}
+                  <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                    <h4 className="text-xs font-bold text-blue-800 uppercase mb-3 flex items-center gap-2">
+                      <GraduationCap size={14} /> Área Académica
+                    </h4>
+                    <div className="text-xs text-blue-900 space-y-1">
+                      {(() => {
+                        const suggestions: string[] = [];
+                        (reportStudent.grades || []).forEach((grade, idx) => {
+                          if (typeof grade === 'object' && grade !== null) {
+                            const fields: Record<string, number> = {
+                              'Lenguajes': Number(grade.lenguajes || 0),
+                              'Saberes y P.C.': Number(grade.saberes || 0),
+                              'Ética, Nat. y Soc.': Number(grade.etica || 0),
+                              'De lo Humano': Number(grade.humano || 0)
+                            };
+                            Object.entries(fields).forEach(([name, val]) => {
+                              if (val > 0 && val < 7) {
+                                suggestions.push(`Reforzar ${name} (T${idx + 1}: ${val.toFixed(1)})`);
+                              }
+                            });
+                          }
+                        });
+                        if (suggestions.length === 0) {
+                          return <p className="text-blue-600 italic">El alumno muestra un desempeño académico adecuado en todas las áreas evaluadas.</p>;
+                        }
+                        return suggestions.map((s, i) => <p key={i}>• {s}</p>);
+                      })()}
+                    </div>
+                  </div>
+
+                  {/* Conduct Observations */}
+                  <div className="bg-amber-50 p-4 rounded-xl border border-amber-100">
+                    <h4 className="text-xs font-bold text-amber-800 uppercase mb-3 flex items-center gap-2">
+                      <AlertCircle size={14} /> Conducta y Participación
+                    </h4>
+                    <div className="text-xs text-amber-900 space-y-1">
+                      {(() => {
+                        const points = reportStudent.behaviorPoints || 0;
+                        const negLogs = logs.filter(l => l.studentId === reportStudent.id && l.type === 'NEGATIVE');
+                        const posLogs = logs.filter(l => l.studentId === reportStudent.id && l.type === 'POSITIVE');
+                        
+                        if (points >= 5) return <p>El alumno presenta excelente conducta y participación activa en clase con {posLogs.length} reconocimientos positivos.</p>;
+                        if (points >= 0) return <p>Conducta dentro de lo esperado. Se recomienda continuar motivando la participación activa del alumno.</p>;
+                        if (negLogs.length > 3) return <p>Se requiere atención inmediata. Ha registrado {negLogs.length} incidencias negativas. Se recomienda reunión con padres de familia.</p>;
+                        return <p>Se sugiere platicar con el alumno sobre su comportamiento y establecer metas de mejora conjunta.</p>;
+                      })()}
+                    </div>
+                  </div>
+                </div>
+
+                {/* USAER / Special Education Observations */}
+                {(reportStudent.usaer || (reportStudent.bap && reportStudent.bap !== 'NINGUNA')) && (
+                  <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100 mt-4">
+                    <h4 className="text-xs font-bold text-indigo-800 uppercase mb-3 flex items-center gap-2">
+                      <Users size={14} /> Atención a la Diversidad
+                    </h4>
+                    <div className="text-xs text-indigo-900 space-y-1">
+                      {reportStudent.usaer && <p>• El alumno recibe apoyo del servicio USAER.</p>}
+                      {reportStudent.bap && reportStudent.bap !== 'NINGUNA' && <p>• Barreras para el aprendizaje identificadas: {reportStudent.bap}</p>}
+                      <p className="italic mt-2">Se requieren ajustes razonables al currículo según las necesidades individuales del alumno.</p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Assignments Tracking */}

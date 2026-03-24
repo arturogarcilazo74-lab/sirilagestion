@@ -69,7 +69,6 @@ const App: React.FC = () => {
       visibleStudents = store.students.filter(s => {
         // More flexible group matching
         const studentGroupStr = (s.group || '').toUpperCase().trim();
-        const userGroupStr = (currentUser.group || '').toUpperCase().trim();
         
         if (!studentGroupStr) return true; // Show unassigned students to their teacher for recovery
 
@@ -105,7 +104,7 @@ const App: React.FC = () => {
 
     visibleEvents = store.events.filter(e => {
       if (!e.targetGroup || e.targetGroup === 'GLOBAL') {
-        return userGrade === '4' && userLetter === 'A';
+        return true; // Global events visible to ALL groups
       }
 
       const eventGroupStr = (e.targetGroup || '').toUpperCase().trim();
@@ -142,7 +141,7 @@ const App: React.FC = () => {
 
     visibleFinanceEvents = store.financeEvents.filter(e => {
       if (!e.targetGroup || e.targetGroup === 'GLOBAL') {
-        return userGrade === '4' && userLetter === 'A';
+        return true; // Global finance events visible to ALL groups
       }
 
       const financeGroupStr = (e.targetGroup || '').toUpperCase().trim();
@@ -182,19 +181,19 @@ const App: React.FC = () => {
       }
 
       // 2. Normalize both strings (remove spaces, etc.) for robust comparison
-      const userGroupStr = (currentUser.group || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+      const normalizedUserGroup = (currentUser.group || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
       const assignmentGroupStr = (a.targetGroup || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 
-      if (userGroupStr === assignmentGroupStr) return true;
+      if (normalizedUserGroup === assignmentGroupStr) return true;
 
       // 3. Extract grade and letter for partial or specific matches (e.g., "4 A" matches "4TO A")
-      const userGrade = userGroupStr.match(/(\d+)/)?.[0];
-      const userLetter = userGroupStr.match(/[A-F]/)?.[0];
+      const userGradeNorm = normalizedUserGroup.match(/(\d+)/)?.[0];
+      const userLetterNorm = normalizedUserGroup.match(/[A-F]/)?.[0];
       const assignmentGrade = assignmentGroupStr.match(/(\d+)/)?.[0];
       const assignmentLetter = assignmentGroupStr.match(/[A-F]/)?.[0];
 
-      if (userGrade && assignmentGrade) {
-        return assignmentGrade === userGrade && assignmentLetter === userLetter;
+      if (userGradeNorm && assignmentGrade) {
+        return assignmentGrade === userGradeNorm && assignmentLetter === userLetterNorm;
       }
 
       return false;

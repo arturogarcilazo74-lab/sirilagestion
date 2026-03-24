@@ -176,6 +176,11 @@ export const useAppStore = () => {
         catch (e) { console.warn("Cache Tasks failed", e); }
     }, [staffTasks]);
 
+    useEffect(() => {
+        try { localStorage.setItem('SIRILA_CACHE_BOOKS', JSON.stringify(books)); }
+        catch (e) { console.warn("Cache Books failed", e); }
+    }, [books]);
+
     // Background Sync when online OR periodically
     useEffect(() => {
         const checkQueue = async () => {
@@ -256,8 +261,8 @@ export const useAppStore = () => {
                                     });
 
                                     // CRITICAL: Update cache with full students (including avatars)
-                                    // We need to pass the updated list here
-                                    flushCache(updated, a, e, l, result.schoolConfig || schoolConfig, f, t, b);
+                                    // Flush all other state variables from closure (they are from server load)
+                                    saveToCache('SIRILA_CACHE_STUDENTS', updated);
                                     return updated;
                                 });
                                 console.log("%c✓ Avatars aplicados y cacheados", "color: purple; font-weight: bold;");
@@ -334,7 +339,7 @@ export const useAppStore = () => {
     const handleAddStudent = (studentData: Omit<Student, 'id' | 'attendance' | 'behaviorPoints' | 'assignmentsCompleted' | 'totalAssignments' | 'participationCount' | 'grades' | 'completedAssignmentIds' | 'annualFeePaid'> & { id?: string }) => {
         const newStudent: Student = {
             ...studentData,
-            id: studentData.id || `2024${Math.floor(100000 + Math.random() * 900000)}`,
+            id: studentData.id || `${new Date().getFullYear()}${Math.floor(100000 + Math.random() * 900000)}`,
             attendance: {},
             behaviorPoints: 0,
             assignmentsCompleted: 0,
@@ -386,7 +391,7 @@ export const useAppStore = () => {
                 } else {
                     // CREATE new student
                     const newStudent: Student = {
-                        id: data.id || `2024${Math.floor(100000 + Math.random() * 900000)}`,
+                        id: data.id || `${new Date().getFullYear()}${Math.floor(100000 + Math.random() * 900000)}`,
                         curp: normalizedCurp || '',
                         name: normalizedName || 'SIN NOMBRE',
                         sex: (data.sex === 'MUJER' ? 'MUJER' : 'HOMBRE'),
@@ -513,8 +518,10 @@ export const useAppStore = () => {
     };
 
     const handleUpdateBehaviorLog = (id: string, updatedData: Partial<BehaviorLog>) => {
-        const updatedLog = { ...behaviorLogs.find(l => l.id === id), ...updatedData } as BehaviorLog;
-        setBehaviorLogs(behaviorLogs.map(l => l.id === id ? updatedLog : l));
+        const existingLog = behaviorLogs.find(l => l.id === id);
+        if (!existingLog) return;
+        const updatedLog: BehaviorLog = { ...existingLog, ...updatedData };
+        setBehaviorLogs(prev => prev.map(l => l.id === id ? updatedLog : l));
         api.saveBehaviorLog(updatedLog).catch(err => console.error("Error updating log DB", err));
     };
 
@@ -599,8 +606,10 @@ export const useAppStore = () => {
     };
 
     const handleUpdateAssignment = (id: string, updatedData: Partial<Assignment>) => {
-        const updatedAssignment = { ...assignments.find(a => a.id === id), ...updatedData } as Assignment;
-        setAssignments(assignments.map(a => a.id === id ? updatedAssignment : a));
+        const existingAssignment = assignments.find(a => a.id === id);
+        if (!existingAssignment) return;
+        const updatedAssignment: Assignment = { ...existingAssignment, ...updatedData };
+        setAssignments(prev => prev.map(a => a.id === id ? updatedAssignment : a));
         api.saveAssignment(updatedAssignment);
     };
 
@@ -646,18 +655,20 @@ export const useAppStore = () => {
             ...eventData,
             id: `E${Date.now()}`
         };
-        setEvents([...events, newEvent]);
+        setEvents(prev => [...prev, newEvent]);
         api.saveEvent(newEvent);
     };
 
     const handleEditEvent = (id: string, updatedData: Partial<SchoolEvent>) => {
-        const updatedEvent = { ...events.find(e => e.id === id), ...updatedData } as SchoolEvent;
-        setEvents(events.map(e => e.id === id ? updatedEvent : e));
+        const existingEvent = events.find(e => e.id === id);
+        if (!existingEvent) return;
+        const updatedEvent = { ...existingEvent, ...updatedData } as SchoolEvent;
+        setEvents(prev => prev.map(e => e.id === id ? updatedEvent : e));
         api.saveEvent(updatedEvent);
     };
 
     const handleDeleteEvent = (id: string) => {
-        setEvents(events.filter(e => e.id !== id));
+        setEvents(prev => prev.filter(e => e.id !== id));
         api.deleteEvent(id);
     };
 
@@ -680,12 +691,12 @@ export const useAppStore = () => {
             id: `FE${Date.now()}`,
             contributions: {}
         };
-        setFinanceEvents([...financeEvents, newEvent]);
+        setFinanceEvents(prev => [...prev, newEvent]);
         api.saveFinanceEvent(newEvent);
     };
 
     const handleDeleteFinanceEvent = (id: string) => {
-        setFinanceEvents(financeEvents.filter(e => e.id !== id));
+        setFinanceEvents(prev => prev.filter(e => e.id !== id));
         api.deleteFinanceEvent(id);
     };
 
@@ -714,18 +725,20 @@ export const useAppStore = () => {
             id: `T${Date.now()}`,
             createdAt: new Date().toISOString()
         };
-        setStaffTasks([...staffTasks, newTask]);
+        setStaffTasks(prev => [...prev, newTask]);
         api.saveStaffTask(newTask);
     };
 
     const handleEditStaffTask = (id: string, updatedData: Partial<StaffTask>) => {
-        const updatedTask = { ...staffTasks.find(t => t.id === id), ...updatedData } as StaffTask;
-        setStaffTasks(staffTasks.map(t => t.id === id ? updatedTask : t));
+        const existingTask = staffTasks.find(t => t.id === id);
+        if (!existingTask) return;
+        const updatedTask: StaffTask = { ...existingTask, ...updatedData };
+        setStaffTasks(prev => prev.map(t => t.id === id ? updatedTask : t));
         api.saveStaffTask(updatedTask);
     };
 
     const handleDeleteStaffTask = (id: string) => {
-        setStaffTasks(staffTasks.filter(t => t.id !== id));
+        setStaffTasks(prev => prev.filter(t => t.id !== id));
         api.deleteStaffTask(id);
     };
 
@@ -733,11 +746,11 @@ export const useAppStore = () => {
         const task = staffTasks.find(t => t.id === taskId);
         if (!task) return;
 
-        // Add staffId to completedBy array if not already present
-        const completedBy = task.completedBy || [];
-        if (!completedBy.includes(staffId)) {
-            completedBy.push(staffId);
-        }
+        // Add staffId to completedBy array if not already present (immutable)
+        const currentCompleted = task.completedBy || [];
+        const completedBy = currentCompleted.includes(staffId)
+            ? currentCompleted
+            : [...currentCompleted, staffId];
 
         // Update task status if all required staff completed
         const allStaff = task.assignedTo === 'ALL' || task.assignedTo === 'DOCENTES'
@@ -747,7 +760,7 @@ export const useAppStore = () => {
         const updatedStatus = (completedBy.length >= allStaff ? 'COMPLETED' : 'PENDING') as 'COMPLETED' | 'PENDING' | 'LATE';
 
         const updatedTask: StaffTask = { ...task, completedBy, status: updatedStatus };
-        setStaffTasks(staffTasks.map(t => t.id === taskId ? updatedTask : t));
+        setStaffTasks(prev => prev.map(t => t.id === taskId ? updatedTask : t));
         api.saveStaffTask(updatedTask);
     };
 
@@ -908,6 +921,7 @@ export const useAppStore = () => {
                 msg += `\n\nTodo se guardó correctamente en la base de datos MySQL.`;
             }
 
+            setNeedsSync(false);
             alert(msg);
             window.location.reload();
 
@@ -921,7 +935,7 @@ export const useAppStore = () => {
 
     const handleSetSchoolConfig = (newConfig: SchoolConfig) => {
         setSchoolConfig(newConfig);
-        saveToCache('SIRILA_CACHE_CONFIG', newConfig);
+        // Cache is automatically saved by useEffect on schoolConfig
         api.saveConfig(newConfig).catch(err => {
             console.log("Configuración guardada localmente (pendiente de servidor)");
             setPendingActions(api.getQueueLength());

@@ -46,7 +46,8 @@ export const MOCK_STUDENTS: Student[] = [
         participationCount: 3,
         grades: [
             { lenguajes: 8.8, saberes: 9.2, etica: 9.0, humano: 8.5 },
-            { lenguajes: 9.5, saberes: 9.8, etica: 9.2, humano: 9.0 }
+            { lenguajes: 9.5, saberes: 9.8, etica: 9.2, humano: 9.0 },
+            { lenguajes: 9.0, saberes: 9.4, etica: 9.1, humano: 8.8 }
         ],
         annualFeePaid: true
     },
@@ -73,7 +74,8 @@ export const MOCK_STUDENTS: Student[] = [
         participationCount: 1,
         grades: [
             { lenguajes: 6.5, saberes: 7.2, etica: 7.0, humano: 7.5 },
-            { lenguajes: 8.0, saberes: 7.8, etica: 7.5, humano: 7.0 }
+            { lenguajes: 8.0, saberes: 7.8, etica: 7.5, humano: 7.0 },
+            { lenguajes: 7.0, saberes: 7.5, etica: 7.2, humano: 7.3 }
         ],
         annualFeePaid: false
     },
@@ -100,7 +102,8 @@ export const MOCK_STUDENTS: Student[] = [
         participationCount: 0,
         grades: [
             { lenguajes: 5.5, saberes: 6.2, etica: 6.0, humano: 6.5 },
-            { lenguajes: 5.5, saberes: 5.8, etica: 6.0, humano: 5.5 }
+            { lenguajes: 5.5, saberes: 5.8, etica: 6.0, humano: 5.5 },
+            { lenguajes: 5.8, saberes: 6.0, etica: 6.2, humano: 5.8 }
         ],
         annualFeePaid: false
     },
@@ -127,7 +130,8 @@ export const MOCK_STUDENTS: Student[] = [
         participationCount: 5,
         grades: [
             { lenguajes: 9.2, saberes: 9.4, etica: 9.5, humano: 10 },
-            { lenguajes: 9.8, saberes: 9.9, etica: 9.6, humano: 9.7 }
+            { lenguajes: 9.8, saberes: 9.9, etica: 9.6, humano: 9.7 },
+            { lenguajes: 9.5, saberes: 9.7, etica: 9.8, humano: 9.9 }
         ],
         annualFeePaid: true
     },
@@ -154,7 +158,8 @@ export const MOCK_STUDENTS: Student[] = [
         participationCount: 2,
         grades: [
             { lenguajes: 7.5, saberes: 7.8, etica: 8.0, humano: 8.2 },
-            { lenguajes: 7.8, saberes: 8.0, etica: 8.5, humano: 8.0 }
+            { lenguajes: 7.8, saberes: 8.0, etica: 8.5, humano: 8.0 },
+            { lenguajes: 8.0, saberes: 8.2, etica: 8.3, humano: 8.5 }
         ],
         annualFeePaid: true
     },
@@ -181,7 +186,8 @@ export const MOCK_STUDENTS: Student[] = [
         participationCount: 2,
         grades: [
             { lenguajes: 8.0, saberes: 8.2, etica: 8.5, humano: 8.8 },
-            { lenguajes: 8.4, saberes: 8.6, etica: 8.8, humano: 8.5 }
+            { lenguajes: 8.4, saberes: 8.6, etica: 8.8, humano: 8.5 },
+            { lenguajes: 8.2, saberes: 8.5, etica: 8.7, humano: 8.6 }
         ],
         annualFeePaid: false
     },
@@ -199,6 +205,6 @@ export const DEFAULT_CONFIG: SchoolConfig = {
     gradeGroup: '5° Grado - A',
     schedule: '13:00 - 18:00 hrs',
     location: 'Guasave, Sinaloa',
-    schoolYear: '2024-2025',
+    schoolYear: '2025-2026',
     directorName: 'Profr. Director General'
 };

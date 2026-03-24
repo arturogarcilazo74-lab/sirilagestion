@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { Student, SchoolConfig, BehaviorLog } from '../types';
+import { Student, SchoolConfig, BehaviorLog, Assignment } from '../types';
 import QRCode from 'qrcode';
 
 type ColorTuple = [number, number, number];
@@ -37,7 +37,7 @@ const getTeacherForStudent = (config: SchoolConfig, studentGroup?: string): stri
 
     const sStr = studentGroup.toUpperCase();
     const sGrade = sStr.match(/(\d+)/)?.[0];
-    const sLetter = sStr.match(/[A-F]/)?.[0];
+    const sLetter = sStr.match(/[A-Z]/)?.[0];
 
     // If we can't parse a specific Grade+Letter, try exact match or return default
     if (!sGrade || !sLetter) return config.teacherName;
@@ -48,7 +48,7 @@ const getTeacherForStudent = (config: SchoolConfig, studentGroup?: string): stri
         if (staffStr.includes('DIREC') || staffStr.includes('ADMIN')) return false;
 
         const staffGrade = staffStr.match(/(\d+)/)?.[0];
-        const staffLetter = staffStr.match(/[A-F]/)?.[0];
+        const staffLetter = staffStr.match(/[A-Z]/)?.[0];
         return staffGrade === sGrade && staffLetter === sLetter;
     });
 
@@ -123,6 +123,19 @@ const addStudentInfo = (doc: jsPDF, student: Student, config: SchoolConfig, star
     doc.text(teacherName, 140, startY + 6);
 };
 
+// Helper to map behavior log types to readable labels
+const getBehaviorTypeLabel = (type: string): string => {
+    switch (type) {
+        case 'POSITIVE': return 'Positiva';
+        case 'NEGATIVE': return 'Negativa';
+        case 'USAER_OBSERVATION': return 'Obs. USAER';
+        case 'USAER_MEETING': return 'Reunión USAER';
+        case 'USAER_ACCOMMODATION': return 'Ajuste USAER';
+        case 'USAER_SUGGESTION': return 'Sug. USAER';
+        default: return type;
+    }
+};
+
 const addFooter = (doc: jsPDF, config: SchoolConfig, student?: Student) => {
     const pageHeight = doc.internal.pageSize.height;
     const pageWidth = doc.internal.pageSize.width;
@@ -172,6 +185,7 @@ const addFooter = (doc: jsPDF, config: SchoolConfig, student?: Student) => {
 export const generateReportCard = async (student: Student, config: SchoolConfig) => {
     try {
         const doc = new jsPDF();
+        const pageWidth = doc.internal.pageSize.width;
 
         // Pre-load logo if needed
         let printConfig = { ...config };
@@ -181,36 +195,78 @@ export const generateReportCard = async (student: Student, config: SchoolConfig)
         }
 
         addHeader(doc, printConfig, 'BOLETA DE EVALUACIÓN');
-        // Debug line to ensure PDF is not blank
-        doc.setFontSize(12);
-        doc.setTextColor(255, 0, 0);
 
         addStudentInfo(doc, student, printConfig, 65);
 
-        // Grades Table
+        // Grades Table - Show all components per trimester
+        const grades = student.grades || [];
+        const gradesData: string[][] = [];
+
+        grades.forEach((grade, index) => {
+            if (typeof grade === 'object' && grade !== null) {
+                const leng = Number(grade.lenguajes || 0);
+                const sab = Number(grade.saberes || 0);
+                const eti = Number(grade.etica || 0);
+                const hum = Number(grade.humano || 0);
+                const validFields = [leng, sab, eti, hum].filter(v => v > 0);
+                const avg = validFields.length > 0 ? (validFields.reduce((a, b) => a + b, 0) / validFields.length) : 0;
+                gradesData.push([
+                    `Evaluación ${index + 1}`,
+                    leng > 0 ? leng.toFixed(1) : '-',
+                    sab > 0 ? sab.toFixed(1) : '-',
+                    eti > 0 ? eti.toFixed(1) : '-',
+                    hum > 0 ? hum.toFixed(1) : '-',
+                    avg > 0 ? avg.toFixed(1) : '-'
+                ]);
+            } else {
+                const val = Number(grade) || 0;
+                gradesData.push([
+                    `Evaluación ${index + 1}`,
+                    val > 0 ? val.toFixed(1) : '-',
+                    val > 0 ? val.toFixed(1) : '-',
+                    val > 0 ? val.toFixed(1) : '-',
+                    val > 0 ? val.toFixed(1) : '-',
+                    val > 0 ? val.toFixed(1) : '-'
+                ]);
+            }
+        });
+
+        // Calculate overall average
         const getGradeValue = (g: any) => {
             if (typeof g === 'number') return g;
             if (typeof g === 'string' && !isNaN(parseFloat(g))) return parseFloat(g);
             if (typeof g === 'object' && g !== null) {
-                return (Number(g.lenguajes || 0) + Number(g.saberes || 0) + Number(g.etica || 0) + Number(g.humano || 0)) / 4;
+                const fields = [Number(g.lenguajes || 0), Number(g.saberes || 0), Number(g.etica || 0), Number(g.humano || 0)];
+                const validFields = fields.filter(v => v > 0);
+                return validFields.length > 0 ? validFields.reduce((a, b) => a + b, 0) / validFields.length : 0;
             }
             return 0;
         };
-
-        const grades = student.grades || [];
-        const gradesData = grades.map((grade, index) => [`Evaluación ${index + 1}`, getGradeValue(grade).toFixed(1)]);
-
         const sum = grades.reduce((acc, grade) => acc + getGradeValue(grade), 0);
-        const average = grades.length > 0 ? (sum / grades.length).toFixed(1) : '0';
+        const average = grades.length > 0 ? (sum / grades.length).toFixed(1) : '-';
 
         autoTable(doc, {
             startY: 85,
-            head: [['Periodo / Concepto', 'Calificación']],
-            body: [...gradesData, ['PROMEDIO FINAL', average]],
+            head: [['Periodo', 'Lenguajes', 'Saberes y P.C.', 'Ética Nat. y Soc.', 'De lo Humano', 'Promedio']],
+            body: [...gradesData, ['PROMEDIO FINAL', '', '', '', '', average]],
             theme: 'grid',
             headStyles: { fillColor: COLORS.primary },
             footStyles: { fillColor: [240, 240, 240], textColor: COLORS.text, fontStyle: 'bold' },
-            styles: { fontSize: 10, cellPadding: 3 },
+            styles: { fontSize: 8, cellPadding: 2 },
+            columnStyles: {
+                0: { cellWidth: 28, fontStyle: 'bold' },
+                1: { cellWidth: 24, halign: 'center' },
+                2: { cellWidth: 28, halign: 'center' },
+                3: { cellWidth: 32, halign: 'center' },
+                4: { cellWidth: 28, halign: 'center' },
+                5: { cellWidth: 22, halign: 'center', fontStyle: 'bold' }
+            },
+            didParseCell: (data) => {
+                if (data.section === 'body' && data.row.index === gradesData.length) {
+                    data.cell.styles.fontStyle = 'bold';
+                    data.cell.styles.fillColor = [240, 240, 240];
+                }
+            }
         });
 
         // Attendance & Behavior Summary
@@ -223,6 +279,7 @@ export const generateReportCard = async (student: Student, config: SchoolConfig)
         const attendance = student.attendance || {};
         const attendanceCount = Object.values(attendance).filter(s => s === 'Presente').length;
         const absences = Object.values(attendance).filter(s => s === 'Ausente').length;
+        const tardiness = Object.values(attendance).filter(s => s === 'Retardo').length;
 
         autoTable(doc, {
             startY: finalY + 5,
@@ -230,12 +287,83 @@ export const generateReportCard = async (student: Student, config: SchoolConfig)
             body: [
                 ['Asistencias', attendanceCount.toString()],
                 ['Faltas', absences.toString()],
+                ['Retardos', tardiness.toString()],
                 ['Puntos de Conducta', (student.behaviorPoints || 0).toString()],
                 ['Tareas Entregadas', `${student.assignmentsCompleted} / ${student.totalAssignments}`]
             ],
             theme: 'striped',
             headStyles: { fillColor: COLORS.secondary },
         });
+
+        // --- Observations and Suggestions Section ---
+        const obsY = (doc as any).lastAutoTable.finalY + 12;
+
+        // Generate academic suggestions based on grades
+        const generateAcademicSuggestion = () => {
+            const suggestions: string[] = [];
+            grades.forEach((grade, idx) => {
+                if (typeof grade === 'object' && grade !== null) {
+                    const fields = {
+                        'Lenguajes': Number(grade.lenguajes || 0),
+                        'Saberes y P.C.': Number(grade.saberes || 0),
+                        'Ética, Nat. y Soc.': Number(grade.etica || 0),
+                        'De lo Humano': Number(grade.humano || 0)
+                    };
+                    Object.entries(fields).forEach(([name, val]) => {
+                        if (val > 0 && val < 7) {
+                            suggestions.push(`- Reforzar ${name} (T${idx + 1}: ${val.toFixed(1)})`);
+                        }
+                    });
+                }
+            });
+            if (suggestions.length === 0) {
+                return '- El alumno muestra un desempeño académico adecuado en todas las áreas.';
+            }
+            return suggestions.join('\n');
+        };
+
+        // Generate conduct suggestions
+        const generateConductSuggestion = () => {
+            const points = student.behaviorPoints || 0;
+            if (points >= 5) return '- El alumno presenta excelente conducta y participación en clase.';
+            if (points >= 0) return '- Se recomienda continuar motivando la participación activa del alumno.';
+            if (points >= -3) return '- Se sugiere platicar con el alumno sobre su comportamiento y establecer metas de mejora.';
+            return '- Se requiere atención inmediata sobre conducta. Se recomienda reunión con padres de familia.';
+        };
+
+        // Observations and Suggestions
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2]);
+        doc.text('Observaciones y Sugerencias', 20, obsY);
+
+        // Academic observations
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Áreas Académicas:', 20, obsY + 8);
+        doc.setFont('helvetica', 'normal');
+        const acadSuggLines = doc.splitTextToSize(generateAcademicSuggestion(), pageWidth - 40);
+        doc.text(acadSuggLines, 20, obsY + 13);
+
+        const conductY = obsY + 13 + (acadSuggLines.length * 4) + 6;
+        doc.setFont('helvetica', 'bold');
+        doc.text('Conducta y Participación:', 20, conductY);
+        doc.setFont('helvetica', 'normal');
+        const conductSuggLines = doc.splitTextToSize(generateConductSuggestion(), pageWidth - 40);
+        doc.text(conductSuggLines, 20, conductY + 5);
+
+        // USAER / BAP observations
+        let specialY = conductY + 5 + (conductSuggLines.length * 4) + 6;
+        if (student.usaer || (student.bap && student.bap !== 'NINGUNA')) {
+            doc.setFont('helvetica', 'bold');
+            doc.text('Atención a la Diversidad:', 20, specialY);
+            doc.setFont('helvetica', 'normal');
+            let specialText = '';
+            if (student.usaer) specialText += '- El alumno recibe apoyo del servicio USAER. ';
+            if (student.bap && student.bap !== 'NINGUNA') specialText += `- Barreras para el aprendizaje: ${student.bap}.`;
+            const specialLines = doc.splitTextToSize(specialText, pageWidth - 40);
+            doc.text(specialLines, 20, specialY + 5);
+        }
 
         addFooter(doc, config, student);
         doc.save(`Boleta_${student.name.replace(/\s+/g, '_')}.pdf`);
@@ -270,7 +398,7 @@ export const generateBehaviorReport = async (student: Student, logs: BehaviorLog
             head: [['Fecha', 'Tipo', 'Descripción']],
             body: studentLogs.map(log => [
                 new Date(log.date).toLocaleDateString(),
-                log.type === 'POSITIVE' ? 'Positiva' : 'Negativa',
+                getBehaviorTypeLabel(log.type),
                 log.description
             ]),
             theme: 'grid',
@@ -285,6 +413,8 @@ export const generateBehaviorReport = async (student: Student, logs: BehaviorLog
                     const type = data.cell.raw;
                     if (type === 'Positiva') {
                         data.cell.styles.textColor = [22, 163, 74]; // Green
+                    } else if (type?.toString().includes('USAER')) {
+                        data.cell.styles.textColor = [79, 70, 229]; // Indigo for USAER
                     } else {
                         data.cell.styles.textColor = [220, 38, 38]; // Red
                     }
@@ -891,4 +1021,356 @@ export const generateGroupList = (
     doc.text(`Hombres: ${groupStudents.filter(s => s.sex === 'HOMBRE').length} | Mujeres: ${groupStudents.filter(s => s.sex === 'MUJER').length}`, 20, finalY + 5);
 
     doc.save(`Lista_${groupName.replace(/\s+/g, '_')}.pdf`);
+};
+
+export const generateCompleteStudentReport = async (
+    student: Student,
+    config: SchoolConfig,
+    logs: BehaviorLog[],
+    assignments: Assignment[]
+) => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.width;
+    const margin = 20;
+
+    // Pre-load logo
+    let printConfig = { ...config };
+    if (config.schoolLogo && !config.schoolLogo.startsWith('data:')) {
+        const base64Logo = await getBase64ImageFromUrl(config.schoolLogo);
+        if (base64Logo) printConfig.schoolLogo = base64Logo;
+    }
+
+    // === PAGE 1: IDENTIFICATION AND ACADEMIC ===
+
+    // Header
+    addHeader(doc, printConfig, 'INFORME COMPLETO DEL ALUMNO');
+
+    // Student identification
+    let y = 55;
+    doc.setFontSize(10);
+    doc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2]);
+
+    const teacherName = getTeacherForStudent(printConfig, student.group || printConfig.gradeGroup);
+
+    // Name and ID
+    doc.setFont('helvetica', 'bold');
+    doc.text('Nombre:', 20, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(student.name, 50, y);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Clave:', 130, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(student.id, 150, y);
+    y += 7;
+
+    // CURP and Group
+    doc.setFont('helvetica', 'bold');
+    doc.text('CURP:', 20, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(student.curp || '-', 50, y);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Grupo:', 130, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(student.group || printConfig.gradeGroup, 150, y);
+    y += 7;
+
+    // Docente
+    doc.setFont('helvetica', 'bold');
+    doc.text('Docente:', 20, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(teacherName, 50, y);
+    y += 12;
+
+    // === SECTION 1: GRADES BY COMPONENT ===
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(COLORS.primary[0], COLORS.primary[1], COLORS.primary[2]);
+    doc.text('1. CALIFICACIONES POR CAMPO FORMATIVO', 20, y);
+    y += 5;
+
+    doc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2]);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'italic');
+    doc.text('Modelo NEM - Nueva Escuela Mexicana: Lenguajes | Saberes y Pensamiento Científico | Ética, Naturaleza y Sociedades | De lo Humano y lo Comunitario', 20, y);
+    y += 3;
+
+    const grades = student.grades || [];
+    const gradesBody: string[][] = [];
+
+    grades.forEach((grade, idx) => {
+        if (typeof grade === 'object' && grade !== null) {
+            const leng = Number(grade.lenguajes || 0);
+            const sab = Number(grade.saberes || 0);
+            const eti = Number(grade.etica || 0);
+            const hum = Number(grade.humano || 0);
+            const validFields = [leng, sab, eti, hum].filter(v => v > 0);
+            const avg = validFields.length > 0 ? (validFields.reduce((a, b) => a + b, 0) / validFields.length) : 0;
+            let nivel = '-';
+            if (avg >= 9) nivel = 'DESTACADO';
+            else if (avg >= 8) nivel = 'SATISFACTORIO';
+            else if (avg >= 6) nivel = 'SUFICIENTE';
+            else if (avg > 0) nivel = 'INSUFICIENTE';
+
+            gradesBody.push([
+                `Trimestre ${idx + 1}`,
+                leng > 0 ? leng.toFixed(1) : '-',
+                sab > 0 ? sab.toFixed(1) : '-',
+                eti > 0 ? eti.toFixed(1) : '-',
+                hum > 0 ? hum.toFixed(1) : '-',
+                avg > 0 ? avg.toFixed(1) : '-',
+                nivel
+            ]);
+        }
+    });
+
+    // Calculate overall average
+    const getGradeValue = (g: any): number => {
+        if (typeof g === 'number') return g;
+        if (typeof g === 'object' && g !== null) {
+            const fields = [Number(g.lenguajes || 0), Number(g.saberes || 0), Number(g.etica || 0), Number(g.humano || 0)];
+            const validFields = fields.filter(v => v > 0);
+            return validFields.length > 0 ? validFields.reduce((a, b) => a + b, 0) / validFields.length : 0;
+        }
+        return 0;
+    };
+    const sum = grades.reduce((acc, g) => acc + getGradeValue(g), 0);
+    const overallAvg = grades.length > 0 ? (sum / grades.length).toFixed(1) : '-';
+
+    autoTable(doc, {
+        startY: y + 2,
+        head: [['Periodo', 'Lenguajes', 'Saberes P.C.', 'Ética Nat.Soc.', 'De lo Humano', 'Promedio', 'Nivel']],
+        body: [...gradesBody, ['PROMEDIO GENERAL', '', '', '', '', overallAvg, '']],
+        theme: 'grid',
+        headStyles: { fillColor: COLORS.primary, fontSize: 7 },
+        styles: { fontSize: 7, cellPadding: 2 },
+        columnStyles: {
+            0: { cellWidth: 24, fontStyle: 'bold' },
+            1: { cellWidth: 20, halign: 'center' },
+            2: { cellWidth: 22, halign: 'center' },
+            3: { cellWidth: 26, halign: 'center' },
+            4: { cellWidth: 24, halign: 'center' },
+            5: { cellWidth: 20, halign: 'center', fontStyle: 'bold' },
+            6: { cellWidth: 26, halign: 'center' }
+        },
+        didParseCell: (data) => {
+            if (data.section === 'body' && data.row.index === gradesBody.length) {
+                data.cell.styles.fontStyle = 'bold';
+                data.cell.styles.fillColor = [240, 240, 240];
+            }
+        }
+    });
+
+    let currentY = (doc as any).lastAutoTable.finalY + 10;
+
+    // === SECTION 2: ATTENDANCE AND CONDUCT SUMMARY ===
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(COLORS.primary[0], COLORS.primary[1], COLORS.primary[2]);
+    doc.text('2. ASISTENCIA Y CONDUCTA', 20, currentY);
+    currentY += 5;
+
+    const attendance = student.attendance || {};
+    const attendCount = Object.values(attendance).filter(s => s === 'Presente').length;
+    const absCount = Object.values(attendance).filter(s => s === 'Ausente').length;
+    const tardCount = Object.values(attendance).filter(s => s === 'Retardo').length;
+
+    const totalAssigns = assignments.filter(a => !a.targetGroup || a.targetGroup === student.group).length;
+    const completedCount = assignments.filter(a => (student.completedAssignmentIds || []).includes(a.id)).length;
+
+    autoTable(doc, {
+        startY: currentY,
+        head: [['Indicador', 'Valor']],
+        body: [
+            ['Asistencias', attendCount.toString()],
+            ['Faltas', absCount.toString()],
+            ['Retardos', tardCount.toString()],
+            ['Puntos de Conducta', (student.behaviorPoints || 0).toString()],
+            ['Tareas Completadas', `${completedCount} / ${totalAssigns}`],
+            ['Porcentaje de Entregas', totalAssigns > 0 ? `${Math.round((completedCount / totalAssigns) * 100)}%` : 'N/A']
+        ],
+        theme: 'striped',
+        headStyles: { fillColor: COLORS.secondary, fontSize: 8 },
+        styles: { fontSize: 8, cellPadding: 2 },
+    });
+
+    currentY = (doc as any).lastAutoTable.finalY + 10;
+
+    // === SECTION 3: BEHAVIOR LOG ===
+    const studentLogs = logs.filter(l => l.studentId === student.id).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    if (studentLogs.length > 0) {
+        // Check if we need a new page
+        if (currentY > 240) {
+            doc.addPage();
+            currentY = 20;
+        }
+
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(COLORS.primary[0], COLORS.primary[1], COLORS.primary[2]);
+        doc.text('3. REGISTRO DE CONDUCTA E INCIDENCIAS', 20, currentY);
+        currentY += 5;
+
+        autoTable(doc, {
+            startY: currentY,
+            head: [['Fecha', 'Tipo', 'Descripción', 'Puntos']],
+            body: studentLogs.map(log => [
+                new Date(log.date).toLocaleDateString(),
+                getBehaviorTypeLabel(log.type),
+                log.description,
+                (log.points > 0 ? '+' : '') + log.points
+            ]),
+            theme: 'grid',
+            headStyles: { fillColor: COLORS.primary, fontSize: 7 },
+            styles: { fontSize: 7, cellPadding: 2 },
+            columnStyles: {
+                0: { cellWidth: 22 },
+                1: { cellWidth: 24 },
+                2: { cellWidth: 'auto' },
+                3: { cellWidth: 16, halign: 'center' }
+            }
+        });
+
+        currentY = (doc as any).lastAutoTable.finalY + 10;
+    }
+
+    // === PAGE 2: OBSERVATIONS AND SUGGESTIONS ===
+    doc.addPage();
+    currentY = 20;
+
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(COLORS.primary[0], COLORS.primary[1], COLORS.primary[2]);
+    doc.text('4. OBSERVACIONES Y SUGERENCIAS', 20, currentY);
+    currentY += 10;
+
+    // Academic Suggestions
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2]);
+    doc.text('a) Áreas Académicas', 20, currentY);
+    currentY += 7;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    const acadSuggestions: string[] = [];
+    grades.forEach((grade, idx) => {
+        if (typeof grade === 'object' && grade !== null) {
+            const fields: Record<string, number> = {
+                'Lenguajes': Number(grade.lenguajes || 0),
+                'Saberes y Pensamiento Científico': Number(grade.saberes || 0),
+                'Ética, Naturaleza y Sociedades': Number(grade.etica || 0),
+                'De lo Humano y lo Comunitario': Number(grade.humano || 0)
+            };
+            Object.entries(fields).forEach(([name, val]) => {
+                if (val > 0 && val < 7) {
+                    acadSuggestions.push(`• Reforzar ${name} (Trimestre ${idx + 1}: ${val.toFixed(1)}). Se recomienda apoyo adicional y actividades de regularización.`);
+                }
+            });
+        }
+    });
+
+    if (acadSuggestions.length === 0) {
+        const text = 'El alumno muestra un desempeño académico adecuado en todos los campos formativos evaluados. Se sugiere mantener las estrategias de enseñanza actuales y continuar motivando su participación.';
+        const splitText = doc.splitTextToSize(text, pageWidth - 40);
+        doc.text(splitText, 20, currentY);
+        currentY += (splitText.length * 5) + 8;
+    } else {
+        acadSuggestions.forEach(sugg => {
+            const splitText = doc.splitTextToSize(sugg, pageWidth - 40);
+            doc.text(splitText, 20, currentY);
+            currentY += (splitText.length * 5) + 3;
+        });
+        currentY += 5;
+    }
+
+    // Conduct Suggestions
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('b) Conducta y Participación', 20, currentY);
+    currentY += 7;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    const points = student.behaviorPoints || 0;
+    const negLogs = logs.filter(l => l.studentId === student.id && l.type === 'NEGATIVE');
+    const posLogs = logs.filter(l => l.studentId === student.id && l.type === 'POSITIVE');
+
+    let conductText = '';
+    if (points >= 5) {
+        conductText = `El alumno presenta una conducta ejemplar con ${posLogs.length} reconocimientos positivos y ${negLogs.length} incidencias negativas. Se felicita al alumno y a la familia por el excelente comportamiento. Se sugiere mantener las buenas prácticas.`;
+    } else if (points >= 0) {
+        conductText = `El alumno presenta una conducta dentro de lo esperado (${negLogs.length} incidencias negativas, ${posLogs.length} positivas). Se recomienda continuar motivando la participación activa y el respeto hacia sus compañeros.`;
+    } else if (points >= -3) {
+        conductText = `El alumno ha registrado ${negLogs.length} incidencias negativas. Se sugiere platicar con el alumno sobre las reglas de convivencia escolar y establecer metas de mejora en conjunto con la familia.`;
+    } else {
+        conductText = `El alumno requiere atención especial en su conducta. Ha registrado ${negLogs.length} incidencias negativas y presenta un puntaje de ${points}. Se recomienda una reunión urgente con padres de familia para establecer un plan de mejora integral.`;
+    }
+    const conductSplit = doc.splitTextToSize(conductText, pageWidth - 40);
+    doc.text(conductSplit, 20, currentY);
+    currentY += (conductSplit.length * 5) + 10;
+
+    // USAER / Special Education
+    if (student.usaer || (student.bap && student.bap !== 'NINGUNA')) {
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text('c) Atención a la Diversidad', 20, currentY);
+        currentY += 7;
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        let specialText = '';
+        if (student.usaer) specialText += '• El alumno recibe apoyo del servicio USAER. ';
+        if (student.bap && student.bap !== 'NINGUNA') specialText += `• Barreras para el aprendizaje identificadas: ${student.bap}. `;
+        specialText += 'Se requieren ajustes razonables al currículo según las necesidades individuales del alumno. Se recomienda coordinación constante entre docente de grupo y el equipo USAER.';
+        const specialSplit = doc.splitTextToSize(specialText, pageWidth - 40);
+        doc.text(specialSplit, 20, currentY);
+        currentY += (specialSplit.length * 5) + 10;
+    }
+
+    // Attendance Suggestions
+    if (absCount > 5) {
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text('d) Observaciones de Asistencia', 20, currentY);
+        currentY += 7;
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        const attendText = `El alumno ha acumulado ${absCount} faltas y ${tardCount} retardos. Las inasistencias afectan significativamente el aprovechamiento académico. Se exhorta a la familia a garantizar la asistencia regular del alumno a clases.`;
+        const attendSplit = doc.splitTextToSize(attendText, pageWidth - 40);
+        doc.text(attendSplit, 20, currentY);
+    }
+
+    // Signatures
+    const sigY = doc.internal.pageSize.height - 40;
+    doc.setLineWidth(0.5);
+    doc.setDrawColor(COLORS.secondary[0], COLORS.secondary[1], COLORS.secondary[2]);
+
+    doc.line(30, sigY, 80, sigY);
+    doc.setFontSize(8);
+    doc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2]);
+    doc.text(teacherName, 55, sigY + 5, { align: 'center' });
+    doc.setFontSize(7);
+    doc.setTextColor(COLORS.lightText[0], COLORS.lightText[1], COLORS.lightText[2]);
+    doc.text('Docente de Grupo', 55, sigY + 9, { align: 'center' });
+
+    doc.line(pageWidth / 2 - 25, sigY, pageWidth / 2 + 25, sigY);
+    doc.setFontSize(8);
+    doc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2]);
+    doc.text(printConfig.directorName || 'Director Escolar', pageWidth / 2, sigY + 5, { align: 'center' });
+    doc.setFontSize(7);
+    doc.setTextColor(COLORS.lightText[0], COLORS.lightText[1], COLORS.lightText[2]);
+    doc.text('Director(a) de la Escuela', pageWidth / 2, sigY + 9, { align: 'center' });
+
+    doc.line(pageWidth - 80, sigY, pageWidth - 30, sigY);
+    doc.setFontSize(7);
+    doc.text('Firma del Padre o Tutor', pageWidth - 55, sigY + 5, { align: 'center' });
+
+    // Date
+    doc.setFontSize(6);
+    const date = new Date().toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    doc.text(`Generado el: ${date}`, 20, doc.internal.pageSize.height - 5);
+
+    doc.save(`Informe_Completo_${student.name.replace(/\s+/g, '_')}.pdf`);
 };
