@@ -417,7 +417,7 @@ const App: React.FC = () => {
             <CommunicationsView students={visibleStudents} />
           )}
           {currentView === 'DOCUMENTS' && (
-            <DocumentsView students={visibleStudents} config={store.schoolConfig} />
+            <DocumentsView students={visibleStudents} config={store.schoolConfig} assignments={store.assignments} />
           )}
           {currentView === 'LIBRARY' && (
             <LibraryView

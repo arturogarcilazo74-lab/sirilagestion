@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Student, SchoolConfig } from '../types';
+import { Student, SchoolConfig, Assignment } from '../types';
 import { generateDocumentContent } from '../services/ai';
 import { generateStudentAnalysis } from '../services/ai';
 import { FileText, Download, Printer, Copy, CheckCircle, AlertTriangle, Calendar, User, FileOutput, Bus, Upload } from 'lucide-react';
@@ -26,11 +26,12 @@ interface DocumentsViewProps {
     students: Student[];
     config: SchoolConfig;
     initialType?: DocumentType;
+    assignments?: Assignment[];
 }
 
-type DocumentType = 'INCIDENCIA' | 'CITATORIO' | 'FICHA_DESCRIPTIVA' | 'PLANEACION' | 'ACTA_HECHOS' | 'PERMISO_SALIDA' | 'AUTORIZACION_EVENTO' | 'PRESENTACION_RESULTADOS' | 'OBSERVACIONES_BOLETA' | 'INFORME_PADRES';
+type DocumentType = 'INCIDENCIA' | 'CITATORIO' | 'FICHA_DESCRIPTIVA' | 'PLANEACION' | 'ACTA_HECHOS' | 'PERMISO_SALIDA' | 'AUTORIZACION_EVENTO' | 'PRESENTACION_RESULTADOS' | 'OBSERVACIONES_BOLETA' | 'INFORME_PADRES' | 'INFORME_ACTIVIDADES';
 
-export const DocumentsView: React.FC<DocumentsViewProps> = ({ students, config, initialType }) => {
+export const DocumentsView: React.FC<DocumentsViewProps> = ({ students, config, initialType, assignments = [] }) => {
     const [selectedType, setSelectedType] = useState<DocumentType>(initialType || 'INCIDENCIA');
     const [selectedStudentId, setSelectedStudentId] = useState<string>('');
     const [generatedContent, setGeneratedContent] = useState<string>('');
@@ -304,6 +305,174 @@ ${analysis}
             return;
         }
 
+        // --- INFORME DE ACTIVIDADES PENDIENTES ---
+        if (selectedType === 'INFORME_ACTIVIDADES') {
+            if (!student) {
+                setGeneratedContent('Error: Debes seleccionar un alumno para generar el informe de actividades.');
+                setIsGenerating(false);
+                return;
+            }
+
+            try {
+                const date = new Date().toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                const cycle = config.schoolYear || `${new Date().getFullYear()}-${new Date().getFullYear() + 1}`;
+
+                // Filter assignments for this student's group
+                const studentAssignments = assignments.filter(a => 
+                    !a.targetGroup || a.targetGroup === student.group || a.targetGroup === 'GLOBAL' || a.targetGroup === 'TODOS'
+                );
+
+                const completedIds = student.completedAssignmentIds || [];
+                const completed = studentAssignments.filter(a => completedIds.includes(a.id));
+                const pending = studentAssignments.filter(a => !completedIds.includes(a.id));
+
+                // Separate by type
+                const completedTasks = completed.filter(a => a.type !== 'INTERACTIVE');
+                const completedInteractive = completed.filter(a => a.type === 'INTERACTIVE');
+                const pendingTasks = pending.filter(a => a.type !== 'INTERACTIVE');
+                const pendingInteractive = pending.filter(a => a.type === 'INTERACTIVE');
+
+                let report = `
+═══════════════════════════════════════════════════════════════════
+
+                    ${config.schoolName.toUpperCase()}
+                    C.C.T: ${config.cct} | Zona: ${config.zone}
+                    Ciclo Escolar: ${cycle}
+
+═══════════════════════════════════════════════════════════════════
+
+          INFORME DE ACTIVIDADES Y TAREAS
+          Para entrega a Padres de Familia
+
+═══════════════════════════════════════════════════════════════════
+
+Nombre del Alumno:     ${student.name}
+Grado y Grupo:         ${student.group || config.gradeGroup}
+Tutor Legal:           ${student.guardianName}
+Fecha del Informe:     ${date}
+Docente:               ${config.teacherName}
+
+═══════════════════════════════════════════════════════════════════
+
+  RESUMEN GENERAL
+═══════════════════════════════════════════════════════════════════
+
+  Total de Actividades Asignadas:  ${studentAssignments.length}
+  Actividades Completadas:         ${completed.length}
+  Actividades Pendientes:          ${pending.length}
+  Porcentaje de Avance:            ${studentAssignments.length > 0 ? Math.round((completed.length / studentAssignments.length) * 100) : 0}%
+
+`;
+
+                // Pending activities detail
+                if (pending.length > 0) {
+                    report += `
+═══════════════════════════════════════════════════════════════════
+
+  ⚠ ACTIVIDADES PENDIENTES (${pending.length})
+  Su hijo(a) NO ha completado las siguientes actividades:
+═══════════════════════════════════════════════════════════════════
+
+`;
+
+                    pending.forEach((a, idx) => {
+                        const isLate = new Date(a.dueDate) < new Date();
+                        const typeLabel = a.type === 'INTERACTIVE' ? '[INTERACTIVA]' : '[TAREA]';
+                        const statusLabel = isLate ? '⚠ VENCIDA' : '⏳ PENDIENTE';
+                        
+                        report += `  ${idx + 1}. ${a.title}  ${typeLabel}  ${statusLabel}
+     Fecha de entrega: ${a.dueDate}
+`;
+                        if (a.description) {
+                            report += `     Descripción: ${a.description}
+`;
+                        }
+                        report += `
+`;
+                    });
+
+                    report += `
+  ═══════════════════════════════════════════════════════════════
+  IMPORTANTE: Se solicita a los padres de familia apoyar a su
+  hijo(a) para que complete las actividades pendientes lo antes
+  posible. Pueden acceder al portal de padres para ver y
+  realizar las actividades interactivas.
+  ═══════════════════════════════════════════════════════════════
+
+`;
+                }
+
+                // Completed activities detail
+                if (completed.length > 0) {
+                    report += `
+═══════════════════════════════════════════════════════════════════
+
+  ✓ ACTIVIDADES COMPLETADAS (${completed.length})
+═══════════════════════════════════════════════════════════════════
+
+`;
+
+                    completed.forEach((a, idx) => {
+                        const typeLabel = a.type === 'INTERACTIVE' ? '[INTERACTIVA]' : '[TAREA]';
+                        const score = student.assignmentResults?.[a.id];
+                        const scoreLabel = score !== undefined ? `Calificación: ${score}/10` : '';
+                        
+                        report += `  ${idx + 1}. ${a.title}  ${typeLabel}  ✓ COMPLETADA
+     Fecha de entrega: ${a.dueDate}
+`;
+                        if (scoreLabel) {
+                            report += `     ${scoreLabel}
+`;
+                        }
+                        report += `
+`;
+                    });
+                }
+
+                // Recommendations for parents
+                report += `
+═══════════════════════════════════════════════════════════════════
+
+  RECOMENDACIONES PARA LA FAMILIA
+═══════════════════════════════════════════════════════════════════
+
+  1. Revise diariamente las actividades pendientes de su hijo(a).
+  2. Establezca un horario fijo para realizar tareas escolares.
+  3. Asegúrese de que cuente con los materiales necesarios.
+  4. Apóyelo preguntándole qué aprendió en clase.
+  5. Ingrese al Portal de Padres para ver actividades interactivas:
+     ${window.location.origin}/padres
+
+  Para cualquier duda o aclaración, favor de contactar al docente.
+  Teléfono de contacto de la escuela o del docente.
+
+═══════════════════════════════════════════════════════════════════
+
+  FIRMAS
+═══════════════════════════════════════════════════════════════════
+
+
+
+  ________________________    ________________________
+       Docente de Grupo            Firma del Padre
+      ${config.teacherName}           o Tutor
+
+
+
+  Documento generado automáticamente por el Sistema SIRILA
+  ${date}
+`;
+
+                setGeneratedContent(report);
+            } catch (error) {
+                console.error("Error generando informe de actividades:", error);
+                setGeneratedContent(`Error al generar el informe: ${error instanceof Error ? error.message : String(error)}`);
+            } finally {
+                setIsGenerating(false);
+            }
+            return;
+        }
+
         // --- Resto de tipos de documentos (lógica existente) ---
         // Calculate real stats for student
         const getGradeAvg = (g: any) => {
@@ -458,6 +627,7 @@ ${analysis}
                         <div className="space-y-2">
                             {[
                                 { id: 'INFORME_PADRES', label: 'Informe para Padres (Completo)', icon: FileText },
+                                { id: 'INFORME_ACTIVIDADES', label: 'Informe de Actividades Pendientes', icon: AlertTriangle },
                                 { id: 'INCIDENCIA', label: 'Reporte de Incidencia', icon: AlertTriangle },
                                 { id: 'ACTA_HECHOS', label: 'Acta de Hechos', icon: FileText },
                                 { id: 'AUTORIZACION_EVENTO', label: 'Autorización Evento', icon: Bus },
@@ -489,19 +659,19 @@ ${analysis}
                             {selectedType !== 'PLANEACION' && selectedType !== 'PRESENTACION_RESULTADOS' && (
                                 <div>
                                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
-                                        {selectedType === 'INFORME_PADRES' ? 'Alumno (Obligatorio)' : 'Estudiante'}
+                                        {(selectedType === 'INFORME_PADRES' || selectedType === 'INFORME_ACTIVIDADES') ? 'Alumno (Obligatorio)' : 'Estudiante'}
                                     </label>
                                     <select
                                         value={selectedStudentId}
                                         onChange={(e) => setSelectedStudentId(e.target.value)}
-                                        className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white/80 ${selectedType === 'INFORME_PADRES' && !selectedStudentId ? 'border-red-400 bg-red-50' : 'border-slate-300'}`}
+                                        className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white/80 ${(selectedType === 'INFORME_PADRES' || selectedType === 'INFORME_ACTIVIDADES') && !selectedStudentId ? 'border-red-400 bg-red-50' : 'border-slate-300'}`}
                                     >
                                         <option value="">Seleccionar Alumno...</option>
                                         {students.map(s => (
                                             <option key={s.id} value={s.id}>{s.name}</option>
                                         ))}
                                     </select>
-                                    {selectedType === 'INFORME_PADRES' && !selectedStudentId && (
+                                    {(selectedType === 'INFORME_PADRES' || selectedType === 'INFORME_ACTIVIDADES') && !selectedStudentId && (
                                         <p className="text-xs text-red-500 mt-1 font-medium">* Debes seleccionar un alumno para generar el informe</p>
                                     )}
                                 </div>
@@ -740,11 +910,11 @@ ${analysis}
 
                             <button
                                 onClick={handleGenerate}
-                                disabled={isGenerating || (selectedType === 'INFORME_PADRES' && !selectedStudentId)}
-                                className={`w-full py-3 rounded-xl font-bold shadow-lg transition-all active:scale-95 disabled:opacity-70 flex items-center justify-center gap-2 mt-4 ${selectedType === 'INFORME_PADRES' ? 'bg-teal-600 hover:bg-teal-700 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}
+                                disabled={isGenerating || ((selectedType === 'INFORME_PADRES' || selectedType === 'INFORME_ACTIVIDADES') && !selectedStudentId)}
+                                className={`w-full py-3 rounded-xl font-bold shadow-lg transition-all active:scale-95 disabled:opacity-70 flex items-center justify-center gap-2 mt-4 ${selectedType === 'INFORME_PADRES' ? 'bg-teal-600 hover:bg-teal-700 text-white' : selectedType === 'INFORME_ACTIVIDADES' ? 'bg-orange-600 hover:bg-orange-700 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}
                             >
                                 {isGenerating ? <span className="animate-spin">✨</span> : <FileText size={18} />}
-                                {isGenerating ? 'Generando...' : selectedType === 'INFORME_PADRES' ? 'Generar Informe con Análisis IA' : 'Generar Documento'}
+                                {isGenerating ? 'Generando...' : selectedType === 'INFORME_PADRES' ? 'Generar Informe con Análisis IA' : selectedType === 'INFORME_ACTIVIDADES' ? 'Generar Informe de Actividades' : 'Generar Documento'}
                             </button>
                         </div>
                     </div>
