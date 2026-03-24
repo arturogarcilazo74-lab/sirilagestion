@@ -1027,7 +1027,8 @@ export const generateCompleteStudentReport = async (
     student: Student,
     config: SchoolConfig,
     logs: BehaviorLog[],
-    assignments: Assignment[]
+    assignments: Assignment[],
+    aiAnalysis?: string
 ) => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.width;
@@ -1244,102 +1245,164 @@ export const generateCompleteStudentReport = async (
     doc.text('4. OBSERVACIONES Y SUGERENCIAS', 20, currentY);
     currentY += 10;
 
-    // Academic Suggestions
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2]);
-    doc.text('a) Áreas Académicas', 20, currentY);
-    currentY += 7;
+    if (aiAnalysis) {
+        // Render AI-generated analysis
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2]);
 
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    const acadSuggestions: string[] = [];
-    grades.forEach((grade, idx) => {
-        if (typeof grade === 'object' && grade !== null) {
-            const fields: Record<string, number> = {
-                'Lenguajes': Number(grade.lenguajes || 0),
-                'Saberes y Pensamiento Científico': Number(grade.saberes || 0),
-                'Ética, Naturaleza y Sociedades': Number(grade.etica || 0),
-                'De lo Humano y lo Comunitario': Number(grade.humano || 0)
-            };
-            Object.entries(fields).forEach(([name, val]) => {
-                if (val > 0 && val < 7) {
-                    acadSuggestions.push(`• Reforzar ${name} (Trimestre ${idx + 1}: ${val.toFixed(1)}). Se recomienda apoyo adicional y actividades de regularización.`);
+        // Split analysis into sections and format
+        const sections = aiAnalysis.split(/\d+\.\s+/).filter(s => s.trim());
+        
+        sections.forEach(section => {
+            const lines = section.split('\n').filter(l => l.trim());
+            if (lines.length === 0) return;
+
+            // Check if we need a new page
+            if (currentY > 265) {
+                doc.addPage();
+                currentY = 20;
+            }
+
+            // Section title (first line)
+            const titleLine = lines[0].replace(/:/g, '').trim();
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(COLORS.primary[0], COLORS.primary[1], COLORS.primary[2]);
+            
+            const titleWidth = doc.getTextWidth(titleLine);
+            if (titleWidth > pageWidth - 40) {
+                const titleSplit = doc.splitTextToSize(titleLine, pageWidth - 40);
+                doc.text(titleSplit, 20, currentY);
+                currentY += (titleSplit.length * 5) + 2;
+            } else {
+                doc.text(titleLine, 20, currentY);
+                currentY += 6;
+            }
+
+            // Section content
+            doc.setFontSize(8.5);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2]);
+
+            lines.slice(1).forEach(line => {
+                if (!line.trim()) return;
+                if (currentY > 275) {
+                    doc.addPage();
+                    currentY = 20;
                 }
+                const contentLines = doc.splitTextToSize(line.trim(), pageWidth - 44);
+                contentLines.forEach((cl: string) => {
+                    if (currentY > 275) {
+                        doc.addPage();
+                        currentY = 20;
+                    }
+                    doc.text(cl, 24, currentY);
+                    currentY += 4;
+                });
             });
-        }
-    });
 
-    if (acadSuggestions.length === 0) {
-        const text = 'El alumno muestra un desempeño académico adecuado en todos los campos formativos evaluados. Se sugiere mantener las estrategias de enseñanza actuales y continuar motivando su participación.';
-        const splitText = doc.splitTextToSize(text, pageWidth - 40);
-        doc.text(splitText, 20, currentY);
-        currentY += (splitText.length * 5) + 8;
-    } else {
-        acadSuggestions.forEach(sugg => {
-            const splitText = doc.splitTextToSize(sugg, pageWidth - 40);
-            doc.text(splitText, 20, currentY);
-            currentY += (splitText.length * 5) + 3;
+            currentY += 4;
         });
-        currentY += 5;
-    }
-
-    // Conduct Suggestions
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.text('b) Conducta y Participación', 20, currentY);
-    currentY += 7;
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    const points = student.behaviorPoints || 0;
-    const negLogs = logs.filter(l => l.studentId === student.id && l.type === 'NEGATIVE');
-    const posLogs = logs.filter(l => l.studentId === student.id && l.type === 'POSITIVE');
-
-    let conductText = '';
-    if (points >= 5) {
-        conductText = `El alumno presenta una conducta ejemplar con ${posLogs.length} reconocimientos positivos y ${negLogs.length} incidencias negativas. Se felicita al alumno y a la familia por el excelente comportamiento. Se sugiere mantener las buenas prácticas.`;
-    } else if (points >= 0) {
-        conductText = `El alumno presenta una conducta dentro de lo esperado (${negLogs.length} incidencias negativas, ${posLogs.length} positivas). Se recomienda continuar motivando la participación activa y el respeto hacia sus compañeros.`;
-    } else if (points >= -3) {
-        conductText = `El alumno ha registrado ${negLogs.length} incidencias negativas. Se sugiere platicar con el alumno sobre las reglas de convivencia escolar y establecer metas de mejora en conjunto con la familia.`;
     } else {
-        conductText = `El alumno requiere atención especial en su conducta. Ha registrado ${negLogs.length} incidencias negativas y presenta un puntaje de ${points}. Se recomienda una reunión urgente con padres de familia para establecer un plan de mejora integral.`;
-    }
-    const conductSplit = doc.splitTextToSize(conductText, pageWidth - 40);
-    doc.text(conductSplit, 20, currentY);
-    currentY += (conductSplit.length * 5) + 10;
-
-    // USAER / Special Education
-    if (student.usaer || (student.bap && student.bap !== 'NINGUNA')) {
+        // Fallback manual observations if AI analysis is not available
+        // Academic Suggestions
         doc.setFontSize(11);
         doc.setFont('helvetica', 'bold');
-        doc.text('c) Atención a la Diversidad', 20, currentY);
+        doc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2]);
+        doc.text('a) Áreas Académicas', 20, currentY);
         currentY += 7;
 
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9);
-        let specialText = '';
-        if (student.usaer) specialText += '• El alumno recibe apoyo del servicio USAER. ';
-        if (student.bap && student.bap !== 'NINGUNA') specialText += `• Barreras para el aprendizaje identificadas: ${student.bap}. `;
-        specialText += 'Se requieren ajustes razonables al currículo según las necesidades individuales del alumno. Se recomienda coordinación constante entre docente de grupo y el equipo USAER.';
-        const specialSplit = doc.splitTextToSize(specialText, pageWidth - 40);
-        doc.text(specialSplit, 20, currentY);
-        currentY += (specialSplit.length * 5) + 10;
-    }
+        const acadSuggestions: string[] = [];
+        grades.forEach((grade, idx) => {
+            if (typeof grade === 'object' && grade !== null) {
+                const fields: Record<string, number> = {
+                    'Lenguajes': Number(grade.lenguajes || 0),
+                    'Saberes y Pensamiento Científico': Number(grade.saberes || 0),
+                    'Ética, Naturaleza y Sociedades': Number(grade.etica || 0),
+                    'De lo Humano y lo Comunitario': Number(grade.humano || 0)
+                };
+                Object.entries(fields).forEach(([name, val]) => {
+                    if (val > 0 && val < 7) {
+                        acadSuggestions.push(`• Reforzar ${name} (Trimestre ${idx + 1}: ${val.toFixed(1)}). Se recomienda apoyo adicional y actividades de regularización.`);
+                    }
+                });
+            }
+        });
 
-    // Attendance Suggestions
-    if (absCount > 5) {
+        if (acadSuggestions.length === 0) {
+            const text = 'El alumno muestra un desempeño académico adecuado en todos los campos formativos evaluados. Se sugiere mantener las estrategias de enseñanza actuales y continuar motivando su participación.';
+            const splitText = doc.splitTextToSize(text, pageWidth - 40);
+            doc.text(splitText, 20, currentY);
+            currentY += (splitText.length * 5) + 8;
+        } else {
+            acadSuggestions.forEach(sugg => {
+                const splitText = doc.splitTextToSize(sugg, pageWidth - 40);
+                doc.text(splitText, 20, currentY);
+                currentY += (splitText.length * 5) + 3;
+            });
+            currentY += 5;
+        }
+
+        // Conduct Suggestions
         doc.setFontSize(11);
         doc.setFont('helvetica', 'bold');
-        doc.text('d) Observaciones de Asistencia', 20, currentY);
+        doc.text('b) Conducta y Participación', 20, currentY);
         currentY += 7;
 
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9);
-        const attendText = `El alumno ha acumulado ${absCount} faltas y ${tardCount} retardos. Las inasistencias afectan significativamente el aprovechamiento académico. Se exhorta a la familia a garantizar la asistencia regular del alumno a clases.`;
-        const attendSplit = doc.splitTextToSize(attendText, pageWidth - 40);
-        doc.text(attendSplit, 20, currentY);
+        const points = student.behaviorPoints || 0;
+        const negLogs = logs.filter(l => l.studentId === student.id && l.type === 'NEGATIVE');
+        const posLogs = logs.filter(l => l.studentId === student.id && l.type === 'POSITIVE');
+
+        let conductText = '';
+        if (points >= 5) {
+            conductText = `El alumno presenta una conducta ejemplar con ${posLogs.length} reconocimientos positivos y ${negLogs.length} incidencias negativas. Se felicita al alumno y a la familia por el excelente comportamiento. Se sugiere mantener las buenas prácticas.`;
+        } else if (points >= 0) {
+            conductText = `El alumno presenta una conducta dentro de lo esperado (${negLogs.length} incidencias negativas, ${posLogs.length} positivas). Se recomienda continuar motivando la participación activa y el respeto hacia sus compañeros.`;
+        } else if (points >= -3) {
+            conductText = `El alumno ha registrado ${negLogs.length} incidencias negativas. Se sugiere platicar con el alumno sobre las reglas de convivencia escolar y establecer metas de mejora en conjunto con la familia.`;
+        } else {
+            conductText = `El alumno requiere atención especial en su conducta. Ha registrado ${negLogs.length} incidencias negativas y presenta un puntaje de ${points}. Se recomienda una reunión urgente con padres de familia para establecer un plan de mejora integral.`;
+        }
+        const conductSplit = doc.splitTextToSize(conductText, pageWidth - 40);
+        doc.text(conductSplit, 20, currentY);
+        currentY += (conductSplit.length * 5) + 10;
+
+        // USAER / Special Education
+        if (student.usaer || (student.bap && student.bap !== 'NINGUNA')) {
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'bold');
+            doc.text('c) Atención a la Diversidad', 20, currentY);
+            currentY += 7;
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9);
+            let specialText = '';
+            if (student.usaer) specialText += '• El alumno recibe apoyo del servicio USAER. ';
+            if (student.bap && student.bap !== 'NINGUNA') specialText += `• Barreras para el aprendizaje identificadas: ${student.bap}. `;
+            specialText += 'Se requieren ajustes razonables al currículo según las necesidades individuales del alumno. Se recomienda coordinación constante entre docente de grupo y el equipo USAER.';
+            const specialSplit = doc.splitTextToSize(specialText, pageWidth - 40);
+            doc.text(specialSplit, 20, currentY);
+            currentY += (specialSplit.length * 5) + 10;
+        }
+
+        // Attendance Suggestions
+        if (absCount > 5) {
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'bold');
+            doc.text('d) Observaciones de Asistencia', 20, currentY);
+            currentY += 7;
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9);
+            const attendText = `El alumno ha acumulado ${absCount} faltas y ${tardCount} retardos. Las inasistencias afectan significativamente el aprovechamiento académico. Se exhorta a la familia a garantizar la asistencia regular del alumno a clases.`;
+            const attendSplit = doc.splitTextToSize(attendText, pageWidth - 40);
+            doc.text(attendSplit, 20, currentY);
+        }
     }
 
     // Signatures

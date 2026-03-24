@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Student, SchoolConfig, BehaviorLog, Assignment } from '../types';
 import { generateReportCard, generateBehaviorReport, generateStudentCredentials, generateCompleteStudentReport } from '../services/pdfGenerator';
+import { generateStudentAnalysis } from '../services/ai';
 import { Plus, Search, Edit2, Trash2, X, Save, User, Phone, Image as ImageIcon, QrCode, Download, FileText, Printer, Building2, Calendar, MapPin, Hash, GraduationCap, AlertCircle, Upload, FileSpreadsheet, Cake, CheckCircle, FileDown, Users, RectangleHorizontal, PieChart, CheckCircle2, Circle, RotateCcw } from 'lucide-react';
 import { GroupAnalysisModal } from './GroupAnalysisModal';
 
@@ -1380,9 +1381,70 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
                   <span>Boleta PDF</span>
                 </button>
                 <button
-                  onClick={() => generateCompleteStudentReport(reportStudent, config, logs, assignments)}
+                  onClick={async () => {
+                    const btn = document.querySelector('[data-ai-btn]') as HTMLButtonElement;
+                    if (btn) {
+                      btn.disabled = true;
+                      btn.textContent = 'Generando análisis con IA...';
+                    }
+                    try {
+                      const metrics = calculateStudentMetrics(reportStudent);
+                      const gradesData = (reportStudent.grades || []).map((g, idx) => {
+                        if (typeof g === 'object' && g !== null) {
+                          const leng = Number(g.lenguajes || 0);
+                          const sab = Number(g.saberes || 0);
+                          const eti = Number(g.etica || 0);
+                          const hum = Number(g.humano || 0);
+                          const validFields = [leng, sab, eti, hum].filter(v => v > 0);
+                          const avg = validFields.length > 0 ? validFields.reduce((a, b) => a + b, 0) / validFields.length : 0;
+                          return { trimester: idx + 1, lenguajes: leng, saberes: sab, etica: eti, humano: hum, promedio: Number(avg.toFixed(1)) };
+                        }
+                        return { trimester: idx + 1, lenguajes: 0, saberes: 0, etica: 0, humano: 0, promedio: 0 };
+                      });
+
+                      const studentLogs = logs.filter(l => l.studentId === reportStudent.id);
+                      const attendance = reportStudent.attendance || {};
+                      const studentAssigns = assignments.filter(a => !a.targetGroup || a.targetGroup === reportStudent.group);
+                      const completedCount = studentAssigns.filter(a => (reportStudent.completedAssignmentIds || []).includes(a.id)).length;
+
+                      const analysis = await generateStudentAnalysis(reportStudent.name, {
+                        grades: gradesData,
+                        attendance: {
+                          presentes: Object.values(attendance).filter(s => s === 'Presente').length,
+                          faltas: Object.values(attendance).filter(s => s === 'Ausente').length,
+                          retardos: Object.values(attendance).filter(s => s === 'Retardo').length
+                        },
+                        behavior: {
+                          puntos: reportStudent.behaviorPoints || 0,
+                          positivos: studentLogs.filter(l => l.type === 'POSITIVE').length,
+                          negativos: studentLogs.filter(l => l.type === 'NEGATIVE').length,
+                          incidentes: studentLogs.filter(l => l.type === 'NEGATIVE').slice(0, 5).map(l => l.description)
+                        },
+                        tareas: {
+                          completadas: completedCount,
+                          total: studentAssigns.length,
+                          porcentaje: studentAssigns.length > 0 ? Math.round((completedCount / studentAssigns.length) * 100) : 0
+                        },
+                        bap: reportStudent.bap || 'NINGUNA',
+                        usaer: reportStudent.usaer || false,
+                        repetidor: reportStudent.repeater || false,
+                        promedioGeneral: Number(metrics.finalAvg)
+                      });
+
+                      await generateCompleteStudentReport(reportStudent, config, logs, assignments, analysis);
+                    } catch (e) {
+                      console.error('Error generando análisis IA:', e);
+                      await generateCompleteStudentReport(reportStudent, config, logs, assignments);
+                    } finally {
+                      if (btn) {
+                        btn.disabled = false;
+                        btn.textContent = 'Informe Completo';
+                      }
+                    }
+                  }}
+                  data-ai-btn="true"
                   className="bg-teal-600 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-teal-700 transition-colors shadow-lg shadow-teal-200 text-sm flex-1 md:flex-none justify-center"
-                  title="Generar informe completo para padres de familia"
+                  title="Generar informe completo con análisis IA para padres de familia"
                 >
                   <FileText size={18} />
                   <span>Informe Completo</span>

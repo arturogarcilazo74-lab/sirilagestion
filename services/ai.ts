@@ -443,3 +443,73 @@ export const generateHtmlGame = async (topic: string, description: string): Prom
     throw new Error(`Game Error: ${e.message}`);
   }
 };
+
+export const generateStudentAnalysis = async (
+  studentName: string,
+  studentData: {
+    grades: { trimester: number; lenguajes: number; saberes: number; etica: number; humano: number; promedio: number }[];
+    attendance: { presentes: number; faltas: number; retardos: number };
+    behavior: { puntos: number; positivos: number; negativos: number; incidentes: string[] };
+    tareas: { completadas: number; total: number; porcentaje: number };
+    bap: string;
+    usaer: boolean;
+    repetidor: boolean;
+    promedioGeneral: number;
+  }
+): Promise<string> => {
+  const prompt = `Eres un pedagogo experto en el modelo NEM (Nueva Escuela Mexicana) de primaria en México. Genera un análisis integral y personalizado del siguiente alumno para entregar a los padres de familia.
+
+DATOS DEL ALUMNO: ${studentName}
+
+CALIFICACIONES POR TRIMESTRE (escala 5-10, campos formativos NEM):
+${studentData.grades.map(g => `  Trimestre ${g.trimester}: Lenguajes=${g.lenguajes}, Saberes y P.C.=${g.saberes}, Ética Nat. y Soc.=${g.etica}, De lo Humano=${g.humano}, Promedio=${g.promedio}`).join('\n')}
+Promedio General: ${studentData.promedioGeneral}
+
+ASISTENCIA:
+  Asistencias: ${studentData.attendance.presentes}, Faltas: ${studentData.attendance.faltas}, Retardos: ${studentData.attendance.retardos}
+
+CONDUCTA:
+  Puntos acumulados: ${studentData.behavior.puntos} (${studentData.behavior.positivos} positivos, ${studentData.behavior.negativos} negativos)
+  ${studentData.behavior.incidentes.length > 0 ? 'Incidentes recientes: ' + studentData.behavior.incidentes.join('; ') : 'Sin incidentes registrados'}
+
+TAREAS:
+  Completadas: ${studentData.tareas.completadas} de ${studentData.tareas.total} (${studentData.tareas.porcentaje}%)
+
+NECESIDADES EDUCATIVAS:
+  ${studentData.usaer ? 'Recibe apoyo USAER' : 'Sin apoyo USAER'}
+  ${studentData.bap !== 'NINGUNA' ? 'BAP: ' + studentData.bap : 'Sin BAP identificada'}
+  ${studentData.repetidor ? 'Es alumno repetidor' : 'No es repetidor'}
+
+INSTRUCCIONES:
+Genera un análisis pedagógico completo en ESPAÑOL con estas secciones claramente separadas:
+
+1. RESUMEN EJECUTIVO: Descripción general del desempeño del alumno en 2-3 líneas.
+
+2. ANÁLISIS ACADÉMICO POR CAMPO FORMATIVO:
+- Lenguajes: fortalezas y áreas de oportunidad basadas en sus calificaciones
+- Saberes y Pensamiento Científico: análisis específico
+- Ética, Naturaleza y Sociedades: análisis específico  
+- De lo Humano y lo Comunitario: análisis específico
+- Identifica la materia más fuerte y la que necesita mayor atención
+
+3. ANÁLISIS DE ASISTENCIA: Evalúa el impacto de su asistencia en su aprendizaje.
+
+4. ANÁLISIS DE CONDUCTA: Evalúa su comportamiento, participación y convivencia escolar.
+
+5. ANÁLISIS DE CUMPLIMIENTO: Evalúa su responsabilidad con las tareas y actividades.
+
+6. OBSERVACIONES ESPECIALES: Menciona cualquier necesidad educativa especial (USAER, BAP, repetidor) y cómo se está atendiendo.
+
+7. SUGERENCIAS PARA LA FAMILIA: 3-4 recomendaciones concretas y prácticas que los padres pueden implementar en casa para apoyar el aprendizaje.
+
+8. METAS PARA EL SIGUIENTE PERIODO: 2-3 objetivos específicos y medibles para el alumno.
+
+Usa tono profesional pero empático. Sé específico con los datos del alumno, no genérico. Cada sugerencia debe estar vinculada a los datos presentados.`;
+
+  try {
+    return await generateWithFallback(prompt, { maxOutputTokens: 2048 });
+  } catch (e: any) {
+    console.error("Error generando análisis del alumno:", e);
+    return `No se pudo generar el análisis con IA. Error: ${e.message}`;
+  }
+};
