@@ -31,7 +31,7 @@ const getBase64ImageFromUrl = async (imageUrl: string): Promise<string | null> =
 };
 
 // Helper to find teacher for a student
-const getTeacherForStudent = (config: SchoolConfig, studentGroup?: string): string => {
+export const getTeacherForStudent = (config: SchoolConfig, studentGroup?: string): string => {
     if (!studentGroup) return config.teacherName; // Fallback to current user if no group info
     if (!config.staff || config.staff.length === 0) return config.teacherName;
 

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Student, SchoolConfig, Assignment } from '../types';
 import { generateDocumentContent } from '../services/ai';
 import { generateStudentAnalysis } from '../services/ai';
+import { getTeacherForStudent } from '../services/pdfGenerator';
 import { FileText, Download, Printer, Copy, CheckCircle, AlertTriangle, Calendar, User, FileOutput, Bus, Upload } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 
@@ -198,7 +199,7 @@ Domicilio:             ${student.address || 'No registrado'}
 Ocupación del Tutor:   ${student.guardianOccupation || 'No registrada'}
 
 ${student.usaer ? '⚠ Recibe apoyo USAER\n' : ''}${student.bap && student.bap !== 'NINGUNA' ? '⚠ BAP: ' + student.bap + '\n' : ''}${student.repeater ? '⚠ Alumno repetidor\n' : ''}
-Docente Responsable:   ${config.teacherName}
+Docente Responsable:   ${student ? getTeacherForStudent(config, student.group) : config.teacherName}
 Director(a):           ${config.directorName || 'No registrado'}
 Fecha del Informe:     ${date}
 `;
@@ -287,7 +288,7 @@ ${analysis}
 
   ________________________    ________________________    ________________________
        Docente de Grupo            Director(a) de la            Firma del Padre
-      ${config.teacherName}         Escuela                        o Tutor
+      ${student ? getTeacherForStudent(config, student.group) : config.teacherName}         Escuela                        o Tutor
 
 
 
@@ -350,7 +351,7 @@ Nombre del Alumno:     ${student.name}
 Grado y Grupo:         ${student.group || config.gradeGroup}
 Tutor Legal:           ${student.guardianName}
 Fecha del Informe:     ${date}
-Docente:               ${config.teacherName}
+Docente:               ${student ? getTeacherForStudent(config, student.group) : config.teacherName}
 
 ═══════════════════════════════════════════════════════════════════
 
@@ -455,7 +456,7 @@ Docente:               ${config.teacherName}
 
   ________________________    ________________________
        Docente de Grupo            Firma del Padre
-      ${config.teacherName}           o Tutor
+      ${student ? getTeacherForStudent(config, student.group) : config.teacherName}           o Tutor
 
 
 
