@@ -30,7 +30,7 @@ interface DocumentsViewProps {
     assignments?: Assignment[];
 }
 
-type DocumentType = 'INCIDENCIA' | 'CITATORIO' | 'FICHA_DESCRIPTIVA' | 'PLANEACION' | 'ACTA_HECHOS' | 'PERMISO_SALIDA' | 'AUTORIZACION_EVENTO' | 'PRESENTACION_RESULTADOS' | 'OBSERVACIONES_BOLETA' | 'INFORME_PADRES' | 'INFORME_ACTIVIDADES';
+type DocumentType = 'INCIDENCIA' | 'CITATORIO' | 'FICHA_DESCRIPTIVA' | 'PLANEACION' | 'ACTA_HECHOS' | 'PERMISO_SALIDA' | 'AUTORIZACION_EVENTO' | 'PRESENTACION_RESULTADOS' | 'OBSERVACIONES_BOLETA' | 'INFORME_PADRES' | 'INFORME_ACTIVIDADES' | 'LISTA_ASISTENCIA_PADRES';
 
 export const DocumentsView: React.FC<DocumentsViewProps> = ({ students, config, initialType, assignments = [] }) => {
     const [selectedType, setSelectedType] = useState<DocumentType>(initialType || 'INCIDENCIA');
@@ -474,6 +474,117 @@ Docente:               ${student ? getTeacherForStudent(config, student.group) :
             return;
         }
 
+        // --- LISTA DE ASISTENCIA PARA JUNTA DE PADRES ---
+        if (selectedType === 'LISTA_ASISTENCIA_PADRES') {
+            try {
+                const date = citationDate || new Date().toISOString().split('T')[0];
+                const formattedDate = new Date(date + 'T00:00:00').toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                const hour = location || '13:00';
+                const place = eventLocation || 'Aula del grupo';
+                const meetingType = citationReason || 'Junta de Padres de Familia';
+                const cycle = config.schoolYear || `${new Date().getFullYear()}-${new Date().getFullYear() + 1}`;
+                const groupName = config.gradeGroup;
+
+                // Sort students alphabetically
+                const sortedStudents = [...students].sort((a, b) => a.name.localeCompare(b.name));
+
+                let report = `
+═══════════════════════════════════════════════════════════════════
+
+                    ${config.schoolName.toUpperCase()}
+                    C.C.T: ${config.cct} | Zona: ${config.zone} | Sector: ${config.sector || 'N/A'}
+                    Ciclo Escolar: ${cycle}
+
+═══════════════════════════════════════════════════════════════════
+
+              LISTA DE ASISTENCIA
+              ${meetingType.toUpperCase()}
+
+═══════════════════════════════════════════════════════════════════
+
+  Grupo:     ${groupName}
+  Docente:   ${getTeacherForStudent(config, groupName)}
+  Fecha:     ${formattedDate}
+  Hora:      ${hour} hrs.
+  Lugar:     ${place}
+
+═══════════════════════════════════════════════════════════════════
+
+  No. │ Nombre del Alumno              │ Nombre del Padre/Tutor        │ Firma
+──────┼────────────────────────────────┼───────────────────────────────┼───────────────
+`;
+
+                sortedStudents.forEach((s, idx) => {
+                    const num = (idx + 1).toString().padStart(3, ' ');
+                    const name = s.name.padEnd(30).substring(0, 30);
+                    const guardian = (s.guardianName || 'Sin registrar').padEnd(31).substring(0, 31);
+                    report += `  ${num} │ ${name}│ ${guardian}│ _______________
+──────┼────────────────────────────────┼───────────────────────────────┼───────────────
+`;
+                });
+
+                report += `
+
+  Total de Alumnos: ${sortedStudents.length}
+  Asistentes: ________
+  Ausentes:   ________
+
+═══════════════════════════════════════════════════════════════════
+
+  OBSERVACIONES DE LA JUNTA
+═══════════════════════════════════════════════════════════════════
+
+
+  __________________________________________________________________
+
+  __________________________________________________________________
+
+  __________________________________________________________________
+
+  __________________________________________________________________
+
+
+═══════════════════════════════════════════════════════════════════
+
+  ACUERDOS TOMADOS
+═══════════════════════════════════════════════════════════════════
+
+
+  1. __________________________________________________________________
+
+  2. __________________________________________________________________
+
+  3. __________________________________________________________________
+
+
+
+═══════════════════════════════════════════════════════════════════
+
+  FIRMAS
+═══════════════════════════════════════════════════════════════════
+
+
+
+  ________________________    ________________________
+       Docente de Grupo            Director(a) de la
+      ${getTeacherForStudent(config, groupName)}         Escuela
+
+
+
+  Documento generado automáticamente por el Sistema SIRILA
+  ${new Date().toLocaleDateString('es-MX')}
+`;
+
+                setGeneratedContent(report);
+            } catch (error) {
+                console.error("Error generando lista de asistencia:", error);
+                setGeneratedContent(`Error al generar la lista: ${error instanceof Error ? error.message : String(error)}`);
+            } finally {
+                setIsGenerating(false);
+            }
+            return;
+        }
+
         // --- Resto de tipos de documentos (lógica existente) ---
         // Calculate real stats for student
         const getGradeAvg = (g: any) => {
@@ -629,6 +740,7 @@ Docente:               ${student ? getTeacherForStudent(config, student.group) :
                             {[
                                 { id: 'INFORME_PADRES', label: 'Informe para Padres (Completo)', icon: FileText },
                                 { id: 'INFORME_ACTIVIDADES', label: 'Informe de Actividades Pendientes', icon: AlertTriangle },
+                                { id: 'LISTA_ASISTENCIA_PADRES', label: 'Lista de Asistencia - Junta Padres', icon: Calendar },
                                 { id: 'INCIDENCIA', label: 'Reporte de Incidencia', icon: AlertTriangle },
                                 { id: 'ACTA_HECHOS', label: 'Acta de Hechos', icon: FileText },
                                 { id: 'AUTORIZACION_EVENTO', label: 'Autorización Evento', icon: Bus },
@@ -657,7 +769,7 @@ Docente:               ${student ? getTeacherForStudent(config, student.group) :
                     <div className="glass-card p-6 rounded-2xl">
                         <h3 className="font-bold text-slate-800 mb-4">Detalles</h3>
                         <div className="space-y-4">
-                            {selectedType !== 'PLANEACION' && selectedType !== 'PRESENTACION_RESULTADOS' && (
+                            {selectedType !== 'PLANEACION' && selectedType !== 'PRESENTACION_RESULTADOS' && selectedType !== 'LISTA_ASISTENCIA_PADRES' && (
                                 <div>
                                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
                                         {(selectedType === 'INFORME_PADRES' || selectedType === 'INFORME_ACTIVIDADES') ? 'Alumno (Obligatorio)' : 'Estudiante'}
@@ -909,13 +1021,63 @@ Docente:               ${student ? getTeacherForStudent(config, student.group) :
                                 </>
                             )}
 
+                            {selectedType === 'LISTA_ASISTENCIA_PADRES' && (
+                                <>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Tipo de Junta</label>
+                                        <select
+                                            value={citationReason}
+                                            onChange={(e) => setCitationReason(e.target.value)}
+                                            className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white/80"
+                                        >
+                                            <option value="">Seleccionar...</option>
+                                            <option value="Junta Ordinaria de Padres de Familia">Junta Ordinaria</option>
+                                            <option value="Junta Extraordinaria de Padres de Familia">Junta Extraordinaria</option>
+                                            <option value="Entrega de Boletas">Entrega de Boletas</option>
+                                            <option value="Reunión de Seguimiento Académico">Reunión de Seguimiento Académico</option>
+                                            <option value="Junta Informativa">Junta Informativa</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha de la Junta</label>
+                                        <input
+                                            type="date"
+                                            value={citationDate}
+                                            onChange={(e) => setCitationDate(e.target.value)}
+                                            className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white/80"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Hora</label>
+                                        <input
+                                            type="time"
+                                            value={location}
+                                            onChange={(e) => setLocation(e.target.value)}
+                                            placeholder="Ej. 13:00"
+                                            className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white/80"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Lugar</label>
+                                        <input
+                                            type="text"
+                                            value={eventLocation}
+                                            onChange={(e) => setEventLocation(e.target.value)}
+                                            placeholder="Ej. Aula de 4to A"
+                                            className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white/80"
+                                        />
+                                    </div>
+                                    <p className="text-xs text-slate-400 mt-1">* La lista se genera con todos los alumnos del grupo actual. No es necesario seleccionar un alumno individual.</p>
+                                </>
+                            )}
+
                             <button
                                 onClick={handleGenerate}
                                 disabled={isGenerating || ((selectedType === 'INFORME_PADRES' || selectedType === 'INFORME_ACTIVIDADES') && !selectedStudentId)}
-                                className={`w-full py-3 rounded-xl font-bold shadow-lg transition-all active:scale-95 disabled:opacity-70 flex items-center justify-center gap-2 mt-4 ${selectedType === 'INFORME_PADRES' ? 'bg-teal-600 hover:bg-teal-700 text-white' : selectedType === 'INFORME_ACTIVIDADES' ? 'bg-orange-600 hover:bg-orange-700 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}
+                                className={`w-full py-3 rounded-xl font-bold shadow-lg transition-all active:scale-95 disabled:opacity-70 flex items-center justify-center gap-2 mt-4 ${selectedType === 'INFORME_PADRES' ? 'bg-teal-600 hover:bg-teal-700 text-white' : selectedType === 'INFORME_ACTIVIDADES' ? 'bg-orange-600 hover:bg-orange-700 text-white' : selectedType === 'LISTA_ASISTENCIA_PADRES' ? 'bg-purple-600 hover:bg-purple-700 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}
                             >
                                 {isGenerating ? <span className="animate-spin">✨</span> : <FileText size={18} />}
-                                {isGenerating ? 'Generando...' : selectedType === 'INFORME_PADRES' ? 'Generar Informe con Análisis IA' : selectedType === 'INFORME_ACTIVIDADES' ? 'Generar Informe de Actividades' : 'Generar Documento'}
+                                {isGenerating ? 'Generando...' : selectedType === 'INFORME_PADRES' ? 'Generar Informe con Análisis IA' : selectedType === 'INFORME_ACTIVIDADES' ? 'Generar Informe de Actividades' : selectedType === 'LISTA_ASISTENCIA_PADRES' ? 'Generar Lista de Asistencia' : 'Generar Documento'}
                             </button>
                         </div>
                     </div>
