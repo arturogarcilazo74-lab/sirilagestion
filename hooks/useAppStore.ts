@@ -192,9 +192,31 @@ export const useAppStore = () => {
             }
         };
 
-        const handleOnline = () => {
-            console.log("Internet connection restored. Syncing...");
-            checkQueue();
+        const handleOnline = async () => {
+            console.log("%c✓ Conexión restaurada. Sincronizando...", "color: green; font-weight: bold;");
+            // First process offline queue
+            await checkQueue();
+            // Then reload fresh data from server
+            try {
+                const result = await api.checkStatus();
+                if (result && !result.isEmpty) {
+                    setStudents(result.students || []);
+                    setAssignments(result.assignments || []);
+                    setEvents(result.events || []);
+                    setBehaviorLogs((result.behaviorLogs || []).map((log: any) => ({
+                        ...log,
+                        points: log.points !== undefined ? log.points : (log.type === 'POSITIVE' ? 1 : -1)
+                    })));
+                    setFinanceEvents(result.financeEvents || []);
+                    setStaffTasks(result.staffTasks || []);
+                    setBooks(result.books || []);
+                    if (result.schoolConfig) setSchoolConfig(result.schoolConfig);
+                    flushCache(result.students, result.assignments, result.events, result.behaviorLogs, result.schoolConfig, result.financeEvents, result.staffTasks, result.books);
+                    console.log("%c✓ Datos sincronizados desde el servidor", "color: green; font-weight: bold;");
+                }
+            } catch (e) {
+                console.warn("No se pudo recargar datos del servidor al reconectar:", e);
+            }
         };
 
         window.addEventListener('online', handleOnline);
@@ -353,7 +375,11 @@ export const useAppStore = () => {
             grades: [],
             annualFeePaid: false
         };
-        setStudents(prev => [...prev, newStudent]);
+        setStudents(prev => {
+            const next = [...prev, newStudent];
+            saveToCache('SIRILA_CACHE_STUDENTS', next);
+            return next;
+        });
         // Send to Server
         api.saveStudent(newStudent).catch(err => {
             console.log("Acción encolada para sincronización manual.");
@@ -453,25 +479,31 @@ export const useAppStore = () => {
         const targetDate = date || new Date().toISOString().split('T')[0];
         let updatedStudent: Student | null = null;
 
-        setStudents(prev => prev.map(s => {
-            if (s.id === studentId) {
-                const newAttendance = { ...s.attendance };
-                if (status === AttendanceStatus.NONE) {
-                    delete newAttendance[targetDate];
-                } else {
-                    newAttendance[targetDate] = status;
+        setStudents(prev => {
+            const next = prev.map(s => {
+                if (s.id === studentId) {
+                    const newAttendance = { ...s.attendance };
+                    if (status === AttendanceStatus.NONE) {
+                        delete newAttendance[targetDate];
+                    } else {
+                        newAttendance[targetDate] = status;
+                    }
+
+                    updatedStudent = {
+                        ...s,
+                        attendance: newAttendance
+                    };
+                    return updatedStudent;
                 }
+                return s;
+            });
+            saveToCache('SIRILA_CACHE_STUDENTS', next);
+            return next;
+        });
 
-                updatedStudent = {
-                    ...s,
-                    attendance: newAttendance
-                };
-                return updatedStudent;
-            }
-            return s;
-        }));
-
-        if (updatedStudent) api.saveStudent(updatedStudent);
+        if (updatedStudent) {
+            api.saveStudent(updatedStudent).catch(() => setPendingActions(api.getQueueLength()));
+        }
     };
 
     const handleBehaviorLog = (studentId: string, type: 'POSITIVE' | 'NEGATIVE' | 'USAER_OBSERVATION' | 'USAER_MEETING' | 'USAER_ACCOMMODATION' | 'USAER_SUGGESTION', description: string) => {
@@ -486,34 +518,46 @@ export const useAppStore = () => {
             date: new Date().toISOString(),
             points
         };
-        setBehaviorLogs(prev => [...prev, newLog]);
-        api.saveBehaviorLog(newLog);
+        setBehaviorLogs(prev => {
+            const next = [...prev, newLog];
+            saveToCache('SIRILA_CACHE_LOGS', next);
+            return next;
+        });
+        api.saveBehaviorLog(newLog).catch(() => setPendingActions(api.getQueueLength()));
 
         // Only update points on student if it's strictly positive/negative behavior, not USAER notes
         if (points !== 0) {
             let updatedStudent: Student | null = null;
-            setStudents(prev => prev.map(s => {
-                if (s.id === studentId) {
-                    updatedStudent = {
-                        ...s,
-                        behaviorPoints: s.behaviorPoints + points
-                    };
-                    return updatedStudent;
-                }
-                return s;
-            }));
+            setStudents(prev => {
+                const next = prev.map(s => {
+                    if (s.id === studentId) {
+                        updatedStudent = {
+                            ...s,
+                            behaviorPoints: s.behaviorPoints + points
+                        };
+                        return updatedStudent;
+                    }
+                    return s;
+                });
+                saveToCache('SIRILA_CACHE_STUDENTS', next);
+                return next;
+            });
 
-            if (updatedStudent) api.saveStudent(updatedStudent);
+            if (updatedStudent) api.saveStudent(updatedStudent).catch(() => setPendingActions(api.getQueueLength()));
         }
     };
 
     const handleDeleteBehaviorLog = async (id: string) => {
-        setBehaviorLogs(prev => prev.filter(log => log.id !== id));
+        setBehaviorLogs(prev => {
+            const next = prev.filter(log => log.id !== id);
+            saveToCache('SIRILA_CACHE_LOGS', next);
+            return next;
+        });
         try {
             await api.deleteBehaviorLog(id);
         } catch (e) {
             console.error("Failed to delete behavior log:", e);
-            alert("Error al eliminar del servidor: " + (e instanceof Error ? e.message : String(e)));
+            setPendingActions(api.getQueueLength());
         }
     };
 
@@ -528,43 +572,42 @@ export const useAppStore = () => {
     // Activity/Assignment Logic
     const handleToggleAssignment = (studentId: string, assignmentId: string, score?: number) => {
         let updatedStudent: Student | null = null;
-        setStudents(prev => prev.map(student => {
-            if (student.id === studentId) {
-                const isCompleted = student.completedAssignmentIds?.includes(assignmentId);
-                let newCompletedIds = [];
-                let newResults = { ...(student.assignmentResults || {}) };
-                let newAttempts = { ...(student.assignmentAttempts || {}) };
+        setStudents(prev => {
+            const next = prev.map(student => {
+                if (student.id === studentId) {
+                    const isCompleted = student.completedAssignmentIds?.includes(assignmentId);
+                    let newCompletedIds = [];
+                    let newResults = { ...(student.assignmentResults || {}) };
+                    let newAttempts = { ...(student.assignmentAttempts || {}) };
 
-                if (isCompleted && score === undefined) {
-                    // Normal toggle OFF - Reset attempts and completion
-                    newCompletedIds = (student.completedAssignmentIds || []).filter(id => id !== assignmentId);
-                    delete newResults[assignmentId];
-                    delete newAttempts[assignmentId];
-                } else {
-                    // Toggle ON or Updating Score
-                    newCompletedIds = [...new Set([...(student.completedAssignmentIds || []), assignmentId])];
-                    if (score !== undefined) {
-                        newResults[assignmentId] = score;
+                    if (isCompleted && score === undefined) {
+                        newCompletedIds = (student.completedAssignmentIds || []).filter(id => id !== assignmentId);
+                        delete newResults[assignmentId];
+                        delete newAttempts[assignmentId];
+                    } else {
+                        newCompletedIds = [...new Set([...(student.completedAssignmentIds || []), assignmentId])];
+                        if (score !== undefined) {
+                            newResults[assignmentId] = score;
+                        }
                     }
-                    // Optionally increment attempts if not already completed?
-                    // Usually handled by the portal, but keeping track here is safer.
+
+                    updatedStudent = {
+                        ...student,
+                        completedAssignmentIds: newCompletedIds,
+                        assignmentResults: newResults,
+                        assignmentAttempts: newAttempts,
+                        assignmentsCompleted: newCompletedIds.length,
+                        totalAssignments: student.totalAssignments || assignments.length
+                    };
+                    return updatedStudent;
                 }
+                return student;
+            });
+            saveToCache('SIRILA_CACHE_STUDENTS', next);
+            return next;
+        });
 
-                updatedStudent = {
-                    ...student,
-                    completedAssignmentIds: newCompletedIds,
-                    assignmentResults: newResults,
-                    assignmentAttempts: newAttempts,
-                    assignmentsCompleted: newCompletedIds.length,
-                    // Respect group-filtered totalAssignments if it already exists correctly
-                    totalAssignments: student.totalAssignments || assignments.length
-                };
-                return updatedStudent;
-            }
-            return student;
-        }));
-
-        if (updatedStudent) api.saveStudent(updatedStudent);
+        if (updatedStudent) api.saveStudent(updatedStudent).catch(() => setPendingActions(api.getQueueLength()));
     };
 
     const handleAddAssignment = async (assignmentData: Partial<Assignment>) => {
@@ -592,15 +635,18 @@ export const useAppStore = () => {
         });
 
         // Optimistic Update
-        setAssignments(prev => [...prev, newAssignment]);
+        setAssignments(prev => {
+            const next = [...prev, newAssignment];
+            saveToCache('SIRILA_CACHE_ASSIGNMENTS', next);
+            return next;
+        });
 
         try {
             await api.saveAssignment(newAssignment);
             return { success: true };
         } catch (error: any) {
             console.error("Failed to save assignment:", error);
-            // We don't necessarily revert here if it went to offline queue,
-            // but we should notify if it's a hard rejection.
+            setPendingActions(api.getQueueLength());
             throw error;
         }
     };
@@ -609,8 +655,12 @@ export const useAppStore = () => {
         const existingAssignment = assignments.find(a => a.id === id);
         if (!existingAssignment) return;
         const updatedAssignment: Assignment = { ...existingAssignment, ...updatedData };
-        setAssignments(prev => prev.map(a => a.id === id ? updatedAssignment : a));
-        api.saveAssignment(updatedAssignment);
+        setAssignments(prev => {
+            const next = prev.map(a => a.id === id ? updatedAssignment : a);
+            saveToCache('SIRILA_CACHE_ASSIGNMENTS', next);
+            return next;
+        });
+        api.saveAssignment(updatedAssignment).catch(() => setPendingActions(api.getQueueLength()));
     };
 
     const handleDeleteAssignment = async (id: string) => {
@@ -618,34 +668,33 @@ export const useAppStore = () => {
         const previousStudents = [...students];
         const newAssignmentList = assignments.filter(a => a.id !== id);
 
-        // Optimistic Update
+        // Optimistic Update with cache
         setAssignments(newAssignmentList);
+        saveToCache('SIRILA_CACHE_ASSIGNMENTS', newAssignmentList);
 
         // Update student totals (Optimistic)
-        setStudents(prev => prev.map(s => {
-            if ((s.totalAssignments || 0) > 0) {
-                const assignment = previousAssignments.find(a => a.id === id);
-                const target = (assignment?.targetGroup || '').toUpperCase().trim();
-                const studentG = (s.group || '').toUpperCase().trim();
-                const isRelevant = !target || target === 'GLOBAL' || target === 'TODOS' || target === studentG;
-                if (isRelevant) return { ...s, totalAssignments: Math.max(0, (s.totalAssignments || 0) - 1) };
-            }
-            return s;
-        }));
+        setStudents(prev => {
+            const next = prev.map(s => {
+                if ((s.totalAssignments || 0) > 0) {
+                    const assignment = previousAssignments.find(a => a.id === id);
+                    const target = (assignment?.targetGroup || '').toUpperCase().trim();
+                    const studentG = (s.group || '').toUpperCase().trim();
+                    const isRelevant = !target || target === 'GLOBAL' || target === 'TODOS' || target === studentG;
+                    if (isRelevant) return { ...s, totalAssignments: Math.max(0, (s.totalAssignments || 0) - 1) };
+                }
+                return s;
+            });
+            saveToCache('SIRILA_CACHE_STUDENTS', next);
+            return next;
+        });
 
         try {
             await api.deleteAssignment(id);
-            // Sync with backend
-            setStudents(current => {
-                current.forEach(student => api.saveStudent(student));
-                return current;
-            });
+            // Sync student changes to server
+            students.forEach(student => api.saveStudent(student).catch(() => setPendingActions(api.getQueueLength())));
         } catch (error: any) {
             console.error("Failed to delete assignment:", error);
-            alert("Error al eliminar la actividad: " + (error.message || "Error desconocido"));
-            // Revert State
-            setAssignments(previousAssignments);
-            setStudents(previousStudents);
+            setPendingActions(api.getQueueLength());
         }
     };
 
@@ -655,34 +704,50 @@ export const useAppStore = () => {
             ...eventData,
             id: `E${Date.now()}`
         };
-        setEvents(prev => [...prev, newEvent]);
-        api.saveEvent(newEvent);
+        setEvents(prev => {
+            const next = [...prev, newEvent];
+            saveToCache('SIRILA_CACHE_EVENTS', next);
+            return next;
+        });
+        api.saveEvent(newEvent).catch(() => setPendingActions(api.getQueueLength()));
     };
 
     const handleEditEvent = (id: string, updatedData: Partial<SchoolEvent>) => {
         const existingEvent = events.find(e => e.id === id);
         if (!existingEvent) return;
         const updatedEvent = { ...existingEvent, ...updatedData } as SchoolEvent;
-        setEvents(prev => prev.map(e => e.id === id ? updatedEvent : e));
-        api.saveEvent(updatedEvent);
+        setEvents(prev => {
+            const next = prev.map(e => e.id === id ? updatedEvent : e);
+            saveToCache('SIRILA_CACHE_EVENTS', next);
+            return next;
+        });
+        api.saveEvent(updatedEvent).catch(() => setPendingActions(api.getQueueLength()));
     };
 
     const handleDeleteEvent = (id: string) => {
-        setEvents(prev => prev.filter(e => e.id !== id));
-        api.deleteEvent(id);
+        setEvents(prev => {
+            const next = prev.filter(e => e.id !== id);
+            saveToCache('SIRILA_CACHE_EVENTS', next);
+            return next;
+        });
+        api.deleteEvent(id).catch(() => setPendingActions(api.getQueueLength()));
     };
 
     // Finance Logic
     const handleUpdateStudentFee = (studentId: string, paid: boolean) => {
         let updatedStudent: Student | null = null;
-        setStudents(prev => prev.map(s => {
-            if (s.id === studentId) {
-                updatedStudent = { ...s, annualFeePaid: paid };
-                return updatedStudent;
-            }
-            return s;
-        }));
-        if (updatedStudent) api.saveStudent(updatedStudent);
+        setStudents(prev => {
+            const next = prev.map(s => {
+                if (s.id === studentId) {
+                    updatedStudent = { ...s, annualFeePaid: paid };
+                    return updatedStudent;
+                }
+                return s;
+            });
+            saveToCache('SIRILA_CACHE_STUDENTS', next);
+            return next;
+        });
+        if (updatedStudent) api.saveStudent(updatedStudent).catch(() => setPendingActions(api.getQueueLength()));
     };
 
     const handleAddFinanceEvent = (eventData: Omit<FinanceEvent, 'id' | 'contributions'>) => {
@@ -691,31 +756,43 @@ export const useAppStore = () => {
             id: `FE${Date.now()}`,
             contributions: {}
         };
-        setFinanceEvents(prev => [...prev, newEvent]);
-        api.saveFinanceEvent(newEvent);
+        setFinanceEvents(prev => {
+            const next = [...prev, newEvent];
+            saveToCache('SIRILA_CACHE_FINANCE', next);
+            return next;
+        });
+        api.saveFinanceEvent(newEvent).catch(() => setPendingActions(api.getQueueLength()));
     };
 
     const handleDeleteFinanceEvent = (id: string) => {
-        setFinanceEvents(prev => prev.filter(e => e.id !== id));
-        api.deleteFinanceEvent(id);
+        setFinanceEvents(prev => {
+            const next = prev.filter(e => e.id !== id);
+            saveToCache('SIRILA_CACHE_FINANCE', next);
+            return next;
+        });
+        api.deleteFinanceEvent(id).catch(() => setPendingActions(api.getQueueLength()));
     };
 
     const handleUpdateContribution = (eventId: string, studentId: string, amount: number) => {
         let updatedEvent: FinanceEvent | null = null;
-        setFinanceEvents(prev => prev.map(e => {
-            if (e.id === eventId) {
-                updatedEvent = {
-                    ...e,
-                    contributions: {
-                        ...e.contributions,
-                        [studentId]: amount
-                    }
-                };
-                return updatedEvent;
-            }
-            return e;
-        }));
-        if (updatedEvent) api.saveFinanceEvent(updatedEvent);
+        setFinanceEvents(prev => {
+            const next = prev.map(e => {
+                if (e.id === eventId) {
+                    updatedEvent = {
+                        ...e,
+                        contributions: {
+                            ...e.contributions,
+                            [studentId]: amount
+                        }
+                    };
+                    return updatedEvent;
+                }
+                return e;
+            });
+            saveToCache('SIRILA_CACHE_FINANCE', next);
+            return next;
+        });
+        if (updatedEvent) api.saveFinanceEvent(updatedEvent).catch(() => setPendingActions(api.getQueueLength()));
     };
 
     // Staff Task Logic
@@ -725,34 +802,44 @@ export const useAppStore = () => {
             id: `T${Date.now()}`,
             createdAt: new Date().toISOString()
         };
-        setStaffTasks(prev => [...prev, newTask]);
-        api.saveStaffTask(newTask);
+        setStaffTasks(prev => {
+            const next = [...prev, newTask];
+            saveToCache('SIRILA_CACHE_TASKS', next);
+            return next;
+        });
+        api.saveStaffTask(newTask).catch(() => setPendingActions(api.getQueueLength()));
     };
 
     const handleEditStaffTask = (id: string, updatedData: Partial<StaffTask>) => {
         const existingTask = staffTasks.find(t => t.id === id);
         if (!existingTask) return;
         const updatedTask: StaffTask = { ...existingTask, ...updatedData };
-        setStaffTasks(prev => prev.map(t => t.id === id ? updatedTask : t));
-        api.saveStaffTask(updatedTask);
+        setStaffTasks(prev => {
+            const next = prev.map(t => t.id === id ? updatedTask : t);
+            saveToCache('SIRILA_CACHE_TASKS', next);
+            return next;
+        });
+        api.saveStaffTask(updatedTask).catch(() => setPendingActions(api.getQueueLength()));
     };
 
     const handleDeleteStaffTask = (id: string) => {
-        setStaffTasks(prev => prev.filter(t => t.id !== id));
-        api.deleteStaffTask(id);
+        setStaffTasks(prev => {
+            const next = prev.filter(t => t.id !== id);
+            saveToCache('SIRILA_CACHE_TASKS', next);
+            return next;
+        });
+        api.deleteStaffTask(id).catch(() => setPendingActions(api.getQueueLength()));
     };
 
     const handleCompleteStaffTask = (taskId: string, staffId: string) => {
         const task = staffTasks.find(t => t.id === taskId);
         if (!task) return;
 
-        // Add staffId to completedBy array if not already present (immutable)
         const currentCompleted = task.completedBy || [];
         const completedBy = currentCompleted.includes(staffId)
             ? currentCompleted
             : [...currentCompleted, staffId];
 
-        // Update task status if all required staff completed
         const allStaff = task.assignedTo === 'ALL' || task.assignedTo === 'DOCENTES'
             ? schoolConfig.staff?.length || 0
             : 1;
@@ -760,8 +847,12 @@ export const useAppStore = () => {
         const updatedStatus = (completedBy.length >= allStaff ? 'COMPLETED' : 'PENDING') as 'COMPLETED' | 'PENDING' | 'LATE';
 
         const updatedTask: StaffTask = { ...task, completedBy, status: updatedStatus };
-        setStaffTasks(prev => prev.map(t => t.id === taskId ? updatedTask : t));
-        api.saveStaffTask(updatedTask);
+        setStaffTasks(prev => {
+            const next = prev.map(t => t.id === taskId ? updatedTask : t);
+            saveToCache('SIRILA_CACHE_TASKS', next);
+            return next;
+        });
+        api.saveStaffTask(updatedTask).catch(() => setPendingActions(api.getQueueLength()));
     };
 
     // Data Export/Import Logic (Still useful for backup JSONs)
