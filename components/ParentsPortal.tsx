@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
+import { calculateStudentMetrics, getTrimesterAvg } from '../services/gradeUtils';
 import { Student, SchoolEvent, Notification, Assignment, DraggableItem, InteractiveZone, BehaviorLog } from '../types';
 import { Bell, Calendar as CalendarIcon, LogOut, MessageCircle, User, CheckCircle, Smartphone, Send, Play, Trophy, HelpCircle, X, Check, AlertCircle, BookOpen, Circle, Move, Trash2, LayoutDashboard, Medal, Star, Award, Users, ChevronRight } from 'lucide-react';
 
@@ -1054,44 +1055,9 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                     <Trophy size={20} />
                                 </div>
                                 <span className="text-2xl font-bold text-slate-800">
-                                    {student?.grades && student.grades.length > 0 ? (
-                                        (() => {
-                                            const getTrimesterAvg = (g: any) => {
-                                                if (!g) return 0;
-                                                if (typeof g === 'number') return g;
-                                                if (typeof g === 'string') return parseFloat(g) || 0;
-                                                if (typeof g === 'object') {
-                                                    const fields = [g.lenguajes, g.saberes, g.etica, g.humano].map(v => Number(v) || 0);
-                                                    const validFields = fields.filter(v => v > 0);
-                                                    return validFields.length > 0 ? validFields.reduce((a, b) => a + b, 0) / validFields.length : 0;
-                                                }
-                                                return 0;
-                                            };
-                                            const activeTrims = student.grades.map(getTrimesterAvg).filter(a => a > 0);
-                                            const academicAvg = activeTrims.length > 0 ? Math.min(10, activeTrims.reduce((a, b) => a + b, 0) / activeTrims.length) : 0;
-
-                                            const completedCount = Math.max(student.assignmentsCompleted || 0, (student.completedAssignmentIds?.length || 0));
-                                            const cappedCompleted = Math.min(assignments.length, completedCount);
-                                            const hwScore = assignments.length > 0 ? (cappedCompleted / assignments.length) * 10 : 0;
-
-                                            const conductScore = Math.max(5, Math.min(10, 8 + ((student.behaviorPoints || 0) * 0.1)));
-
-                                            let finalAvg = 0;
-                                            const hasAcademic = academicAvg > 0;
-                                            const hasHomework = assignments.length > 0;
-
-                                            if (hasAcademic && hasHomework) {
-                                                finalAvg = (academicAvg * 0.3) + (hwScore * 0.55) + (conductScore * 0.15);
-                                            } else if (hasAcademic) {
-                                                finalAvg = (academicAvg * 0.85) + (conductScore * 0.15);
-                                            } else if (hasHomework) {
-                                                finalAvg = (hwScore * 0.85) + (conductScore * 0.15);
-                                            } else {
-                                                finalAvg = conductScore;
-                                            }
-                                            return Math.min(10, finalAvg).toFixed(1);
-                                        })()
-                                    ) : '-'}
+                                    {student?.grades && student.grades.length > 0
+                                        ? calculateStudentMetrics(student, assignments).finalAvg
+                                        : '-'}
                                 </span>
                                 <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">Promedio Gral.</span>
                             </div>
@@ -2233,11 +2199,8 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                         <tr><td colSpan={2} className="py-4 text-center text-slate-400">Sin registros aún.</td></tr>
                                     ) : (
                                         student.grades.map((g: any, i: number) => {
-                                            let val = 0;
-                                            if (typeof g === 'number') val = g;
-                                            else {
-                                                val = (Number(g.lenguajes || 0) + Number(g.saberes || 0) + Number(g.etica || 0) + Number(g.humano || 0)) / 4;
-                                            }
+                                            // Usando función compartida para consistencia
+                                            const val = getTrimesterAvg(g);
                                             return (
                                                 <tr key={i} className="border-b border-slate-100 last:border-0">
                                                     <td className="py-3 font-medium text-slate-700">Parcial {i + 1}</td>

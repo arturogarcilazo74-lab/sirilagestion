@@ -6,6 +6,7 @@ import {
     ChevronLeft, ChevronRight, Settings, CheckCircle2,
     Edit2, Trash2, AlertTriangle, X, User, TrendingUp, Phone, Printer, FileText, FilePlus, Menu, Plus, Shuffle, FileDown, AlertCircle
 } from 'lucide-react';
+import { calculateStudentMetrics, getStudentGlobalAverage } from '../services/gradeUtils';
 import { StudentsView } from './StudentsView';
 import { FinanceView } from './FinanceView';
 import { SettingsView } from './SettingsView';
@@ -1962,37 +1963,21 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                                                 const males = groupStudents.filter((s: Student) => s.sex === 'HOMBRE').length;
                                                 const females = groupStudents.filter((s: Student) => s.sex !== 'HOMBRE').length;
 
-                                                // Grade Avg
+                                                // Grade Avg - Usando función compartida para consistencia
                                                 let sumAvgs = 0;
                                                 let studentsWithGrades = 0;
                                                 groupStudents.forEach((s: Student) => {
-                                                    if (s.grades && s.grades.length > 0) {
-                                                        let studentSum = 0;
-                                                        s.grades.forEach((g: any) => {
-                                                            const val = (Number(g.lenguajes || 0) + Number(g.saberes || 0) + Number(g.etica || 0) + Number(g.humano || 0)) / 4;
-                                                            studentSum += val;
-                                                        });
-                                                        const studentGlobalAvg = studentSum / s.grades.length;
-                                                        sumAvgs += studentGlobalAvg;
+                                                    const studentAvg = getStudentGlobalAverage(s);
+                                                    if (studentAvg > 0) {
+                                                        sumAvgs += studentAvg;
                                                         studentsWithGrades++;
                                                     }
                                                 });
                                                 const groupAvg = studentsWithGrades > 0 ? (sumAvgs / studentsWithGrades).toFixed(1) : 'S/D';
 
-                                                // RISK ANALYSIS
+                                                // RISK ANALYSIS - Usando función compartida para consistencia
                                                 const riskStudents = groupStudents.filter((s: Student) => {
-                                                    let stAvg = 10;
-                                                    if (s.grades && s.grades.length > 0) {
-                                                        let sSum = 0;
-                                                        s.grades.forEach((g: any) => {
-                                                            let val = 0;
-                                                            if (typeof g === 'number') val = g;
-                                                            else val = ((Number(g.lenguajes || 0) + Number(g.saberes || 0) + Number(g.etica || 0) + Number(g.humano || 0)) / 4);
-                                                            sSum += val;
-                                                        });
-                                                        stAvg = sSum / s.grades.length;
-                                                    }
-
+                                                    const stAvg = getStudentGlobalAverage(s);
                                                     const absences = s.attendance ? Object.values(s.attendance).filter(x => x === 'Ausente').length : 0;
                                                     const taskCompletion = s.totalAssignments > 0 ? (s.assignmentsCompleted / s.totalAssignments) : 1;
 
@@ -2176,9 +2161,8 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                                                                                                 {(s.attendance && Object.values(s.attendance || {}).filter(x => x === 'Ausente').length >= 3) && <span className="text-[10px] bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full border border-rose-200 font-bold">Faltas ({Object.values(s.attendance).filter(x => x === 'Ausente').length})</span>}
                                                                                                 {(s.totalAssignments > 0 && (s.assignmentsCompleted / s.totalAssignments) < 0.6) && <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full border border-amber-200 font-bold">Tareas ({Math.round((s.assignmentsCompleted / s.totalAssignments) * 100)}%)</span>}
                                                                                                 {(() => {
-                                                                                                    if (!s.grades || s.grades.length === 0) return null;
-                                                                                                    const avg = s.grades.reduce((acc: number, g: any) => acc + (typeof g === 'number' ? g : (Number(g.lenguajes || 0) + Number(g.saberes || 0) + Number(g.etica || 0) + Number(g.humano || 0)) / 4), 0) / s.grades.length;
-                                                                                                    return avg < 7 ? <span className="text-[10px] bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full border border-yellow-200 font-bold">Promedio ({avg.toFixed(1)})</span> : null;
+                                                                                                    const avg = getStudentGlobalAverage(s);
+                                                                                                    return avg > 0 && avg < 7 ? <span className="text-[10px] bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full border border-yellow-200 font-bold">Promedio ({avg.toFixed(1)})</span> : null;
                                                                                                 })()}
                                                                                             </div>
                                                                                         </div>
@@ -2306,11 +2290,7 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                                                                             </thead>
                                                                             <tbody className="divide-y divide-slate-100">
                                                                                 {groupStudents.map((s: Student) => {
-                                                                                    let avg = 0;
-                                                                                    if (s.grades && s.grades.length > 0) {
-                                                                                        const sum = s.grades.reduce((acc: number, g: any) => acc + (typeof g === 'number' ? g : (Number(g.lenguajes || 0) + Number(g.saberes || 0) + Number(g.etica || 0) + Number(g.humano || 0)) / 4), 0);
-                                                                                        avg = sum / s.grades.length;
-                                                                                    }
+                                                                                    const avg = getStudentGlobalAverage(s);
                                                                                     return (
                                                                                         <tr key={s.id} className="hover:bg-slate-50 cursor-pointer" onClick={() => setReportStudent(s)} aria-label={`Ver boleta de ${s.name}`}>
                                                                                             <td className="p-3 font-bold text-slate-700">{s.name}</td>
@@ -2807,15 +2787,8 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                                         const risks: string[] = [];
 
                                         // Grade Risk
-                                        let globalAvg = 0;
-                                        if (viewStudent.grades && viewStudent.grades.length > 0) {
-                                            let sum = 0;
-                                            viewStudent.grades.forEach((g: any) => {
-                                                if (typeof g === 'object') sum += (Number(g.lenguajes || 0) + Number(g.saberes || 0) + Number(g.etica || 0) + Number(g.humano || 0)) / 4;
-                                                else sum += Number(g);
-                                            });
-                                            globalAvg = sum / viewStudent.grades.length;
-                                        }
+                                        // Usando función compartida para consistencia
+                                        const globalAvg = getStudentGlobalAverage(viewStudent);
                                         if (globalAvg > 0 && globalAvg < 7) risks.push(`Promedio Bajo (${globalAvg.toFixed(1)})`);
 
                                         // Behavior Risk
@@ -3119,15 +3092,8 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                                         <div className="grid grid-cols-3 gap-2 text-center">
                                             <div className="bg-slate-50 p-2 rounded border border-slate-200">
                                                 <div className="text-xl font-bold text-indigo-700">
-                                                    {reportStudent.grades && reportStudent.grades.length > 0
-                                                        ? (() => {
-                                                            const sumAvgs = reportStudent.grades.reduce((acc: number, g: any) => {
-                                                                if (typeof g === 'number') return acc + g;
-                                                                const tAvg = (Number(g.lenguajes || 0) + Number(g.saberes || 0) + Number(g.etica || 0) + Number(g.humano || 0)) / 4;
-                                                                return acc + tAvg;
-                                                            }, 0);
-                                                            return (sumAvgs / reportStudent.grades.length).toFixed(1);
-                                                        })()
+                                                    {getStudentGlobalAverage(reportStudent) > 0
+                                                        ? getStudentGlobalAverage(reportStudent).toFixed(1)
                                                         : '-'}
                                                 </div>
                                                 <div className="text-[10px] uppercase font-bold text-slate-500">Promedio</div>
@@ -3166,17 +3132,8 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                                                 <tr><td colSpan={3} className="p-4 text-center text-slate-400">Sin calificaciones registradas</td></tr>
                                             ) : (
                                                 reportStudent.grades.map((grade: any, idx: number) => {
-                                                    let score = 0;
-                                                    if (typeof grade === 'number') {
-                                                        score = grade;
-                                                    } else if (typeof grade === 'string') {
-                                                        score = parseFloat(grade) || 0;
-                                                    } else if (typeof grade === 'object' && grade !== null) {
-                                                        const g = grade as any;
-                                                        score = (Number(g.lenguajes || 0) + Number(g.saberes || 0) + Number(g.etica || 0) + Number(g.humano || 0)) / 4;
-                                                    } else {
-                                                        score = Number(grade) || 0;
-                                                    }
+                                                    // Usando función compartida para consistencia
+                                                    const score = calculateStudentMetrics(reportStudent).trimAvgs[idx] || 0;
 
                                                     return (
                                                         <tr key={idx}>

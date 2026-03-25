@@ -3,6 +3,7 @@ import { Student, SchoolConfig, Assignment } from '../types';
 import { generateDocumentContent } from '../services/ai';
 import { generateStudentAnalysis } from '../services/ai';
 import { getTeacherForStudent, generateAttendanceListPDF } from '../services/pdfGenerator';
+import { calculateStudentMetrics, getTrimesterAvg, getStudentGlobalAverage } from '../services/gradeUtils';
 import { FileText, Download, Printer, Copy, CheckCircle, AlertTriangle, Calendar, User, FileOutput, Bus, Upload } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 
@@ -108,13 +109,14 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({ students, config, 
             }
 
             try {
-                // Build complete student data for AI analysis
+                // Usando función compartida para consistencia
                 const gradesData = (student.grades || []).map((g, idx) => {
                     if (typeof g === 'object' && g !== null) {
                         const leng = Number(g.lenguajes || 0);
                         const sab = Number(g.saberes || 0);
                         const eti = Number(g.etica || 0);
                         const hum = Number(g.humano || 0);
+                        // Usando la misma lógica que la función compartida
                         const validFields = [leng, sab, eti, hum].filter(v => v > 0);
                         const avg = validFields.length > 0 ? validFields.reduce((a, b) => a + b, 0) / validFields.length : 0;
                         return { trimester: idx + 1, lenguajes: leng, saberes: sab, etica: eti, humano: hum, promedio: Number(avg.toFixed(1)) };
@@ -125,20 +127,8 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({ students, config, 
                 const attendance = student.attendance || {};
                 const studentLogs = (window as any).__appLogs || []; // Will be passed via props later
 
-                // Calculate overall average
-                const getGradeAvg = (g: any) => {
-                    if (typeof g === 'number') return g;
-                    if (!g) return 0;
-                    if (typeof g === 'object') {
-                        const fields = [Number(g.lenguajes || 0), Number(g.saberes || 0), Number(g.etica || 0), Number(g.humano || 0)];
-                        const valid = fields.filter(v => v > 0);
-                        return valid.length > 0 ? valid.reduce((a, b) => a + b, 0) / valid.length : 0;
-                    }
-                    return 0;
-                };
-                const gradesAvg = student.grades?.length
-                    ? student.grades.reduce((acc, g) => acc + getGradeAvg(g), 0) / student.grades.length
-                    : 0;
+                // Calculate overall average using shared function for consistency
+                const gradesAvg = getStudentGlobalAverage(student);
 
                 const analysis = await generateStudentAnalysis(student.name, {
                     grades: gradesData,
@@ -494,32 +484,27 @@ Docente:               ${student ? getTeacherForStudent(config, student.group) :
         }
 
         // --- Resto de tipos de documentos (lógica existente) ---
-        // Calculate real stats for student
-        const getGradeAvg = (g: any) => {
-            if (typeof g === 'number') return g;
-            if (!g) return 0;
-            return (Number(g.lenguajes || 0) + Number(g.saberes || 0) + Number(g.etica || 0) + Number(g.humano || 0)) / 4;
-        };
-
+        // Calculate real stats for student using shared function for consistency
         const average = student?.grades?.length
-            ? (student.grades.reduce((acc, grade) => acc + getGradeAvg(grade), 0) / student.grades.length).toFixed(1)
+            ? getStudentGlobalAverage(student).toFixed(1)
             : 'N/A';
 
         const totalAttendanceDays = student ? Object.keys(student.attendance).length : 0;
         const presentDays = student ? Object.values(student.attendance).filter(s => s === 'Presente').length : 0;
         const attendanceRate = totalAttendanceDays > 0 ? ((presentDays / totalAttendanceDays) * 100).toFixed(0) : '100';
 
-        // Calculate Group Stats for Presentation
+        // Calculate Group Stats for Presentation using shared function for consistency
         let groupAverage = '0';
         let groupAttendance = '0';
         let atRiskCount = 0;
         let assignmentsCount = 0;
 
         if (students.length > 0) {
-            // Group Average
-            const allGrades = students.flatMap(s => s.grades || []);
-            if (allGrades.length > 0) {
-                groupAverage = (allGrades.reduce((acc, grade) => acc + getGradeAvg(grade), 0) / allGrades.length).toFixed(1);
+            // Group Average using shared function
+            const studentsWithGrades = students.filter(s => s.grades && s.grades.length > 0);
+            if (studentsWithGrades.length > 0) {
+                const totalAvg = studentsWithGrades.reduce((acc, s) => acc + getStudentGlobalAverage(s), 0);
+                groupAverage = (totalAvg / studentsWithGrades.length).toFixed(1);
             }
 
             // Group Attendance
@@ -532,12 +517,10 @@ Docente:               ${student ? getTeacherForStudent(config, student.group) :
             });
             groupAttendance = totalDays > 0 ? ((totalPresent / totalDays) * 100).toFixed(0) : '0';
 
-            // Risk Count
+            // Risk Count using shared function for consistency
             atRiskCount = students.filter(s => {
-                const avg = s.grades && s.grades.length > 0
-                    ? (s.grades.reduce((acc, grade) => acc + getGradeAvg(grade), 0) / s.grades.length)
-                    : 10;
-                return avg < 6 || s.behaviorPoints < 0;
+                const avg = getStudentGlobalAverage(s);
+                return (avg > 0 && avg < 6) || s.behaviorPoints < 0;
             }).length;
 
             // Assignments

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Student, BehaviorLog } from '../types';
+import { getTrimesterAvg } from '../services/gradeUtils';
 import {
   ThumbsUp, ThumbsDown, AlertTriangle, Star, MessageCircle,
   X, Send, Trophy, Medal, Pen, Check, Search, Filter,
@@ -275,43 +276,15 @@ export const BehaviorView: React.FC<BehaviorViewProps> = ({ students, onLogBehav
 
             <div className="space-y-3">
               {[...students].map(s => {
-                const getTrimesterAvg = (g: any) => {
-                  if (!g) return 0;
-                  if (typeof g === 'number') return g;
-                  if (typeof g === 'string') return parseFloat(g) || 0;
-                  if (typeof g === 'object') {
-                    const fields = [g.lenguajes, g.saberes, g.etica, g.humano].map(v => Number(v) || 0);
-                    const validFields = fields.filter(v => v > 0);
-                    return validFields.length > 0 ? validFields.reduce((a, b) => a + b, 0) / validFields.length : 0;
-                  }
-                  return 0;
-                };
-
+                // Usando función compartida para consistencia - SOLO promedio académico
                 const trimAvgs = (s.grades || []).map(getTrimesterAvg);
                 const activeTrims = trimAvgs.filter(a => a > 0);
-                const academicAvg = activeTrims.length > 0 ? Math.min(10, activeTrims.reduce((a, b) => a + b, 0) / activeTrims.length) : 0;
+                const academicAvg = activeTrims.length > 0 ? activeTrims.reduce((a, b) => a + b, 0) / activeTrims.length : 0;
 
-                const completedCount = (s.completedAssignmentIds || []).length;
-                const cappedCompleted = Math.min(totalAssignmentCount, completedCount);
-                const hwScore = totalAssignmentCount > 0 ? (cappedCompleted / totalAssignmentCount) * 10 : 0;
+                // El promedio final es SOLO el académico (calificaciones NEM)
+                const finalAvg = academicAvg > 0 ? academicAvg : 0;
 
-                const conductScore = Math.max(5, Math.min(10, 8 + ((s.behaviorPoints || 0) * 0.1)));
-
-                let finalAvg = 0;
-                const hasAcademic = academicAvg > 0;
-                const hasHomework = totalAssignmentCount > 0;
-
-                if (hasAcademic && hasHomework) {
-                  finalAvg = (academicAvg * 0.3) + (hwScore * 0.55) + (conductScore * 0.15);
-                } else if (hasAcademic) {
-                  finalAvg = (academicAvg * 0.85) + (conductScore * 0.15);
-                } else if (hasHomework) {
-                  finalAvg = (hwScore * 0.85) + (conductScore * 0.15);
-                } else {
-                  finalAvg = conductScore;
-                }
-
-                return { ...s, calculatedAvg: Math.min(10, finalAvg) };
+                return { ...s, calculatedAvg: finalAvg };
               })
                 .sort((a, b) => b.calculatedAvg - a.calculatedAvg)
                 .slice(0, 3)

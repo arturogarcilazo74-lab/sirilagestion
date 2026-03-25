@@ -75,3 +75,45 @@ export const getChatReplyMessage = (senderRole: string, message: string) => {
 export const getStaffNoticeMessage = (title: string, message: string) => {
     return `*AVISO DE DIRECCIÓN (PERSONAL)*\n\n📌 *${title}*\n\n${message}`;
 };
+
+/**
+ * Template for Complete Student Report
+ */
+export const getCompleteReportMessage = (
+    studentName: string,
+    schoolName: string,
+    gradeGroup: string,
+    finalAvg: number | string,
+    attendance: { presentes: number; faltas: number; retardos: number },
+    behaviorPoints: number,
+    tareas: { completadas: number; total: number; porcentaje: number },
+    analysis?: string
+) => {
+    let msg = `*INFORME COMPLETO DEL ALUMNO*\n\n`;
+    msg += `🏫 *${schoolName}*\n`;
+    msg += `👤 Alumno(a): *${studentName}*\n`;
+    msg += `📚 Grupo: ${gradeGroup}\n\n`;
+
+    msg += `📊 *RESULTADOS ACADÉMICOS*\n`;
+    msg += `• Promedio General: *${finalAvg}*\n\n`;
+
+    msg += `📅 *ASISTENCIA*\n`;
+    msg += `• Asistencias: ${attendance.presentes}\n`;
+    msg += `• Faltas: ${attendance.faltas}\n`;
+    msg += `• Retardos: ${attendance.retardos}\n\n`;
+
+    msg += `⭐ *CONDUCTA*\n`;
+    msg += `• Puntos: ${behaviorPoints > 0 ? '+' : ''}${behaviorPoints}\n\n`;
+
+    msg += `📝 *TAREAS*\n`;
+    msg += `• Completadas: ${tareas.completadas}/${tareas.total} (${tareas.porcentaje}%)\n\n`;
+
+    if (analysis) {
+        msg += `💡 *ANÁLISIS Y RECOMENDACIONES*\n`;
+        msg += `${analysis}\n\n`;
+    }
+
+    msg += `\nPara más detalles, revise el documento PDF completo o consulte el Portal de Padres.`;
+
+    return msg;
+};

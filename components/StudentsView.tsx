@@ -2,7 +2,9 @@ import React, { useState, useRef } from 'react';
 import { Student, SchoolConfig, BehaviorLog, Assignment } from '../types';
 import { generateReportCard, generateBehaviorReport, generateStudentCredentials, generateCompleteStudentReport } from '../services/pdfGenerator';
 import { generateStudentAnalysis } from '../services/ai';
-import { Plus, Search, Edit2, Trash2, X, Save, User, Phone, Image as ImageIcon, QrCode, Download, FileText, Printer, Building2, Calendar, MapPin, Hash, GraduationCap, AlertCircle, Upload, FileSpreadsheet, Cake, CheckCircle, FileDown, Users, RectangleHorizontal, PieChart, CheckCircle2, Circle, RotateCcw } from 'lucide-react';
+import { calculateStudentMetrics } from '../services/gradeUtils';
+import { sendWhatsAppMessage, getCompleteReportMessage } from '../whatsappUtils';
+import { Plus, Search, Edit2, Trash2, X, Save, User, Phone, Image as ImageIcon, QrCode, Download, FileText, Printer, Building2, Calendar, MapPin, Hash, GraduationCap, AlertCircle, Upload, FileSpreadsheet, Cake, CheckCircle, FileDown, Users, RectangleHorizontal, PieChart, CheckCircle2, Circle, RotateCcw, MessageCircle } from 'lucide-react';
 import { GroupAnalysisModal } from './GroupAnalysisModal';
 
 interface StudentsViewProps {
@@ -69,47 +71,6 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
       window.scrollTo({ top: 0, behavior: 'instant' });
     }
   }, [reportStudent, students]);
-
-  const calculateStudentMetrics = (s: Student) => {
-    const getTrimesterAvg = (g: any) => {
-      if (!g) return 0;
-      if (typeof g === 'number') return g;
-      if (typeof g === 'string') return parseFloat(g) || 0;
-      if (typeof g === 'object') {
-        const fields = [g.lenguajes, g.saberes, g.etica, g.humano].map(v => Number(v) || 0);
-        const validFields = fields.filter(v => v > 0);
-        return validFields.length > 0 ? validFields.reduce((a, b) => a + b, 0) / validFields.length : 0;
-      }
-      return 0;
-    };
-
-    const trimAvgs = (s.grades || []).map(getTrimesterAvg);
-    const activeTrims = trimAvgs.filter(a => a > 0);
-    // Promedio académico: promedio simple de los trimestres con calificación > 0
-    const academicAvg = activeTrims.length > 0 ? activeTrims.reduce((a, b) => a + b, 0) / activeTrims.length : 0;
-    
-    // Porcentaje de tareas completadas (solo informativo, NO afecta el promedio académico)
-    const studentAssignments = assignments.filter(a => 
-      !a.targetGroup || a.targetGroup === s.group
-    );
-    const completedCount = studentAssignments.filter(a => (s.completedAssignmentIds || []).includes(a.id)).length;
-    const actualTotalAssignments = studentAssignments.length;
-    const hwPercentage = actualTotalAssignments > 0 ? Math.round((completedCount / actualTotalAssignments) * 100) : 0;
-    
-    // Puntos de conducta (solo informativo, NO afecta el promedio académico)
-    const behaviorPoints = s.behaviorPoints || 0;
-
-    // El promedio final es SOLO el académico (calificaciones NEM)
-    const finalAvg = academicAvg > 0 ? academicAvg.toFixed(1) : '-';
-
-    return { 
-      trimAvgs, 
-      academicAvg, 
-      hwPercentage,
-      behaviorPoints,
-      finalAvg
-    };
-  };
 
   const filteredStudents = students
     .filter(s => {
@@ -644,7 +605,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
             <tbody className="divide-y divide-slate-100">
               {filteredStudents.length > 0 ? (
                 filteredStudents.map((student) => {
-                  const { trimAvgs, finalAvg } = calculateStudentMetrics(student);
+                  const { trimAvgs, finalAvg } = calculateStudentMetrics(student, assignments);
                   const t1Avg = trimAvgs[0] || 0;
                   const t2Avg = trimAvgs[1] || 0;
                   const t3Avg = trimAvgs[2] || 0;
@@ -786,7 +747,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
       <div className="md:hidden space-y-4 print:hidden">
         {filteredStudents.length > 0 ? (
           filteredStudents.map((student) => {
-            const { finalAvg } = calculateStudentMetrics(student);
+            const { finalAvg } = calculateStudentMetrics(student, assignments);
 
             return (
               <div key={student.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
@@ -1374,13 +1335,15 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
                       btn.textContent = 'Generando análisis con IA...';
                     }
                     try {
-                      const metrics = calculateStudentMetrics(reportStudent);
+                      const metrics = calculateStudentMetrics(reportStudent, assignments);
+                      // Usando función compartida para consistencia
                       const gradesData = (reportStudent.grades || []).map((g, idx) => {
                         if (typeof g === 'object' && g !== null) {
                           const leng = Number(g.lenguajes || 0);
                           const sab = Number(g.saberes || 0);
                           const eti = Number(g.etica || 0);
                           const hum = Number(g.humano || 0);
+                          // Usando la misma lógica que la función compartida
                           const validFields = [leng, sab, eti, hum].filter(v => v > 0);
                           const avg = validFields.length > 0 ? validFields.reduce((a, b) => a + b, 0) / validFields.length : 0;
                           return { trimester: idx + 1, lenguajes: leng, saberes: sab, etica: eti, humano: hum, promedio: Number(avg.toFixed(1)) };
@@ -1441,6 +1404,91 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
                 >
                   <AlertCircle size={18} />
                   <span>Conducta PDF</span>
+                </button>
+                <button
+                  onClick={async () => {
+                    const phone = reportStudent.guardianPhone;
+                    if (!phone) {
+                      alert('Este alumno no tiene teléfono de contacto registrado.');
+                      return;
+                    }
+                    const metrics = calculateStudentMetrics(reportStudent, assignments);
+                    const studentLogs = logs.filter(l => l.studentId === reportStudent.id);
+                    const attendance = reportStudent.attendance || {};
+                    const studentAssigns = assignments.filter(a => !a.targetGroup || a.targetGroup === reportStudent.group);
+                    const completedCount = studentAssigns.filter(a => (reportStudent.completedAssignmentIds || []).includes(a.id)).length;
+
+                    let analysisText = '';
+                    try {
+                      // Usando función compartida para consistencia
+                      const gradesData = (reportStudent.grades || []).map((g, idx) => {
+                        if (typeof g === 'object' && g !== null) {
+                          const leng = Number(g.lenguajes || 0);
+                          const sab = Number(g.saberes || 0);
+                          const eti = Number(g.etica || 0);
+                          const hum = Number(g.humano || 0);
+                          // Usando la misma lógica que la función compartida
+                          const validFields = [leng, sab, eti, hum].filter(v => v > 0);
+                          const avg = validFields.length > 0 ? validFields.reduce((a, b) => a + b, 0) / validFields.length : 0;
+                          return { trimester: idx + 1, lenguajes: leng, saberes: sab, etica: eti, humano: hum, promedio: Number(avg.toFixed(1)) };
+                        }
+                        return { trimester: idx + 1, lenguajes: 0, saberes: 0, etica: 0, humano: 0, promedio: 0 };
+                      });
+
+                      const analysis = await generateStudentAnalysis(reportStudent.name, {
+                        grades: gradesData,
+                        attendance: {
+                          presentes: Object.values(attendance).filter(s => s === 'Presente').length,
+                          faltas: Object.values(attendance).filter(s => s === 'Ausente').length,
+                          retardos: Object.values(attendance).filter(s => s === 'Retardo').length
+                        },
+                        behavior: {
+                          puntos: reportStudent.behaviorPoints || 0,
+                          positivos: studentLogs.filter(l => l.type === 'POSITIVE').length,
+                          negativos: studentLogs.filter(l => l.type === 'NEGATIVE').length,
+                          incidentes: studentLogs.filter(l => l.type === 'NEGATIVE').slice(0, 5).map(l => l.description)
+                        },
+                        tareas: {
+                          completadas: completedCount,
+                          total: studentAssigns.length,
+                          porcentaje: studentAssigns.length > 0 ? Math.round((completedCount / studentAssigns.length) * 100) : 0
+                        },
+                        bap: reportStudent.bap || 'NINGUNA',
+                        usaer: reportStudent.usaer || false,
+                        repetidor: reportStudent.repeater || false,
+                        promedioGeneral: Number(metrics.finalAvg)
+                      });
+                      analysisText = analysis;
+                    } catch (e) {
+                      console.error('Error generating AI analysis for WhatsApp:', e);
+                    }
+
+                    const message = getCompleteReportMessage(
+                      reportStudent.name,
+                      config.schoolName,
+                      reportStudent.group || config.gradeGroup,
+                      metrics.finalAvg,
+                      {
+                        presentes: Object.values(attendance).filter(s => s === 'Presente').length,
+                        faltas: Object.values(attendance).filter(s => s === 'Ausente').length,
+                        retardos: Object.values(attendance).filter(s => s === 'Retardo').length
+                      },
+                      reportStudent.behaviorPoints || 0,
+                      {
+                        completadas: completedCount,
+                        total: studentAssigns.length,
+                        porcentaje: studentAssigns.length > 0 ? Math.round((completedCount / studentAssigns.length) * 100) : 0
+                      },
+                      analysisText || undefined
+                    );
+
+                    sendWhatsAppMessage(phone, message);
+                  }}
+                  className="bg-green-600 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-green-700 transition-colors shadow-lg shadow-green-200 text-sm flex-1 md:flex-none justify-center"
+                  title="Enviar informe completo por WhatsApp al padre de familia"
+                >
+                  <MessageCircle size={18} />
+                  <span>WhatsApp</span>
                 </button>
                 <button
                   onClick={() => window.open('/padres', '_blank')}
@@ -1636,7 +1684,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
                   <div className="grid grid-cols-3 gap-2 text-center">
                     <div className="bg-slate-50 p-2 rounded border border-slate-200">
                       <div className="text-xl font-bold text-indigo-700">
-                        {calculateStudentMetrics(reportStudent).finalAvg}
+                        {calculateStudentMetrics(reportStudent, assignments).finalAvg}
                       </div>
                       <div className="text-[10px] uppercase font-bold text-slate-500">Promedio Gral.</div>
                     </div>
@@ -1684,7 +1732,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
                       <tr><td colSpan={7} className="p-4 text-center text-slate-400">Sin calificaciones registradas</td></tr>
                     ) : (
                       reportStudent.grades.map((grade, idx) => {
-                        const metrics = calculateStudentMetrics(reportStudent);
+                        const metrics = calculateStudentMetrics(reportStudent, assignments);
                         const score = metrics.trimAvgs[idx] || 0;
                         const isObj = typeof grade === 'object' && grade !== null;
                         const leng = isObj ? Number(grade.lenguajes || 0) : Number(grade) || 0;

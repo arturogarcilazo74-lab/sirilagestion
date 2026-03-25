@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { Student, BehaviorLog, SchoolEvent, Assignment, ViewState, StaffTask, StaffMember } from '../types';
 import { generateRiskPlan, analyzeClassPerformance } from '../services/ai';
 import { api } from '../services/api';
+import { getTrimesterAvg } from '../services/gradeUtils';
 import { Sparkles, TrendingUp, Users, AlertCircle, History, X, Phone, User, CheckCircle, Calendar as CalendarIcon, BookOpen, Clock, Download, ClipboardList, ThumbsUp, ThumbsDown, ChevronLeft, ChevronRight, Plus, Edit2, Trash2, Save, MoreHorizontal, ArrowRight, Send, Megaphone, AlertTriangle, CheckSquare, MessageCircle } from 'lucide-react';
 import { sendWhatsAppMessage, getEventMessage } from '../whatsappUtils';
 
@@ -254,44 +255,12 @@ export const DashboardView: React.FC<DashboardProps> = ({
     const csvContent = [
       headers.join(','),
       ...sortedStudents.map(s => {
-        // Get trimester averages first (same as StudentsView)
-        const getTrimesterAvg = (g: any) => {
-          if (!g) return 0;
-          if (typeof g === 'number') return g;
-          if (typeof g === 'string') return parseFloat(g) || 0;
-          if (typeof g === 'object') {
-            const fields = [g.lenguajes, g.saberes, g.etica, g.humano].map(v => Number(v) || 0);
-            const validFields = fields.filter(v => v > 0);
-            return validFields.length > 0 ? validFields.reduce((a, b) => a + b, 0) / validFields.length : 0;
-          }
-          return 0;
-        };
-
+        // Get trimester averages using shared function for consistency - SOLO promedio académico
         const activeTrims = (s.grades || []).map(getTrimesterAvg).filter(a => a > 0);
-        const academicAvg = activeTrims.length > 0 ? Math.min(10, activeTrims.reduce((a, b) => a + b, 0) / activeTrims.length) : 0;
+        const academicAvg = activeTrims.length > 0 ? activeTrims.reduce((a, b) => a + b, 0) / activeTrims.length : 0;
         
-        const studentAssignments = assignments.filter(a => !a.targetGroup || a.targetGroup === s.group);
-        const completedCount = studentAssignments.filter(a => (s.completedAssignmentIds || []).includes(a.id)).length;
-        const actualTotalAssignments = studentAssignments.length;
-        const hwScore = actualTotalAssignments > 0 ? (completedCount / actualTotalAssignments) * 10 : 0;
-
-        const conductScore = Math.max(5, Math.min(10, 8 + ((s.behaviorPoints || 0) * 0.1)));
-        
-        let calculatedAvg = 0;
-        const hasAcademic = academicAvg > 0;
-        const hasHomework = s.totalAssignments > 0;
-
-        if (hasAcademic && hasHomework) {
-          calculatedAvg = (academicAvg * 0.3) + (hwScore * 0.55) + (conductScore * 0.15);
-        } else if (hasAcademic) {
-          calculatedAvg = (academicAvg * 0.85) + (conductScore * 0.15);
-        } else if (hasHomework) {
-          calculatedAvg = (hwScore * 0.85) + (conductScore * 0.15);
-        } else {
-          calculatedAvg = conductScore;
-        }
-        
-        const finalAvg = (hasAcademic || hasHomework) ? Math.min(10, calculatedAvg).toFixed(1) : conductScore.toFixed(1);
+        // El promedio final es SOLO el académico (calificaciones NEM)
+        const finalAvg = academicAvg > 0 ? academicAvg.toFixed(1) : '-';
         const attendanceCount = Object.values(s.attendance || {}).filter(x => x === 'Presente').length;
         return [
           s.id,
@@ -993,24 +962,9 @@ export const DashboardView: React.FC<DashboardProps> = ({
                   );
                   const completedCount = studentAssignments.filter(a => (student.completedAssignmentIds || []).includes(a.id)).length;
                   const actualTotalAssignments = studentAssignments.length;
-                  const hwScore = actualTotalAssignments > 0 ? Math.min(10, (completedCount / actualTotalAssignments) * 10) : 0;
-                  const conductScore = Math.max(5, Math.min(10, 8 + ((student.behaviorPoints || 0) * 0.1)));
 
-                  let calculatedAvg = 0;
-                  const hasAcademic = academicAvg > 0;
-                  const hasHomework = actualTotalAssignments > 0;
-
-                  if (hasAcademic && hasHomework) {
-                    calculatedAvg = (academicAvg * 0.3) + (hwScore * 0.55) + (conductScore * 0.15);
-                  } else if (hasAcademic) {
-                    calculatedAvg = (academicAvg * 0.85) + (conductScore * 0.15);
-                  } else if (hasHomework) {
-                    calculatedAvg = (hwScore * 0.85) + (conductScore * 0.15);
-                  } else {
-                    calculatedAvg = conductScore;
-                  }
-
-                  const avg = Math.min(10, calculatedAvg);
+                  // El promedio final es SOLO el académico (calificaciones NEM)
+                  const avg = academicAvg > 0 ? academicAvg : 0;
 
                   return (
                     <tr
@@ -1183,44 +1137,14 @@ export const DashboardView: React.FC<DashboardProps> = ({
                     <div>
                       <div className="text-2xl font-bold text-slate-800">
                         {(() => {
-                           const academicAvg = selectedStudent.grades.length > 0
-                             ? Math.min(10, selectedStudent.grades.reduce((acc, g: any) => {
-                                 let val = 0;
-                                 if (typeof g === 'number') val = g;
-                                 else if (typeof g === 'object' && g !== null) {
-                                   const fields = [g.lenguajes, g.saberes, g.etica, g.humano].map(v => Number(v) || 0);
-                                   const validFields = fields.filter(v => v > 0);
-                                   val = validFields.length > 0 ? validFields.reduce((a, b) => a + b, 0) / validFields.length : 0;
-                                 }
-                                 return acc + val;
-                               }, 0) / selectedStudent.grades.length)
-                             : 0;
-
-                             const studentAssignments = assignments.filter(a => 
-                               !a.targetGroup || a.targetGroup === selectedStudent.group
-                             );
-                             const completedAssignments = studentAssignments.filter(a => (selectedStudent.completedAssignmentIds || []).includes(a.id));
-                             const completedCount = completedAssignments.length;
-                             const actualTotalAssignments = studentAssignments.length;
-                             const hwScore = actualTotalAssignments > 0 ? Math.min(10, (completedCount / actualTotalAssignments) * 10) : 0;
-                            const conductScore = Math.max(5, Math.min(10, 8 + ((selectedStudent.behaviorPoints || 0) * 0.1)));
-
-                            let calculatedAvg = 0;
-                            const hasAcademic = academicAvg > 0;
-                            const hasHomework = actualTotalAssignments > 0;
-
-                            if (hasAcademic && hasHomework) {
-                              calculatedAvg = (academicAvg * 0.3) + (hwScore * 0.55) + (conductScore * 0.15);
-                            } else if (hasAcademic) {
-                              calculatedAvg = (academicAvg * 0.85) + (conductScore * 0.15);
-                            } else if (hasHomework) {
-                              calculatedAvg = (hwScore * 0.85) + (conductScore * 0.15);
-                            } else {
-                              calculatedAvg = conductScore;
-                            }
-                            
-                            return Math.min(10, calculatedAvg).toFixed(1);
-                         })()}
+                           // Usando función compartida para consistencia - SOLO promedio académico
+                           const trimAvgs = (selectedStudent.grades || []).map(getTrimesterAvg);
+                           const activeTrims = trimAvgs.filter(a => a > 0);
+                           const academicAvg = activeTrims.length > 0 ? activeTrims.reduce((a, b) => a + b, 0) / activeTrims.length : 0;
+                           
+                           // El promedio final es SOLO el académico (calificaciones NEM)
+                           return academicAvg > 0 ? academicAvg.toFixed(1) : '-';
+                          })()}
                       </div>
                       <div className="text-xs text-slate-500">Promedio</div>
                     </div>
