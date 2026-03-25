@@ -1245,7 +1245,7 @@ export const generateCompleteStudentReport = async (
     doc.text('4. OBSERVACIONES Y SUGERENCIAS', 20, currentY);
     currentY += 10;
 
-    if (aiAnalysis) {
+    if (aiAnalysis && !aiAnalysis.includes('No se pudo generar el análisis con IA')) {
         // Render AI-generated analysis
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9);
@@ -1254,21 +1254,28 @@ export const generateCompleteStudentReport = async (
         // Split analysis into sections and format
         const sections = aiAnalysis.split(/\d+\.\s+/).filter(s => s.trim());
         
-        sections.forEach(section => {
-            const lines = section.split('\n').filter(l => l.trim());
-            if (lines.length === 0) return;
+        // Verify that we have valid sections with titles
+        const hasValidSections = sections.some(s => {
+            const lines = s.split('\n').filter(l => l.trim());
+            return lines.length > 0 && lines[0].trim().length > 5;
+        });
 
-            // Check if we need a new page
-            if (currentY > 265) {
-                doc.addPage();
-                currentY = 20;
-            }
+        if (hasValidSections) {
+            sections.forEach(section => {
+                const lines = section.split('\n').filter(l => l.trim());
+                if (lines.length === 0) return;
 
-            // Section title (first line)
-            const titleLine = lines[0].replace(/:/g, '').trim();
-            doc.setFontSize(10);
-            doc.setFont('helvetica', 'bold');
-            doc.setTextColor(COLORS.primary[0], COLORS.primary[1], COLORS.primary[2]);
+                // Check if we need a new page
+                if (currentY > 265) {
+                    doc.addPage();
+                    currentY = 20;
+                }
+
+                // Section title (first line)
+                const titleLine = lines[0].replace(/:/g, '').trim();
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(COLORS.primary[0], COLORS.primary[1], COLORS.primary[2]);
             
             const titleWidth = doc.getTextWidth(titleLine);
             if (titleWidth > pageWidth - 40) {
@@ -1303,9 +1310,16 @@ export const generateCompleteStudentReport = async (
             });
 
             currentY += 4;
-        });
-    } else {
-        // Fallback manual observations if AI analysis is not available
+            });
+        }
+        // If AI analysis doesn't have valid sections, continue to fallback below
+    }
+    
+    if (!aiAnalysis || aiAnalysis.includes('No se pudo generar el análisis con IA') || !aiAnalysis.split(/\d+\.\s+/).filter(s => s.trim()).some(s => {
+        const lines = s.split('\n').filter(l => l.trim());
+        return lines.length > 0 && lines[0].trim().length > 5;
+    })) {
+        // Fallback manual observations if AI analysis is not available or invalid
         // Academic Suggestions
         doc.setFontSize(11);
         doc.setFont('helvetica', 'bold');
