@@ -332,42 +332,24 @@ app.get('/sirila-v1/honor-roll', async (req, res) => {
         }
 
         const calculateAvg = (s) => {
+            // Función para calcular promedio de un trimestre - SIEMPRE usa los 4 campos NEM
             const getTrimesterAvg = (g) => {
                 if (!g) return 0;
                 if (typeof g === 'number') return g;
                 if (typeof g === 'object') {
-                    const fields = [g.lenguajes, g.saberes, g.etica, g.humano].map(v => Number(v) || 0);
-                    const valid = fields.filter(v => v > 0);
-                    return valid.length > 0 ? valid.reduce((a, b) => a + b, 0) / valid.length : 0;
+                    // Siempre usar los 4 campos NEM y dividir entre 4
+                    const suma = Number(g.lenguajes || 0) + Number(g.saberes || 0) + Number(g.etica || 0) + Number(g.humano || 0);
+                    return suma / 4;
                 }
                 return 0;
             };
 
             const trimAvgs = (s.grades || []).map(getTrimesterAvg);
             const activeTrims = trimAvgs.filter(a => a > 0);
-            const academicAvg = activeTrims.length > 0 ? Math.min(10, activeTrims.reduce((a, b) => a + b, 0) / activeTrims.length) : 0;
+            const academicAvg = activeTrims.length > 0 ? activeTrims.reduce((a, b) => a + b, 0) / activeTrims.length : 0;
 
-            const completedCount = Math.max(s.assignmentsCompleted || 0, (s.completedAssignmentIds?.length || 0));
-            const actualTotal = Math.max(totalAssignmentsCount, s.totalAssignments || 0);
-            const cappedCompleted = Math.min(actualTotal, completedCount);
-            const hwScore = actualTotal > 0 ? (cappedCompleted / actualTotal) * 10 : 0;
-
-            const conductScore = Math.max(5, Math.min(10, 8 + ((s.behaviorPoints || 0) * 0.1)));
-
-            let finalAvg = 0;
-            const hasAcademic = academicAvg > 0;
-            const hasHomework = totalAssignmentsCount > 0;
-
-            if (hasAcademic && hasHomework) {
-                finalAvg = (academicAvg * 0.3) + (hwScore * 0.55) + (conductScore * 0.15);
-            } else if (hasAcademic) {
-                finalAvg = (academicAvg * 0.85) + (conductScore * 0.15);
-            } else if (hasHomework) {
-                finalAvg = (hwScore * 0.85) + (conductScore * 0.15);
-            } else {
-                finalAvg = conductScore;
-            }
-            return Math.min(10, finalAvg);
+            // El promedio final es SOLO el académico (calificaciones NEM)
+            return academicAvg;
         };
 
         const honorRoll = students
