@@ -3,6 +3,7 @@ import { Student, AttendanceStatus } from '../types';
 import { QrCode, CheckCircle, XCircle, Users, Clock, AlertTriangle, Search, Calendar, Eraser, MessageCircle } from 'lucide-react';
 import { sendWhatsAppMessage, getAttendanceMessage } from '../whatsappUtils';
 import { Html5QrcodeScanner } from 'html5-qrcode';
+import { isSchoolDay } from '../services/schoolCalendarUtils';
 
 interface AttendanceViewProps {
   students: Student[];
@@ -10,10 +11,11 @@ interface AttendanceViewProps {
 }
 
 export const AttendanceView: React.FC<AttendanceViewProps> = ({ students, onUpdateAttendance }) => {
-  const [mode, setMode] = useState<'LIST' | 'SCAN'>('LIST');
-  const [lastScanned, setLastScanned] = useState<Student | null>(null);
-  const [scanError, setScanError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
+   const [mode, setMode] = useState<'LIST' | 'SCAN'>('LIST');
+   const [lastScanned, setLastScanned] = useState<Student | null>(null);
+   const [scanError, setScanError] = useState<string | null>(null);
+   const [dateError, setDateError] = useState<string | null>(null);
+   const [searchTerm, setSearchTerm] = useState('');
 
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
@@ -48,27 +50,43 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({ students, onUpda
         }
       };
     }
-  }, [mode]);
+   }, [mode]);
 
-  const onScanSuccess = (decodedText: string, decodedResult: any) => {
-    // Handle the scanned code
-    const student = students.find(s => s.id === decodedText);
-    if (student) {
-      setLastScanned(student);
-      onUpdateAttendance(student.id, AttendanceStatus.PRESENT, selectedDate);
-      setScanError(null);
+   // Validate selected date when it changes
+   useEffect(() => {
+     if (selectedDate && !isSchoolDay(selectedDate)) {
+       setDateError('Fecha seleccionada no es un día hábil según el calendario escolar.');
+     } else {
+       setDateError(null);
+     }
+   }, [selectedDate]);
 
-      // Play success sound (optional)
-      const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-      audio.play().catch(e => console.log("Audio play failed", e));
+   const onScanSuccess = (decodedText: string, decodedResult: any) => {
+     // Handle the scanned code
+     const student = students.find(s => s.id === decodedText);
+     if (student) {
+       // Validate date before marking attendance
+       if (!isSchoolDay(selectedDate)) {
+         setDateError('No se puede marcar asistencia en este día. No es un día hábil según el calendario escolar.');
+         return;
+       }
+       setDateError(null);
+       
+       setLastScanned(student);
+       onUpdateAttendance(student.id, AttendanceStatus.PRESENT, selectedDate);
+       setScanError(null);
 
-      // Clear success message after 3 seconds
-      setTimeout(() => setLastScanned(null), 3000);
-    } else {
-      setScanError("Código QR no reconocido en el sistema.");
-      setTimeout(() => setScanError(null), 3000);
-    }
-  };
+       // Play success sound (optional)
+       const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+       audio.play().catch(e => console.log("Audio play failed", e));
+
+       // Clear success message after 3 seconds
+       setTimeout(() => setLastScanned(null), 3000);
+     } else {
+       setScanError("Código QR no reconocido en el sistema.");
+       setTimeout(() => setScanError(null), 3000);
+     }
+   };
 
   const onScanFailure = (error: any) => {
     // console.warn(`Code scan error = ${error}`);
@@ -83,18 +101,21 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({ students, onUpda
     <div className="space-y-6 animate-fadeIn">
       {/* Header & Stats */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <h2 className="text-3xl font-extrabold text-slate-800 tracking-tight">Control de Asistencia</h2>
-          <div className="flex items-center gap-2 mt-1">
-            <Calendar size={18} className="text-slate-500" />
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="bg-transparent border-none text-slate-500 font-medium focus:ring-0 cursor-pointer"
-            />
-          </div>
-        </div>
+           <div>
+             <h2 className="text-3xl font-extrabold text-slate-800 tracking-tight">Control de Asistencia</h2>
+             <div className="flex items-center gap-2 mt-1">
+               <Calendar size={18} className="text-slate-500" />
+               <input
+                 type="date"
+                 value={selectedDate}
+                 onChange={(e) => setSelectedDate(e.target.value)}
+                 className="bg-transparent border-none text-slate-500 font-medium focus:ring-0 cursor-pointer"
+               />
+             </div>
+             {dateError && (
+               <p className="text-red-500 text-center mt-2">{dateError}</p>
+             )}
+           </div>
 
         <div className="flex gap-2 bg-slate-100 p-1 rounded-xl">
           <button
@@ -253,34 +274,62 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({ students, onUpda
                       </td>
                       <td className="p-4 text-right">
                         <div className="flex justify-end gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
-                          <button
-                            onClick={() => onUpdateAttendance(student.id, AttendanceStatus.PRESENT, selectedDate)}
-                            className={`p-2 rounded-lg transition-all ${status === AttendanceStatus.PRESENT ? 'bg-green-500 text-white shadow-md' : 'hover:bg-green-100 text-green-600'}`}
-                            title="Presente"
-                          >
-                            <CheckCircle size={18} />
-                          </button>
-                          <button
-                            onClick={() => onUpdateAttendance(student.id, AttendanceStatus.LATE, selectedDate)}
-                            className={`p-2 rounded-lg transition-all ${status === AttendanceStatus.LATE ? 'bg-yellow-500 text-white shadow-md' : 'hover:bg-yellow-100 text-yellow-600'}`}
-                            title="Retardo"
-                          >
-                            <Clock size={18} />
-                          </button>
-                          <button
-                            onClick={() => onUpdateAttendance(student.id, AttendanceStatus.ABSENT, selectedDate)}
-                            className={`p-2 rounded-lg transition-all ${status === AttendanceStatus.ABSENT ? 'bg-red-500 text-white shadow-md' : 'hover:bg-red-100 text-red-600'}`}
-                            title="Ausente"
-                          >
-                            <XCircle size={18} />
-                          </button>
-                          <button
-                            onClick={() => onUpdateAttendance(student.id, AttendanceStatus.NONE, selectedDate)}
-                            className={`p-2 rounded-lg transition-all hover:bg-slate-100 text-slate-400 hover:text-slate-600`}
-                            title="Borrar Registro (Reiniciar)"
-                          >
-                            <Eraser size={18} />
-                          </button>
+                           <button
+                             onClick={() => {
+                               if (!isSchoolDay(selectedDate)) {
+                                 setDateError('No se puede marcar asistencia en este día. No es un día hábil según el calendario escolar.');
+                                 return;
+                               }
+                               setDateError(null);
+                               onUpdateAttendance(student.id, AttendanceStatus.PRESENT, selectedDate);
+                             }}
+                             className={`p-2 rounded-lg transition-all ${status === AttendanceStatus.PRESENT ? 'bg-green-500 text-white shadow-md' : 'hover:bg-green-100 text-green-600'}`}
+                             title="Presente"
+                           >
+                             <CheckCircle size={18} />
+                           </button>
+                           <button
+                             onClick={() => {
+                               if (!isSchoolDay(selectedDate)) {
+                                 setDateError('No se puede marcar asistencia en este día. No es un día hábil según el calendario escolar.');
+                                 return;
+                               }
+                               setDateError(null);
+                               onUpdateAttendance(student.id, AttendanceStatus.LATE, selectedDate);
+                             }}
+                             className={`p-2 rounded-lg transition-all ${status === AttendanceStatus.LATE ? 'bg-yellow-500 text-white shadow-md' : 'hover:bg-yellow-100 text-yellow-600'}`}
+                             title="Retardo"
+                           >
+                             <Clock size={18} />
+                           </button>
+                           <button
+                             onClick={() => {
+                               if (!isSchoolDay(selectedDate)) {
+                                 setDateError('No se puede marcar asistencia en este día. No es un día hábil según el calendario escolar.');
+                                 return;
+                               }
+                               setDateError(null);
+                               onUpdateAttendance(student.id, AttendanceStatus.ABSENT, selectedDate);
+                             }}
+                             className={`p-2 rounded-lg transition-all ${status === AttendanceStatus.ABSENT ? 'bg-red-500 text-white shadow-md' : 'hover:bg-red-100 text-red-600'}`}
+                             title="Ausente"
+                           >
+                             <XCircle size={18} />
+                           </button>
+                           <button
+                             onClick={() => {
+                               if (!isSchoolDay(selectedDate)) {
+                                 setDateError('No se puede marcar asistencia en este día. No es un día hábil según el calendario escolar.');
+                                 return;
+                               }
+                               setDateError(null);
+                               onUpdateAttendance(student.id, AttendanceStatus.NONE, selectedDate);
+                             }}
+                             className={`p-2 rounded-lg transition-all hover:bg-slate-100 text-slate-400 hover:text-slate-600`}
+                             title="Borrar Registro (Reiniciar)"
+                           >
+                             <Eraser size={18} />
+                           </button>
                           <button
                             onClick={() => sendWhatsAppMessage(student.guardianPhone, getAttendanceMessage(student.name, status as string, selectedDate))}
                             className="p-2 rounded-lg bg-green-50 text-green-600 hover:bg-green-600 hover:text-white transition-all shadow-sm"
@@ -326,37 +375,65 @@ export const AttendanceView: React.FC<AttendanceViewProps> = ({ students, onUpda
                   </div>
 
                   <div className="grid grid-cols-4 gap-2">
-                    <button
-                      onClick={() => onUpdateAttendance(student.id, AttendanceStatus.PRESENT, selectedDate)}
-                      className={`py-3 rounded-xl flex items-center justify-center gap-2 font-bold transition-all text-sm
-                        ${status === AttendanceStatus.PRESENT ? 'bg-green-500 text-white shadow-md ring-2 ring-green-200' : 'bg-green-50 text-green-600 border border-green-200'}`}
-                      title="Asistencia"
-                    >
-                      <CheckCircle size={18} />
-                    </button>
-                    <button
-                      onClick={() => onUpdateAttendance(student.id, AttendanceStatus.LATE, selectedDate)}
-                      className={`py-3 rounded-xl flex items-center justify-center gap-2 font-bold transition-all text-sm
-                        ${status === AttendanceStatus.LATE ? 'bg-yellow-500 text-white shadow-md ring-2 ring-yellow-200' : 'bg-yellow-50 text-yellow-600 border border-yellow-200'}`}
-                      title="Retardo"
-                    >
-                      <Clock size={18} />
-                    </button>
-                    <button
-                      onClick={() => onUpdateAttendance(student.id, AttendanceStatus.ABSENT, selectedDate)}
-                      className={`py-3 rounded-xl flex items-center justify-center gap-2 font-bold transition-all text-sm
-                        ${status === AttendanceStatus.ABSENT ? 'bg-red-500 text-white shadow-md ring-2 ring-red-200' : 'bg-red-50 text-red-600 border border-red-200'}`}
-                      title="Falta"
-                    >
-                      <XCircle size={18} />
-                    </button>
-                    <button
-                      onClick={() => onUpdateAttendance(student.id, AttendanceStatus.NONE, selectedDate)}
-                      className={`py-3 rounded-xl flex items-center justify-center gap-2 font-bold transition-all text-sm bg-slate-100 text-slate-500 border border-slate-200`}
-                      title="Borrar"
-                    >
-                      <Eraser size={18} />
-                    </button>
+                     <button
+                       onClick={() => {
+                         if (!isSchoolDay(selectedDate)) {
+                           setDateError('No se puede marcar asistencia en este día. No es un día hábil según el calendario escolar.');
+                           return;
+                         }
+                         setDateError(null);
+                         onUpdateAttendance(student.id, AttendanceStatus.PRESENT, selectedDate);
+                       }}
+                       className={`py-3 rounded-xl flex items-center justify-center gap-2 font-bold transition-all text-sm
+                         ${status === AttendanceStatus.PRESENT ? 'bg-green-500 text-white shadow-md ring-2 ring-green-200' : 'bg-green-50 text-green-600 border border-green-200'}`}
+                       title="Asistencia"
+                     >
+                       <CheckCircle size={18} />
+                     </button>
+                     <button
+                       onClick={() => {
+                         if (!isSchoolDay(selectedDate)) {
+                           setDateError('No se puede marcar asistencia en este día. No es un día hábil según el calendario escolar.');
+                           return;
+                         }
+                         setDateError(null);
+                         onUpdateAttendance(student.id, AttendanceStatus.LATE, selectedDate);
+                       }}
+                       className={`py-3 rounded-xl flex items-center justify-center gap-2 font-bold transition-all text-sm
+                         ${status === AttendanceStatus.LATE ? 'bg-yellow-500 text-white shadow-md ring-2 ring-yellow-200' : 'bg-yellow-50 text-yellow-600 border border-yellow-200'}`}
+                       title="Retardo"
+                     >
+                       <Clock size={18} />
+                     </button>
+                     <button
+                       onClick={() => {
+                         if (!isSchoolDay(selectedDate)) {
+                           setDateError('No se puede marcar asistencia en este día. No es un día hábil según el calendario escolar.');
+                           return;
+                         }
+                         setDateError(null);
+                         onUpdateAttendance(student.id, AttendanceStatus.ABSENT, selectedDate);
+                       }}
+                       className={`py-3 rounded-xl flex items-center justify-center gap-2 font-bold transition-all text-sm
+                         ${status === AttendanceStatus.ABSENT ? 'bg-red-500 text-white shadow-md ring-2 ring-red-200' : 'bg-red-50 text-red-600 border border-red-200'}`}
+                       title="Falta"
+                     >
+                       <XCircle size={18} />
+                     </button>
+                     <button
+                       onClick={() => {
+                         if (!isSchoolDay(selectedDate)) {
+                           setDateError('No se puede marcar asistencia en este día. No es un día hábil según el calendario escolar.');
+                           return;
+                         }
+                         setDateError(null);
+                         onUpdateAttendance(student.id, AttendanceStatus.NONE, selectedDate);
+                       }}
+                       className={`py-3 rounded-xl flex items-center justify-center gap-2 font-bold transition-all text-sm bg-slate-100 text-slate-500 border border-slate-200`}
+                       title="Borrar"
+                     >
+                       <Eraser size={18} />
+                     </button>
                   </div>
                   <button
                     onClick={() => sendWhatsAppMessage(student.guardianPhone, getAttendanceMessage(student.name, status as string, selectedDate))}

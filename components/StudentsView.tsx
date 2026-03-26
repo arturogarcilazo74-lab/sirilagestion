@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Student, SchoolConfig, BehaviorLog, Assignment } from '../types';
-import { generateReportCard, generateBehaviorReport, generateStudentCredentials, generateCompleteStudentReport } from '../services/pdfGenerator';
+import { generateReportCard, generateBehaviorReport, generateStudentCredentials, generateCompleteStudentReport, generateMonthlyAttendanceReport } from '../services/pdfGenerator';
 import { generateStudentAnalysis } from '../services/ai';
 import { calculateStudentMetrics } from '../services/gradeUtils';
 import { sendWhatsAppMessage, getCompleteReportMessage } from '../whatsappUtils';

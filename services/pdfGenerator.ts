@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { Student, SchoolConfig, BehaviorLog, Assignment } from '../types';
+import { Student, SchoolConfig, BehaviorLog, Assignment, AttendanceStatus } from '../types';
 import QRCode from 'qrcode';
 
 type ColorTuple = [number, number, number];
@@ -1450,6 +1450,200 @@ export const generateCompleteStudentReport = async (
     doc.text(`Generado el: ${date}`, 20, doc.internal.pageSize.height - 5);
 
     doc.save(`Informe_Completo_${student.name.replace(/\s+/g, '_')}.pdf`);
+};
+
+export const generateMonthlyAttendanceReport = async (
+    student: Student,
+    config: SchoolConfig
+) => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.width;
+    const margin = 20;
+
+    // Pre-load logo
+    let printConfig = { ...config };
+    if (config.schoolLogo && !config.schoolLogo.startsWith('data:')) {
+        const base64Logo = await getBase64ImageFromUrl(config.schoolLogo);
+        if (base64Logo) printConfig.schoolLogo = base64Logo;
+    }
+
+    addHeader(doc, printConfig, 'REPORTE DE ASISTENCIAS POR MESES');
+
+    // Student info
+    addStudentInfo(doc, student, printConfig, 65);
+
+    // Process attendance data by month
+    const attendance = student.attendance || {};
+    const monthNames = [
+        'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+        'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+
+    // Group attendance by month
+    const monthlyData: Record<string, { present: number; absent: number; late: number; total: number }> = {};
+
+    Object.entries(attendance).forEach(([dateStr, status]) => {
+        const date = new Date(dateStr + 'T00:00:00');
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        const monthIndex = date.getMonth();
+
+        if (!monthlyData[monthKey]) {
+            monthlyData[monthKey] = { present: 0, absent: 0, late: 0, total: 0 };
+        }
+
+        if (status === AttendanceStatus.PRESENT) {
+            monthlyData[monthKey].present++;
+        } else if (status === AttendanceStatus.ABSENT) {
+            monthlyData[monthKey].absent++;
+        } else if (status === AttendanceStatus.LATE) {
+            monthlyData[monthKey].late++;
+        }
+        monthlyData[monthKey].total++;
+    });
+
+    // Sort months chronologically
+    const sortedMonths = Object.keys(monthlyData).sort();
+
+    // Prepare table data
+    const tableBody: string[][] = [];
+    let totalPresent = 0;
+    let totalAbsent = 0;
+    let totalLate = 0;
+    let totalDays = 0;
+
+    sortedMonths.forEach(monthKey => {
+        const [year, month] = monthKey.split('-');
+        const monthIndex = parseInt(month) - 1;
+        const monthName = monthNames[monthIndex];
+        const data = monthlyData[monthKey];
+        const attendanceRate = data.total > 0 ? ((data.present / data.total) * 100).toFixed(1) : '0';
+
+        tableBody.push([
+            `${monthName} ${year}`,
+            data.present.toString(),
+            data.absent.toString(),
+            data.late.toString(),
+            data.total.toString(),
+            `${attendanceRate}%`
+        ]);
+
+        totalPresent += data.present;
+        totalAbsent += data.absent;
+        totalLate += data.late;
+        totalDays += data.total;
+    });
+
+    // Add totals row
+    const overallRate = totalDays > 0 ? ((totalPresent / totalDays) * 100).toFixed(1) : '0';
+    tableBody.push([
+        'TOTAL',
+        totalPresent.toString(),
+        totalAbsent.toString(),
+        totalLate.toString(),
+        totalDays.toString(),
+        `${overallRate}%`
+    ]);
+
+    // Generate table
+    let currentY = 85;
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(COLORS.primary[0], COLORS.primary[1], COLORS.primary[2]);
+    doc.text('Resumen de Asistencia por Mes', margin, currentY);
+    currentY += 5;
+
+    autoTable(doc, {
+        startY: currentY,
+        head: [['Mes', 'Asistencias', 'Faltas', 'Retardos', 'Total Días', '% Asistencia']],
+        body: tableBody,
+        theme: 'grid',
+        headStyles: { fillColor: COLORS.primary, fontSize: 8 },
+        styles: { fontSize: 8, cellPadding: 3 },
+        columnStyles: {
+            0: { cellWidth: 35, fontStyle: 'bold' },
+            1: { cellWidth: 25, halign: 'center' },
+            2: { cellWidth: 25, halign: 'center' },
+            3: { cellWidth: 25, halign: 'center' },
+            4: { cellWidth: 25, halign: 'center' },
+            5: { cellWidth: 30, halign: 'center', fontStyle: 'bold' }
+        },
+        didParseCell: (data) => {
+            if (data.section === 'body' && data.row.index === tableBody.length - 1) {
+                data.cell.styles.fontStyle = 'bold';
+                data.cell.styles.fillColor = [240, 240, 240];
+            }
+            // Color coding for attendance rate
+            if (data.section === 'body' && data.column.index === 5 && data.row.index < tableBody.length - 1) {
+                const rate = parseFloat(data.cell.raw?.toString() || '0');
+                if (rate >= 90) {
+                    data.cell.styles.textColor = [22, 163, 74]; // Green
+                } else if (rate >= 75) {
+                    data.cell.styles.textColor = [234, 179, 8]; // Yellow
+                } else {
+                    data.cell.styles.textColor = [220, 38, 38]; // Red
+                }
+            }
+        }
+    });
+
+    currentY = (doc as any).lastAutoTable.finalY + 15;
+
+    // Summary statistics
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(COLORS.primary[0], COLORS.primary[1], COLORS.primary[2]);
+    doc.text('Estadísticas Generales', margin, currentY);
+    currentY += 5;
+
+    autoTable(doc, {
+        startY: currentY,
+        head: [['Indicador', 'Valor']],
+        body: [
+            ['Total de días registrados', totalDays.toString()],
+            ['Asistencias', totalPresent.toString()],
+            ['Faltas', totalAbsent.toString()],
+            ['Retardos', totalLate.toString()],
+            ['Porcentaje de asistencia', `${overallRate}%`],
+            ['Meses con registros', sortedMonths.length.toString()]
+        ],
+        theme: 'striped',
+        headStyles: { fillColor: COLORS.secondary, fontSize: 8 },
+        styles: { fontSize: 8, cellPadding: 2 },
+    });
+
+    currentY = (doc as any).lastAutoTable.finalY + 15;
+
+    // Attendance observations
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(COLORS.primary[0], COLORS.primary[1], COLORS.primary[2]);
+    doc.text('Observaciones', margin, currentY);
+    currentY += 7;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2]);
+
+    let observations = '';
+    const rateNum = parseFloat(overallRate);
+
+    if (rateNum >= 95) {
+        observations = 'El alumno presenta una asistencia excelente. Se reconoce su compromiso y dedicación con su formación académica.';
+    } else if (rateNum >= 85) {
+        observations = 'El alumno mantiene una buena asistencia. Se recomienda continuar con este ritmo de asistencia regular.';
+    } else if (rateNum >= 75) {
+        observations = `El alumno ha registrado ${totalAbsent} faltas. Se sugiere a los padres de familia garantizar la asistencia regular del alumno para evitar afectar su aprovechamiento académico.`;
+    } else {
+        observations = `El alumno presenta un nivel de asistencia preocupante con ${totalAbsent} faltas. Las inasistencias afectan significativamente el proceso de aprendizaje. Se requiere atención inmediata por parte de los padres de familia.`;
+    }
+
+    const obsLines = doc.splitTextToSize(observations, pageWidth - 40);
+    doc.text(obsLines, margin, currentY);
+
+    // Footer with signatures
+    addFooter(doc, config, student);
+
+    doc.save(`Asistencia_Por_Meses_${student.name.replace(/\s+/g, '_')}.pdf`);
 };
 
 export const generateAttendanceListPDF = async (
