@@ -1399,12 +1399,20 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
                   <span>Informe Completo</span>
                 </button>
                 <button
-                  onClick={() => generateBehaviorReport(reportStudent, logs.filter(l => l.studentId === reportStudent.id), config)}
-                  className="bg-rose-600 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-rose-700 transition-colors shadow-lg shadow-rose-200 text-sm flex-1 md:flex-none justify-center"
-                >
-                  <AlertCircle size={18} />
-                  <span>Conducta PDF</span>
-                </button>
+                   onClick={() => generateBehaviorReport(reportStudent, logs.filter(l => l.studentId === reportStudent.id), config)}
+                   className="bg-rose-600 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-rose-700 transition-colors shadow-lg shadow-rose-200 text-sm flex-1 md:flex-none justify-center"
+                 >
+                   <AlertCircle size={18} />
+                   <span>Conducta PDF</span>
+                 </button>
+                 <button
+                   onClick={() => generateMonthlyAttendanceReport(reportStudent, config)}
+                   className="bg-orange-600 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-orange-700 transition-colors shadow-lg shadow-orange-200 text-sm flex-1 md:flex-none justify-center"
+                   title="Generar reporte de asistencias por meses en PDF"
+                 >
+                   <Calendar size={18} />
+                   <span>Asistencia Mensual PDF</span>
+                 </button>
                 <button
                   onClick={async () => {
                     const phone = reportStudent.guardianPhone;
