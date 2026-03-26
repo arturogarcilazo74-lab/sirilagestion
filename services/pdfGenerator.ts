@@ -2,6 +2,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Student, SchoolConfig, BehaviorLog, Assignment, AttendanceStatus } from '../types';
 import QRCode from 'qrcode';
+import { SCHOOL_PERIODS, isSchoolDay, getSchoolPeriod } from './schoolCalendarUtils';
 
 type ColorTuple = [number, number, number];
 
@@ -1467,42 +1468,42 @@ export const generateMonthlyAttendanceReport = async (
         if (base64Logo) printConfig.schoolLogo = base64Logo;
     }
 
-    addHeader(doc, printConfig, 'REPORTE DE ASISTENCIAS POR MESES');
+    addHeader(doc, printConfig, 'REPORTE DE ASISTENCIAS POR PERIODO');
 
     // Student info
     addStudentInfo(doc, student, printConfig, 65);
 
-    // Process attendance data by month
+    // Process attendance data by period
     const attendance = student.attendance || {};
-    const monthNames = [
-        'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-        'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-    ];
+    
+    // Group attendance by period
+    const periodData: Record<string, { present: number; absent: number; late: number; total: number }> = {};
+    
+    // Initialize period data
+    SCHOOL_PERIODS.forEach(period => {
+        periodData[period.id] = { present: 0, absent: 0, late: 0, total: 0 };
+    });
 
-    // Group attendance by month
-    const monthlyData: Record<string, { present: number; absent: number; late: number; total: number }> = {};
-
+    // Count attendance by period (only valid school days)
     Object.entries(attendance).forEach(([dateStr, status]) => {
-        const date = new Date(dateStr + 'T00:00:00');
-        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-        const monthIndex = date.getMonth();
-
-        if (!monthlyData[monthKey]) {
-            monthlyData[monthKey] = { present: 0, absent: 0, late: 0, total: 0 };
+        if (!isSchoolDay(dateStr)) return; // Skip invalid days
+        
+        const period = getSchoolPeriod(dateStr);
+        if (!period) return;
+        
+        if (!periodData[period.id]) {
+            periodData[period.id] = { present: 0, absent: 0, late: 0, total: 0 };
         }
 
         if (status === AttendanceStatus.PRESENT) {
-            monthlyData[monthKey].present++;
+            periodData[period.id].present++;
         } else if (status === AttendanceStatus.ABSENT) {
-            monthlyData[monthKey].absent++;
+            periodData[period.id].absent++;
         } else if (status === AttendanceStatus.LATE) {
-            monthlyData[monthKey].late++;
+            periodData[period.id].late++;
         }
-        monthlyData[monthKey].total++;
+        periodData[period.id].total++;
     });
-
-    // Sort months chronologically
-    const sortedMonths = Object.keys(monthlyData).sort();
 
     // Prepare table data
     const tableBody: string[][] = [];
@@ -1511,15 +1512,12 @@ export const generateMonthlyAttendanceReport = async (
     let totalLate = 0;
     let totalDays = 0;
 
-    sortedMonths.forEach(monthKey => {
-        const [year, month] = monthKey.split('-');
-        const monthIndex = parseInt(month) - 1;
-        const monthName = monthNames[monthIndex];
-        const data = monthlyData[monthKey];
+    SCHOOL_PERIODS.forEach(period => {
+        const data = periodData[period.id] || { present: 0, absent: 0, late: 0, total: 0 };
         const attendanceRate = data.total > 0 ? ((data.present / data.total) * 100).toFixed(1) : '0';
 
         tableBody.push([
-            `${monthName} ${year}`,
+            period.name,
             data.present.toString(),
             data.absent.toString(),
             data.late.toString(),
@@ -1536,7 +1534,7 @@ export const generateMonthlyAttendanceReport = async (
     // Add totals row
     const overallRate = totalDays > 0 ? ((totalPresent / totalDays) * 100).toFixed(1) : '0';
     tableBody.push([
-        'TOTAL',
+        'TOTAL GENERAL',
         totalPresent.toString(),
         totalAbsent.toString(),
         totalLate.toString(),
@@ -1549,12 +1547,12 @@ export const generateMonthlyAttendanceReport = async (
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(COLORS.primary[0], COLORS.primary[1], COLORS.primary[2]);
-    doc.text('Resumen de Asistencia por Mes', margin, currentY);
+    doc.text('Resumen de Asistencia por Periodo', margin, currentY);
     currentY += 5;
 
     autoTable(doc, {
         startY: currentY,
-        head: [['Mes', 'Asistencias', 'Faltas', 'Retardos', 'Total Días', '% Asistencia']],
+        head: [['Periodo', 'Asistencias', 'Faltas', 'Retardos', 'Total Días', '% Asistencia']],
         body: tableBody,
         theme: 'grid',
         headStyles: { fillColor: COLORS.primary, fontSize: 8 },
@@ -1604,7 +1602,7 @@ export const generateMonthlyAttendanceReport = async (
             ['Faltas', totalAbsent.toString()],
             ['Retardos', totalLate.toString()],
             ['Porcentaje de asistencia', `${overallRate}%`],
-            ['Meses con registros', sortedMonths.length.toString()]
+            ['Periodos con registros', SCHOOL_PERIODS.filter(p => (periodData[p.id]?.total || 0) > 0).length.toString()]
         ],
         theme: 'striped',
         headStyles: { fillColor: COLORS.secondary, fontSize: 8 },
@@ -1643,7 +1641,7 @@ export const generateMonthlyAttendanceReport = async (
     // Footer with signatures
     addFooter(doc, config, student);
 
-    doc.save(`Asistencia_Por_Meses_${student.name.replace(/\s+/g, '_')}.pdf`);
+    doc.save(`Asistencia_Por_Periodo_${student.name.replace(/\s+/g, '_')}.pdf`);
 };
 
 export const generateAttendanceListPDF = async (

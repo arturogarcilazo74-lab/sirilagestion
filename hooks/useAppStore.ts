@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { Student, Assignment, BehaviorLog, SchoolEvent, SchoolConfig, FinanceEvent, AttendanceStatus, StaffTask, Book } from '../types';
 import { MOCK_ASSIGNMENTS, MOCK_EVENTS, MOCK_STUDENTS, DEFAULT_CONFIG } from '../constants';
+import { cleanInvalidAttendance } from '../services/schoolCalendarUtils';
 
 export const useAppStore = () => {
     // -- STATE (Initialized with Mocks/Empty primarily, then Server fills it) --
@@ -28,7 +29,18 @@ export const useAppStore = () => {
         } catch (e) { return fallback; }
     };
 
-    const [students, setStudents] = useState<Student[]>(() => getCache('SIRILA_CACHE_STUDENTS', MOCK_STUDENTS));
+    // Clean attendance records when loading from cache
+    const cleanCachedStudents = (cachedStudents: Student[]): Student[] => {
+        return cachedStudents.map(student => ({
+            ...student,
+            attendance: cleanInvalidAttendance(student.attendance || {}) as Record<string, AttendanceStatus>
+        }));
+    };
+
+    const [students, setStudents] = useState<Student[]>(() => {
+        const cachedStudents = getCache('SIRILA_CACHE_STUDENTS', MOCK_STUDENTS);
+        return cleanCachedStudents(cachedStudents);
+    });
     const [assignments, setAssignments] = useState<Assignment[]>(() => getCache('SIRILA_CACHE_ASSIGNMENTS', MOCK_ASSIGNMENTS));
     const [behaviorLogs, setBehaviorLogs] = useState<BehaviorLog[]>(() => getCache('SIRILA_CACHE_LOGS', []));
     const [events, setEvents] = useState<SchoolEvent[]>(() => getCache('SIRILA_CACHE_EVENTS', MOCK_EVENTS));
@@ -259,7 +271,16 @@ export const useAppStore = () => {
                         const t = result.staffTasks || [];
                         const b = result.books || [];
 
-                        setStudents(s);
+                        // Clean invalid attendance records
+                        const cleanedStudents = s.map((student: Student) => {
+                            const cleanedAttendance = cleanInvalidAttendance(student.attendance || {}) as Record<string, AttendanceStatus>;
+                            return {
+                                ...student,
+                                attendance: cleanedAttendance
+                            };
+                        });
+
+                        setStudents(cleanedStudents);
                         setAssignments(a);
                         setEvents(e);
                         setBehaviorLogs(l);
@@ -292,7 +313,7 @@ export const useAppStore = () => {
                         }
 
                         // CRITICAL: Flush to cache immediately
-                        flushCache(s, a, e, l, result.schoolConfig || schoolConfig, f, t, b);
+                        flushCache(cleanedStudents, a, e, l, result.schoolConfig || schoolConfig, f, t, b);
                     } else {
                         console.warn("Servidor vacío. Intentando recuperación local...");
                         recoverLocalData(true);
