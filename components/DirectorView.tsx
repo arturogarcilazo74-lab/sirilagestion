@@ -4,13 +4,17 @@ import {
     Building2, LayoutDashboard, LogOut, Briefcase,
     Megaphone, Search, UserCheck, RotateCw,
     ChevronLeft, ChevronRight, Settings, CheckCircle2,
-    Edit2, Trash2, AlertTriangle, X, User, TrendingUp, Phone, Printer, FileText, FilePlus, Menu, Plus, Shuffle, FileDown, AlertCircle
+    Edit2, Trash2, AlertTriangle, X, User, TrendingUp, Phone, Printer, FileText, FilePlus, Menu, Plus, Shuffle, FileDown, AlertCircle,
+    ClipboardList, Gamepad2, Presentation
 } from 'lucide-react';
 import { calculateStudentMetrics, getStudentGlobalAverage } from '../services/gradeUtils';
 import { StudentsView } from './StudentsView';
 import { FinanceView } from './FinanceView';
 import { SettingsView } from './SettingsView';
 import { CommunicationsView } from './CommunicationsView';
+import { StaffAttendanceView } from './StaffAttendanceView';
+import { CTEGamesView } from './CTEGamesView';
+import { CTEPresentationView } from './CTEPresentationView';
 import { SchoolConfig, Student, StaffMember } from '../types';
 import { generateSchoolDocument, generateGroupList, generateReportCard, generateBehaviorReport } from '../services/pdfGenerator';
 import { api } from '../services/api'; // Import API for saving events
@@ -21,7 +25,7 @@ interface DirectorViewProps {
     currentUser: StaffMember | null;
 }
 
-type DirectorTab = 'DASHBOARD' | 'STUDENTS' | 'PARENTS' | 'STAFF' | 'FINANCE' | 'CALENDAR' | 'NOTICES' | 'ROTATION' | 'MANAGEMENT' | 'SETTINGS' | 'DOCUMENTS';
+type DirectorTab = 'DASHBOARD' | 'STUDENTS' | 'PARENTS' | 'STAFF' | 'FINANCE' | 'CALENDAR' | 'NOTICES' | 'ROTATION' | 'MANAGEMENT' | 'SETTINGS' | 'DOCUMENTS' | 'STAFF_ATTENDANCE' | 'CTE_GAMES' | 'CTE_PRESENTATIONS';
 
 export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, currentUser }) => {
     const [activeTab, setActiveTab] = useState<DirectorTab>('DASHBOARD');
@@ -1450,6 +1454,41 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                     <DirectorNavBtn active={activeTab === 'PARENTS'} onClick={() => { setActiveTab('PARENTS'); setIsMobileMenuOpen(false); }} icon={UserCheck} label="Padres de Familia" />
                     <DirectorNavBtn active={activeTab === 'DOCUMENTS'} onClick={() => { setActiveTab('DOCUMENTS'); setIsMobileMenuOpen(false); }} icon={FileText} label="Documentos" />
 
+                    <div className="pt-4 pb-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider px-3">Consejo Técnico</div>
+                    <DirectorNavBtn
+                        active={activeTab === 'STAFF_ATTENDANCE'}
+                        onClick={() => { setActiveTab('STAFF_ATTENDANCE'); setIsMobileMenuOpen(false); }}
+                        icon={ClipboardList}
+                        label={
+                            <span className="flex items-center justify-between w-full">
+                                Lista Asistencia Docente
+                                <span className="text-[9px] bg-amber-400 text-amber-950 px-1 rounded font-bold ml-1">NUEVO</span>
+                            </span>
+                        }
+                    />
+                    <DirectorNavBtn
+                        active={activeTab === 'CTE_GAMES'}
+                        onClick={() => { setActiveTab('CTE_GAMES'); setIsMobileMenuOpen(false); }}
+                        icon={Gamepad2}
+                        label={
+                            <span className="flex items-center justify-between w-full">
+                                Juegos CTE
+                                <span className="text-[9px] bg-amber-400 text-amber-950 px-1 rounded font-bold ml-1">NUEVO</span>
+                            </span>
+                        }
+                    />
+                    <DirectorNavBtn
+                        active={activeTab === 'CTE_PRESENTATIONS'}
+                        onClick={() => { setActiveTab('CTE_PRESENTATIONS'); setIsMobileMenuOpen(false); }}
+                        icon={Presentation}
+                        label={
+                            <span className="flex items-center justify-between w-full">
+                                Presentaciones CTE
+                                <span className="text-[9px] bg-amber-400 text-amber-950 px-1 rounded font-bold ml-1">NUEVO</span>
+                            </span>
+                        }
+                    />
+
                     <div className="pt-4 pb-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider px-3">Comunicación</div>
                     <DirectorNavBtn active={activeTab === 'CALENDAR'} onClick={() => { setActiveTab('CALENDAR'); setIsMobileMenuOpen(false); }} icon={Calendar} label="Agenda / Calendario" />
                     <DirectorNavBtn active={activeTab === 'NOTICES'} onClick={() => { setActiveTab('NOTICES'); setIsMobileMenuOpen(false); }} icon={Megaphone} label="Portal de Avisos" />
@@ -1488,6 +1527,9 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                                 {activeTab === 'NOTICES' && 'Comunicación Oficial'}
                                 {activeTab === 'SETTINGS' && 'Configuración del Sistema'}
                                 {activeTab === 'DOCUMENTS' && 'Generador de Documentos'}
+                                {activeTab === 'STAFF_ATTENDANCE' && 'Lista de Asistencia Docente'}
+                                {activeTab === 'CTE_GAMES' && 'Juegos Interactivos CTE'}
+                                {activeTab === 'CTE_PRESENTATIONS' && 'Presentaciones CTE'}
                             </h2>
                             <p className="text-slate-400 font-medium mt-1">
                                 {schoolConfig.schoolName} • Ciclo Escolar {schoolConfig.schoolYear || '2024-2025'}
@@ -2739,6 +2781,39 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                     }
 
                     {activeTab === 'DOCUMENTS' && <DocumentsPanel />}
+
+                    {activeTab === 'STAFF_ATTENDANCE' && (
+                        <div className="animate-fadeIn">
+                            <StaffAttendanceView
+                                schoolConfig={schoolConfig}
+                                records={store.staffAttendanceRecords || []}
+                                onSaveRecord={store.handleSaveStaffAttendanceRecord}
+                                onDeleteRecord={store.handleDeleteStaffAttendanceRecord}
+                            />
+                        </div>
+                    )}
+
+                    {activeTab === 'CTE_GAMES' && (
+                        <div className="animate-fadeIn">
+                            <CTEGamesView
+                                schoolConfig={schoolConfig}
+                                games={store.cteGames || []}
+                                onSaveGame={store.handleSaveCTEGame}
+                                onDeleteGame={store.handleDeleteCTEGame}
+                            />
+                        </div>
+                    )}
+
+                    {activeTab === 'CTE_PRESENTATIONS' && (
+                        <div className="animate-fadeIn">
+                            <CTEPresentationView
+                                schoolConfig={schoolConfig}
+                                presentations={store.ctePresentations || []}
+                                onSavePresentation={store.handleSaveCTEPresentation}
+                                onDeletePresentation={store.handleDeleteCTEPresentation}
+                            />
+                        </div>
+                    )}
                 </div >
 
                 {/* STUDENT DETAIL MODAL (Read Only) */}

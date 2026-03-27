@@ -222,3 +222,56 @@ export interface Book {
   borrowedBy?: string; // Student ID
   dueDate?: string;
 }
+
+export interface StaffAttendanceRecord {
+  id: string;
+  title: string; // Título editable (ej: "Consejo Técnico Escolar - 1ra Sesión")
+  date: string; // YYYY-MM-DD
+  attendees: Record<string, 'PRESENTE' | 'AUSENTE' | 'RETARDO' | 'JUSTIFICADO'>; // staffId -> status
+  notes?: string;
+  createdAt: string;
+}
+
+export interface CTEGame {
+  id: string;
+  title: string;
+  type: 'TRIVIA' | 'MATCHING' | 'WORD_SEARCH' | 'OPEN_QUESTION' | 'SURVEY';
+  sessionId?: string; // ID de la sesión CTE asociada
+  questions: CTEQuestion[];
+  createdAt: string;
+  isActive: boolean;
+}
+
+export interface CTEQuestion {
+  id: string;
+  text: string;
+  options?: string[];
+  correctIndex?: number;
+  category?: string;
+}
+
+export interface CTEPresentation {
+  id: string;
+  title: string;
+  date: string;
+  sessionId?: string;
+  slides: CTESlide[];
+  documents: CTEDocument[];
+  createdAt: string;
+}
+
+export interface CTESlide {
+  id: string;
+  title: string;
+  content: string;
+  type: 'TITLE' | 'CONTENT' | 'ACTIVITY' | 'AGENDA' | 'CLOSING';
+  order: number;
+}
+
+export interface CTEDocument {
+  id: string;
+  name: string;
+  type: 'PDF' | 'IMAGE' | 'LINK';
+  url: string;
+  addedAt: string;
+}

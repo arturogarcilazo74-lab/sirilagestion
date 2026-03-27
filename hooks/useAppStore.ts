@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
-import { Student, Assignment, BehaviorLog, SchoolEvent, SchoolConfig, FinanceEvent, AttendanceStatus, StaffTask, Book } from '../types';
+import { Student, Assignment, BehaviorLog, SchoolEvent, SchoolConfig, FinanceEvent, AttendanceStatus, StaffTask, Book, StaffAttendanceRecord, CTEGame, CTEPresentation } from '../types';
 import { MOCK_ASSIGNMENTS, MOCK_EVENTS, MOCK_STUDENTS, DEFAULT_CONFIG } from '../constants';
 import { cleanInvalidAttendance } from '../services/schoolCalendarUtils';
 
@@ -48,6 +48,9 @@ export const useAppStore = () => {
     const [financeEvents, setFinanceEvents] = useState<FinanceEvent[]>(() => getCache('SIRILA_CACHE_FINANCE', []));
     const [staffTasks, setStaffTasks] = useState<StaffTask[]>(() => getCache('SIRILA_CACHE_TASKS', []));
     const [books, setBooks] = useState<Book[]>(() => getCache('SIRILA_CACHE_BOOKS', []));
+    const [staffAttendanceRecords, setStaffAttendanceRecords] = useState<StaffAttendanceRecord[]>(() => getCache('SIRILA_CACHE_STAFF_ATTENDANCE', []));
+    const [cteGames, setCteGames] = useState<CTEGame[]>(() => getCache('SIRILA_CACHE_CTE_GAMES', []));
+    const [ctePresentations, setCtePresentations] = useState<CTEPresentation[]>(() => getCache('SIRILA_CACHE_CTE_PRESENTATIONS', []));
 
     // Functional setter to ensure we always have the latest state and trigger immediate cache flush
     const updateStateAndCache = async (key: string, setter: Function, data: any, apiCall?: Function) => {
@@ -192,6 +195,21 @@ export const useAppStore = () => {
         try { localStorage.setItem('SIRILA_CACHE_BOOKS', JSON.stringify(books)); }
         catch (e) { console.warn("Cache Books failed", e); }
     }, [books]);
+
+    useEffect(() => {
+        try { localStorage.setItem('SIRILA_CACHE_STAFF_ATTENDANCE', JSON.stringify(staffAttendanceRecords)); }
+        catch (e) { console.warn("Cache Staff Attendance failed", e); }
+    }, [staffAttendanceRecords]);
+
+    useEffect(() => {
+        try { localStorage.setItem('SIRILA_CACHE_CTE_GAMES', JSON.stringify(cteGames)); }
+        catch (e) { console.warn("Cache CTE Games failed", e); }
+    }, [cteGames]);
+
+    useEffect(() => {
+        try { localStorage.setItem('SIRILA_CACHE_CTE_PRESENTATIONS', JSON.stringify(ctePresentations)); }
+        catch (e) { console.warn("Cache CTE Presentations failed", e); }
+    }, [ctePresentations]);
 
     // Background Sync when online OR periodically
     useEffect(() => {
@@ -1081,6 +1099,60 @@ export const useAppStore = () => {
         });
     };
 
+    // --- Staff Attendance Records ---
+    const handleSaveStaffAttendanceRecord = (record: StaffAttendanceRecord) => {
+        setStaffAttendanceRecords(prev => {
+            const existing = prev.findIndex(r => r.id === record.id);
+            const next = existing >= 0 ? prev.map(r => r.id === record.id ? record : r) : [...prev, record];
+            saveToCache('SIRILA_CACHE_STAFF_ATTENDANCE', next);
+            return next;
+        });
+    };
+
+    const handleDeleteStaffAttendanceRecord = (id: string) => {
+        setStaffAttendanceRecords(prev => {
+            const next = prev.filter(r => r.id !== id);
+            saveToCache('SIRILA_CACHE_STAFF_ATTENDANCE', next);
+            return next;
+        });
+    };
+
+    // --- CTE Games ---
+    const handleSaveCTEGame = (game: CTEGame) => {
+        setCteGames(prev => {
+            const existing = prev.findIndex(g => g.id === game.id);
+            const next = existing >= 0 ? prev.map(g => g.id === game.id ? game : g) : [...prev, game];
+            saveToCache('SIRILA_CACHE_CTE_GAMES', next);
+            return next;
+        });
+    };
+
+    const handleDeleteCTEGame = (id: string) => {
+        setCteGames(prev => {
+            const next = prev.filter(g => g.id !== id);
+            saveToCache('SIRILA_CACHE_CTE_GAMES', next);
+            return next;
+        });
+    };
+
+    // --- CTE Presentations ---
+    const handleSaveCTEPresentation = (pres: CTEPresentation) => {
+        setCtePresentations(prev => {
+            const existing = prev.findIndex(p => p.id === pres.id);
+            const next = existing >= 0 ? prev.map(p => p.id === pres.id ? pres : p) : [...prev, pres];
+            saveToCache('SIRILA_CACHE_CTE_PRESENTATIONS', next);
+            return next;
+        });
+    };
+
+    const handleDeleteCTEPresentation = (id: string) => {
+        setCtePresentations(prev => {
+            const next = prev.filter(p => p.id !== id);
+            saveToCache('SIRILA_CACHE_CTE_PRESENTATIONS', next);
+            return next;
+        });
+    };
+
     return {
         students,
         assignments,
@@ -1125,6 +1197,15 @@ export const useAppStore = () => {
         handleAddBook,
         handleUpdateBook,
         handleDeleteBook,
+        staffAttendanceRecords,
+        handleSaveStaffAttendanceRecord,
+        handleDeleteStaffAttendanceRecord,
+        cteGames,
+        handleSaveCTEGame,
+        handleDeleteCTEGame,
+        ctePresentations,
+        handleSaveCTEPresentation,
+        handleDeleteCTEPresentation,
         isLoading
     };
 };
