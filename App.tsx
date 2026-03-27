@@ -23,6 +23,7 @@ import { LandingView } from './components/LandingView';
 import { LibraryView } from './components/LibraryView';
 import { LiteracyView } from './components/LiteracyView';
 import { ExamGeneratorView } from './components/ExamGeneratorView';
+import { CTEGamePlayerView } from './components/CTEGamePlayerView';
 
 const App: React.FC = () => {
   // Initialize View based on URL mainly for independent Parents Portal access
@@ -440,6 +441,15 @@ const App: React.FC = () => {
           {currentView === 'EXAM_GENERATOR' && (
             <ExamGeneratorView
               assignments={visibleAssignments}
+            />
+          )}
+
+          {currentView === 'CTE_GAMES' && currentUser && (
+            <CTEGamePlayerView
+              games={store.cteGames}
+              results={store.cteGameResults}
+              currentUser={currentUser}
+              onSaveResult={store.handleSaveCTEGameResult}
             />
           )}
 

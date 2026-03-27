@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-    LayoutDashboard, Users, QrCode, ListTodo, BookCheck, ClipboardList, Wallet, FileText, MessageSquare, Wrench, Settings, LogOut, Smartphone, Building2, Library, GraduationCap
+    LayoutDashboard, Users, QrCode, ListTodo, BookCheck, ClipboardList, Wallet, FileText, MessageSquare, Wrench, Settings, LogOut, Smartphone, Building2, Library, GraduationCap, Gamepad2
 } from 'lucide-react';
 import { ViewState, SchoolConfig } from '../types';
 
@@ -145,6 +145,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, s
                         >
                             <FileText size={20} />
                             <span className="font-medium">Generador Exámenes</span>
+                        </button>
+
+                        <button
+                            onClick={() => setCurrentView('CTE_GAMES')}
+                            className={`flex items-center gap-3 w-full p-3 rounded-xl transition-all duration-300 group relative ${currentView === 'CTE_GAMES' ? 'bg-indigo-600 shadow-[0_0_20px_rgba(79,70,229,0.5)] text-white' : 'text-amber-300 hover:bg-amber-500/20 hover:text-amber-200'}`}
+                        >
+                            <Gamepad2 size={20} />
+                            <span className="font-medium">Juegos CTE</span>
+                            <span className="absolute right-3 text-[8px] bg-amber-500 text-white px-1.5 py-0.5 rounded-full font-bold">NUEVO</span>
                         </button>
 
                         <button

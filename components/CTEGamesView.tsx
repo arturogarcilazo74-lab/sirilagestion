@@ -5,14 +5,16 @@ import {
     RotateCcw, Star, ChevronRight, MessageSquare, X,
     Sparkles, Loader2, FileUp, Brain, FileText, Image
 } from 'lucide-react';
-import { CTEGame, CTEQuestion, StaffMember, SchoolConfig } from '../types';
+import { CTEGame, CTEQuestion, CTEGameResult, StaffMember, SchoolConfig } from '../types';
 import { generateCTEGameQuestions } from '../services/ai';
 
 interface CTEGamesViewProps {
     schoolConfig: SchoolConfig;
     games: CTEGame[];
+    gameResults: CTEGameResult[];
     onSaveGame: (game: CTEGame) => void;
     onDeleteGame: (id: string) => void;
+    onDeleteGameResults: (gameId: string) => void;
 }
 
 const PRESET_TOPICS = [
@@ -56,8 +58,10 @@ const PRESET_TOPICS = [
 export const CTEGamesView: React.FC<CTEGamesViewProps> = ({
     schoolConfig,
     games,
+    gameResults,
     onSaveGame,
-    onDeleteGame
+    onDeleteGame,
+    onDeleteGameResults
 }) => {
     const [showCreateForm, setShowCreateForm] = useState(false);
     const [activeGame, setActiveGame] = useState<CTEGame | null>(null);
@@ -83,7 +87,14 @@ export const CTEGamesView: React.FC<CTEGamesViewProps> = ({
     const [aiError, setAiError] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const staff: StaffMember[] = schoolConfig.staff || [];
+    // Assignment state
+    const [assignTo, setAssignTo] = useState<'ALL' | 'SPECIFIC'>('ALL');
+    const [selectedStaffIds, setSelectedStaffIds] = useState<string[]>([]);
+    const [viewingResultsGameId, setViewingResultsGameId] = useState<string | null>(null);
+
+    const staff: StaffMember[] = (schoolConfig.staff || []).filter(s =>
+        s.role?.includes('Docente') || s.role?.includes('Docente Titular') || s.role?.includes('Administrativo')
+    );
 
     const resetForm = () => {
         setNewGameTitle('');
@@ -98,6 +109,8 @@ export const CTEGamesView: React.FC<CTEGamesViewProps> = ({
         setAiQuestionCount(5);
         setIsGenerating(false);
         setAiError('');
+        setAssignTo('ALL');
+        setSelectedStaffIds([]);
     };
 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -170,6 +183,7 @@ export const CTEGamesView: React.FC<CTEGamesViewProps> = ({
             alert('Agrega un título y al menos una pregunta');
             return;
         }
+        const assignedTo = assignTo === 'ALL' ? 'ALL' : selectedStaffIds;
         const game: CTEGame = {
             id: Date.now().toString(),
             title: newGameTitle.trim(),
@@ -177,6 +191,7 @@ export const CTEGamesView: React.FC<CTEGamesViewProps> = ({
             questions: newQuestions,
             createdAt: new Date().toISOString(),
             isActive: false,
+            assignedTo: assignedTo as any,
         };
         onSaveGame(game);
         resetForm();
@@ -458,6 +473,52 @@ export const CTEGamesView: React.FC<CTEGamesViewProps> = ({
                             )}
                         </div>
 
+                        <div className="px-6 pb-2">
+                            <div className="border border-slate-200 rounded-xl p-4 bg-slate-50">
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-3">Asignar a Docentes</label>
+                                <div className="flex gap-3 mb-3">
+                                    <button
+                                        onClick={() => setAssignTo('ALL')}
+                                        className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-colors ${assignTo === 'ALL' ? 'bg-violet-600 text-white' : 'bg-white border border-slate-300 text-slate-600 hover:bg-slate-100'}`}
+                                    >
+                                        Todos los Docentes
+                                    </button>
+                                    <button
+                                        onClick={() => setAssignTo('SPECIFIC')}
+                                        className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-colors ${assignTo === 'SPECIFIC' ? 'bg-violet-600 text-white' : 'bg-white border border-slate-300 text-slate-600 hover:bg-slate-100'}`}
+                                    >
+                                        Seleccionar Docentes
+                                    </button>
+                                </div>
+                                {assignTo === 'SPECIFIC' && (
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                        {staff.map(s => {
+                                            const isSelected = selectedStaffIds.includes(s.id);
+                                            return (
+                                                <button
+                                                    key={s.id}
+                                                    onClick={() => {
+                                                        setSelectedStaffIds(prev =>
+                                                            isSelected ? prev.filter(id => id !== s.id) : [...prev, s.id]
+                                                        );
+                                                    }}
+                                                    className={`p-2.5 rounded-lg text-xs font-bold transition-all border-2 ${
+                                                        isSelected
+                                                            ? 'bg-violet-100 border-violet-400 text-violet-700'
+                                                            : 'bg-white border-slate-200 text-slate-600 hover:border-violet-300'
+                                                    }`}
+                                                >
+                                                    {isSelected && <CheckCircle2 size={12} className="inline mr-1" />}
+                                                    {s.name.split(' ')[0]}
+                                                    <span className="block text-[10px] opacity-60 font-normal">{s.group}</span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
                         <div className="p-4 border-t border-slate-200 flex justify-end gap-3 bg-slate-50">
                             <button onClick={resetForm} className="px-5 py-2 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-200 transition-colors">Cancelar</button>
                             <button
@@ -656,34 +717,101 @@ export const CTEGamesView: React.FC<CTEGamesViewProps> = ({
                 </div>
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {games.map(game => (
-                        <div key={game.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden hover:shadow-lg transition-all">
-                            <div className="p-5">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <span className="p-1.5 rounded-lg bg-violet-100 text-violet-600">
-                                        {getGameTypeIcon(game.type)}
-                                    </span>
-                                    <span className="text-xs font-bold text-slate-400 uppercase">{getGameTypeLabel(game.type)}</span>
+                    {games.map(game => {
+                        const gameResultsList = gameResults.filter(r => r.gameId === game.id);
+                        const completedCount = gameResultsList.length;
+                        const avgScore = completedCount > 0
+                            ? Math.round(gameResultsList.reduce((sum, r) => sum + r.score, 0) / completedCount)
+                            : 0;
+                        const totalAssigned = game.assignedTo === 'ALL'
+                            ? staff.length
+                            : (game.assignedTo as string[] || []).length;
+
+                        return (
+                            <div key={game.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden hover:shadow-lg transition-all">
+                                <div className="p-5">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <span className="p-1.5 rounded-lg bg-violet-100 text-violet-600">
+                                            {getGameTypeIcon(game.type)}
+                                        </span>
+                                        <span className="text-xs font-bold text-slate-400 uppercase">{getGameTypeLabel(game.type)}</span>
+                                    </div>
+                                    <h3 className="font-bold text-slate-800 mb-1">{game.title}</h3>
+                                    <p className="text-xs text-slate-400">{game.questions.length} preguntas</p>
+
+                                    {totalAssigned > 0 && (
+                                        <div className="mt-3 flex items-center gap-3 text-xs">
+                                            <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-bold">
+                                                {completedCount}/{totalAssigned} completados
+                                            </span>
+                                            {avgScore > 0 && (
+                                                <span className={`font-bold ${avgScore >= 80 ? 'text-emerald-600' : avgScore >= 60 ? 'text-amber-600' : 'text-red-600'}`}>
+                                                    Prom: {avgScore}%
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
-                                <h3 className="font-bold text-slate-800 mb-1">{game.title}</h3>
-                                <p className="text-xs text-slate-400">{game.questions.length} preguntas</p>
+                                <div className="border-t border-slate-100 p-3 flex gap-2">
+                                    <button
+                                        onClick={() => startGame(game)}
+                                        className="flex-1 bg-violet-600 text-white py-2 rounded-lg text-sm font-bold hover:bg-violet-700 transition-colors flex items-center justify-center gap-1"
+                                    >
+                                        <Play size={14} /> Jugar
+                                    </button>
+                                    {completedCount > 0 && (
+                                        <button
+                                            onClick={() => setViewingResultsGameId(viewingResultsGameId === game.id ? null : game.id)}
+                                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                            title="Ver resultados"
+                                        >
+                                            <Trophy size={16} />
+                                        </button>
+                                    )}
+                                    <button
+                                        onClick={() => {
+                                            if (confirm('¿Eliminar este juego y todos sus resultados?')) {
+                                                onDeleteGameResults(game.id);
+                                                onDeleteGame(game.id);
+                                            }
+                                        }}
+                                        className="p-2 text-red-400 hover:bg-red-50 rounded-lg transition-colors"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                </div>
+
+                                {viewingResultsGameId === game.id && (
+                                    <div className="border-t border-slate-100 p-4 bg-slate-50 animate-fadeIn">
+                                        <h4 className="text-xs font-bold text-slate-500 uppercase mb-3">Resultados por Docente</h4>
+                                        <div className="space-y-2 max-h-64 overflow-y-auto">
+                                            {gameResultsList
+                                                .sort((a, b) => b.score - a.score)
+                                                .map(r => (
+                                                    <div key={r.id} className="flex items-center justify-between bg-white rounded-lg p-2.5 border border-slate-200">
+                                                        <div>
+                                                            <span className="text-sm font-bold text-slate-800">{r.staffName}</span>
+                                                            <span className="text-xs text-slate-400 ml-2">
+                                                                {new Date(r.completedAt).toLocaleDateString('es-MX')}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-xs text-slate-500">{r.correctAnswers}/{r.totalQuestions}</span>
+                                                            <span className={`text-sm font-black ${r.score >= 80 ? 'text-emerald-600' : r.score >= 60 ? 'text-amber-600' : 'text-red-600'}`}>
+                                                                {r.score}%
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            {gameResultsList.length === 0 && (
+                                                <p className="text-xs text-slate-400 italic text-center py-2">Sin resultados aún</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
-                            <div className="border-t border-slate-100 p-3 flex gap-2">
-                                <button
-                                    onClick={() => startGame(game)}
-                                    className="flex-1 bg-violet-600 text-white py-2 rounded-lg text-sm font-bold hover:bg-violet-700 transition-colors flex items-center justify-center gap-1"
-                                >
-                                    <Play size={14} /> Jugar
-                                </button>
-                                <button
-                                    onClick={() => { if (confirm('¿Eliminar este juego?')) onDeleteGame(game.id); }}
-                                    className="p-2 text-red-400 hover:bg-red-50 rounded-lg transition-colors"
-                                >
-                                    <Trash2 size={16} />
-                                </button>
-                            </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
         </div>

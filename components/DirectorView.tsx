@@ -2798,8 +2798,10 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                             <CTEGamesView
                                 schoolConfig={schoolConfig}
                                 games={store.cteGames || []}
+                                gameResults={store.cteGameResults || []}
                                 onSaveGame={store.handleSaveCTEGame}
                                 onDeleteGame={store.handleDeleteCTEGame}
+                                onDeleteGameResults={store.handleDeleteCTEGameResults}
                             />
                         </div>
                     )}

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
-import { Student, Assignment, BehaviorLog, SchoolEvent, SchoolConfig, FinanceEvent, AttendanceStatus, StaffTask, Book, StaffAttendanceRecord, CTEGame, CTEPresentation } from '../types';
+import { Student, Assignment, BehaviorLog, SchoolEvent, SchoolConfig, FinanceEvent, AttendanceStatus, StaffTask, Book, StaffAttendanceRecord, CTEGame, CTEPresentation, CTEGameResult } from '../types';
 import { MOCK_ASSIGNMENTS, MOCK_EVENTS, MOCK_STUDENTS, DEFAULT_CONFIG } from '../constants';
 import { cleanInvalidAttendance } from '../services/schoolCalendarUtils';
 
@@ -51,6 +51,7 @@ export const useAppStore = () => {
     const [staffAttendanceRecords, setStaffAttendanceRecords] = useState<StaffAttendanceRecord[]>(() => getCache('SIRILA_CACHE_STAFF_ATTENDANCE', []));
     const [cteGames, setCteGames] = useState<CTEGame[]>(() => getCache('SIRILA_CACHE_CTE_GAMES', []));
     const [ctePresentations, setCtePresentations] = useState<CTEPresentation[]>(() => getCache('SIRILA_CACHE_CTE_PRESENTATIONS', []));
+    const [cteGameResults, setCteGameResults] = useState<CTEGameResult[]>(() => getCache('SIRILA_CACHE_CTE_GAME_RESULTS', []));
 
     // Functional setter to ensure we always have the latest state and trigger immediate cache flush
     const updateStateAndCache = async (key: string, setter: Function, data: any, apiCall?: Function) => {
@@ -210,6 +211,11 @@ export const useAppStore = () => {
         try { localStorage.setItem('SIRILA_CACHE_CTE_PRESENTATIONS', JSON.stringify(ctePresentations)); }
         catch (e) { console.warn("Cache CTE Presentations failed", e); }
     }, [ctePresentations]);
+
+    useEffect(() => {
+        try { localStorage.setItem('SIRILA_CACHE_CTE_GAME_RESULTS', JSON.stringify(cteGameResults)); }
+        catch (e) { console.warn("Cache CTE Game Results failed", e); }
+    }, [cteGameResults]);
 
     // Background Sync when online OR periodically
     useEffect(() => {
@@ -1153,6 +1159,27 @@ export const useAppStore = () => {
         });
     };
 
+    // --- CTE Game Results ---
+    const handleSaveCTEGameResult = (result: CTEGameResult) => {
+        setCteGameResults(prev => {
+            // Replace if same game+staff combo exists
+            const existing = prev.findIndex(r => r.gameId === result.gameId && r.staffId === result.staffId);
+            const next = existing >= 0
+                ? prev.map((r, i) => i === existing ? result : r)
+                : [...prev, result];
+            saveToCache('SIRILA_CACHE_CTE_GAME_RESULTS', next);
+            return next;
+        });
+    };
+
+    const handleDeleteCTEGameResults = (gameId: string) => {
+        setCteGameResults(prev => {
+            const next = prev.filter(r => r.gameId !== gameId);
+            saveToCache('SIRILA_CACHE_CTE_GAME_RESULTS', next);
+            return next;
+        });
+    };
+
     return {
         students,
         assignments,
@@ -1206,6 +1233,9 @@ export const useAppStore = () => {
         ctePresentations,
         handleSaveCTEPresentation,
         handleDeleteCTEPresentation,
+        cteGameResults,
+        handleSaveCTEGameResult,
+        handleDeleteCTEGameResults,
         isLoading
     };
 };

@@ -195,7 +195,7 @@ export interface Notification {
   type: 'INFO' | 'ALERT' | 'EVENT';
 }
 
-export type ViewState = 'LANDING' | 'DASHBOARD' | 'ATTENDANCE' | 'STUDENTS' | 'TOOLS' | 'BEHAVIOR' | 'ACTIVITIES' | 'HOMEWORK_QR' | 'FINANCE' | 'DOCUMENTS' | 'SETTINGS' | 'PARENTS_PORTAL' | 'COMMUNICATIONS' | 'DIRECTOR' | 'USAER' | 'LIBRARY' | 'LITERACY' | 'EXAM_GENERATOR';
+export type ViewState = 'LANDING' | 'DASHBOARD' | 'ATTENDANCE' | 'STUDENTS' | 'TOOLS' | 'BEHAVIOR' | 'ACTIVITIES' | 'HOMEWORK_QR' | 'FINANCE' | 'DOCUMENTS' | 'SETTINGS' | 'PARENTS_PORTAL' | 'COMMUNICATIONS' | 'DIRECTOR' | 'USAER' | 'LIBRARY' | 'LITERACY' | 'EXAM_GENERATOR' | 'CTE_GAMES';
 
 export interface StaffTask {
   id: string;
@@ -240,6 +240,7 @@ export interface CTEGame {
   questions: CTEQuestion[];
   createdAt: string;
   isActive: boolean;
+  assignedTo?: string[] | 'ALL'; // Staff IDs o 'ALL' para todos los docentes
 }
 
 export interface CTEQuestion {
@@ -248,6 +249,18 @@ export interface CTEQuestion {
   options?: string[];
   correctIndex?: number;
   category?: string;
+}
+
+export interface CTEGameResult {
+  id: string;
+  gameId: string;
+  staffId: string;
+  staffName: string;
+  answers: Record<string, number>; // questionId -> selectedIndex
+  score: number; // 0-100
+  totalQuestions: number;
+  correctAnswers: number;
+  completedAt: string;
 }
 
 export interface CTEPresentation {
