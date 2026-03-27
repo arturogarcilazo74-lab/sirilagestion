@@ -536,6 +536,78 @@ export const api = {
         }
     },
 
+    // CTE Games
+    saveCTEGame: async (game: any) => {
+        try {
+            const res = await fetch(`${API_URL}/cte-games`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(game)
+            });
+            if (!res.ok) throw new Error(`Server error: ${res.status}`);
+        } catch (e) {
+            addToQueue(`/cte-games`, 'POST', game);
+        }
+    },
+    deleteCTEGame: async (id: string) => {
+        try {
+            const res = await fetch(`${API_URL}/cte-games/${id}`, { method: 'DELETE' });
+            if (!res.ok) throw new Error('Server unreachable');
+        } catch (e) {
+            addToQueue(`/cte-games/${id}`, 'DELETE', null);
+        }
+    },
+
+    // CTE Game Results
+    saveCTEGameResult: async (result: any) => {
+        try {
+            const res = await fetch(`${API_URL}/cte-game-results`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(result)
+            });
+            if (!res.ok) throw new Error(`Server error: ${res.status}`);
+        } catch (e) {
+            addToQueue(`/cte-game-results`, 'POST', result);
+        }
+    },
+
+    // CTE Presentations
+    saveCTEPresentation: async (pres: any) => {
+        try {
+            const res = await fetch(`${API_URL}/cte-presentations`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(pres)
+            });
+            if (!res.ok) throw new Error(`Server error: ${res.status}`);
+        } catch (e) {
+            addToQueue(`/cte-presentations`, 'POST', pres);
+        }
+    },
+    deleteCTEPresentation: async (id: string) => {
+        try {
+            const res = await fetch(`${API_URL}/cte-presentations/${id}`, { method: 'DELETE' });
+            if (!res.ok) throw new Error('Server unreachable');
+        } catch (e) {
+            addToQueue(`/cte-presentations/${id}`, 'DELETE', null);
+        }
+    },
+
+    // Staff Attendance Records
+    saveStaffAttendance: async (record: any) => {
+        try {
+            const res = await fetch(`${API_URL}/staff-attendance`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(record)
+            });
+            if (!res.ok) throw new Error(`Server error: ${res.status}`);
+        } catch (e) {
+            addToQueue(`/staff-attendance`, 'POST', record);
+        }
+    },
+    deleteStaffAttendance: async (id: string) => {
+        try {
+            const res = await fetch(`${API_URL}/staff-attendance/${id}`, { method: 'DELETE' });
+            if (!res.ok) throw new Error('Server unreachable');
+        } catch (e) {
+            addToQueue(`/staff-attendance/${id}`, 'DELETE', null);
+        }
+    },
+
     getAvatars: async () => {
         const res = await fetch(`${API_URL}/students/avatars`);
         if (!res.ok) throw new Error('Failed to fetch avatars');

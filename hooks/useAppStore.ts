@@ -246,6 +246,10 @@ export const useAppStore = () => {
                     setFinanceEvents(result.financeEvents || []);
                     setStaffTasks(result.staffTasks || []);
                     setBooks(result.books || []);
+                    if (result.cteGames) setCteGames(result.cteGames);
+                    if (result.cteGameResults) setCteGameResults(result.cteGameResults);
+                    if (result.ctePresentations) setCtePresentations(result.ctePresentations);
+                    if (result.staffAttendanceRecords) setStaffAttendanceRecords(result.staffAttendanceRecords);
                     if (result.schoolConfig) setSchoolConfig(result.schoolConfig);
                     flushCache(result.students, result.assignments, result.events, result.behaviorLogs, result.schoolConfig, result.financeEvents, result.staffTasks, result.books);
                     console.log("%c✓ Datos sincronizados desde el servidor", "color: green; font-weight: bold;");
@@ -311,6 +315,12 @@ export const useAppStore = () => {
                         setFinanceEvents(f);
                         setStaffTasks(t);
                         setBooks(b);
+
+                        // CTE data from server
+                        if (result.cteGames) setCteGames(result.cteGames);
+                        if (result.cteGameResults) setCteGameResults(result.cteGameResults);
+                        if (result.ctePresentations) setCtePresentations(result.ctePresentations);
+                        if (result.staffAttendanceRecords) setStaffAttendanceRecords(result.staffAttendanceRecords);
 
                         // If response was optimized (stripped avatars), fetch them now
                         if (result.isOptimized) {
@@ -1113,6 +1123,7 @@ export const useAppStore = () => {
             saveToCache('SIRILA_CACHE_STAFF_ATTENDANCE', next);
             return next;
         });
+        api.saveStaffAttendance(record).catch(() => setPendingActions(api.getQueueLength()));
     };
 
     const handleDeleteStaffAttendanceRecord = (id: string) => {
@@ -1121,6 +1132,7 @@ export const useAppStore = () => {
             saveToCache('SIRILA_CACHE_STAFF_ATTENDANCE', next);
             return next;
         });
+        api.deleteStaffAttendance(id).catch(() => setPendingActions(api.getQueueLength()));
     };
 
     // --- CTE Games ---
@@ -1131,6 +1143,7 @@ export const useAppStore = () => {
             saveToCache('SIRILA_CACHE_CTE_GAMES', next);
             return next;
         });
+        api.saveCTEGame(game).catch(() => setPendingActions(api.getQueueLength()));
     };
 
     const handleDeleteCTEGame = (id: string) => {
@@ -1139,6 +1152,7 @@ export const useAppStore = () => {
             saveToCache('SIRILA_CACHE_CTE_GAMES', next);
             return next;
         });
+        api.deleteCTEGame(id).catch(() => setPendingActions(api.getQueueLength()));
     };
 
     // --- CTE Presentations ---
@@ -1149,6 +1163,7 @@ export const useAppStore = () => {
             saveToCache('SIRILA_CACHE_CTE_PRESENTATIONS', next);
             return next;
         });
+        api.saveCTEPresentation(pres).catch(() => setPendingActions(api.getQueueLength()));
     };
 
     const handleDeleteCTEPresentation = (id: string) => {
@@ -1157,12 +1172,12 @@ export const useAppStore = () => {
             saveToCache('SIRILA_CACHE_CTE_PRESENTATIONS', next);
             return next;
         });
+        api.deleteCTEPresentation(id).catch(() => setPendingActions(api.getQueueLength()));
     };
 
     // --- CTE Game Results ---
     const handleSaveCTEGameResult = (result: CTEGameResult) => {
         setCteGameResults(prev => {
-            // Replace if same game+staff combo exists
             const existing = prev.findIndex(r => r.gameId === result.gameId && r.staffId === result.staffId);
             const next = existing >= 0
                 ? prev.map((r, i) => i === existing ? result : r)
@@ -1170,6 +1185,7 @@ export const useAppStore = () => {
             saveToCache('SIRILA_CACHE_CTE_GAME_RESULTS', next);
             return next;
         });
+        api.saveCTEGameResult(result).catch(() => setPendingActions(api.getQueueLength()));
     };
 
     const handleDeleteCTEGameResults = (gameId: string) => {

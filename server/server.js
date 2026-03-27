@@ -246,6 +246,44 @@ app.get('/sirila-v1/full-state', async (req, res) => {
         const [taskRows] = await pool.query('SELECT * FROM staff_tasks');
         const [bookRows] = await pool.query('SELECT * FROM books');
 
+        // CTE Games & Results
+        let cteGames = [];
+        let cteGameResults = [];
+        let ctePresentations = [];
+        let staffAttendanceRecords = [];
+        try {
+            const [cteGameRows] = await pool.query('SELECT * FROM cte_games');
+            cteGames = cteGameRows.map(r => {
+                let d = r.data_json || {};
+                if (typeof d === 'string') { try { d = JSON.parse(d); } catch (e) { } }
+                return { ...d, id: r.id };
+            });
+        } catch (e) { console.log('cte_games table not found, skipping'); }
+        try {
+            const [cteResultRows] = await pool.query('SELECT * FROM cte_game_results');
+            cteGameResults = cteResultRows.map(r => {
+                let d = r.data_json || {};
+                if (typeof d === 'string') { try { d = JSON.parse(d); } catch (e) { } }
+                return { ...d, id: r.id };
+            });
+        } catch (e) { console.log('cte_game_results table not found, skipping'); }
+        try {
+            const [ctePresRows] = await pool.query('SELECT * FROM cte_presentations');
+            ctePresentations = ctePresRows.map(r => {
+                let d = r.data_json || {};
+                if (typeof d === 'string') { try { d = JSON.parse(d); } catch (e) { } }
+                return { ...d, id: r.id };
+            });
+        } catch (e) { console.log('cte_presentations table not found, skipping'); }
+        try {
+            const [staffAttRows] = await pool.query('SELECT * FROM staff_attendance');
+            staffAttendanceRecords = staffAttRows.map(r => {
+                let d = r.data_json || {};
+                if (typeof d === 'string') { try { d = JSON.parse(d); } catch (e) { } }
+                return { ...d, id: r.id };
+            });
+        } catch (e) { console.log('staff_attendance table not found, skipping'); }
+
         let schoolConfig = null;
         if (configRows.length > 0) {
             try {
@@ -261,8 +299,12 @@ app.get('/sirila-v1/full-state', async (req, res) => {
             behaviorLogs,
             financeEvents,
             schoolConfig,
-            staffTasks: taskRows.map(r => ({ ...r, id: r.id })), // Simplified
+            staffTasks: taskRows.map(r => ({ ...r, id: r.id })),
             books: bookRows.map(r => ({ ...r, id: r.id })),
+            cteGames,
+            cteGameResults,
+            ctePresentations,
+            staffAttendanceRecords,
             isEmpty: students.length === 0,
             isOptimized: true
         });
@@ -1172,6 +1214,159 @@ app.delete('/sirila-v1/books/:id', async (req, res) => {
     try {
         const pool = getPool();
         await pool.query('DELETE FROM books WHERE id = ?', [req.params.id]);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// --- CTE Games ---
+app.post('/sirila-v1/cte-games', async (req, res) => {
+    const g = req.body;
+    if (!useMySQL) {
+        const data = readJSON();
+        if (!data.cteGames) data.cteGames = [];
+        const index = data.cteGames.findIndex(x => x.id === g.id);
+        if (index >= 0) data.cteGames[index] = g;
+        else data.cteGames.push(g);
+        writeJSON(data);
+        return res.json({ success: true });
+    }
+    try {
+        const pool = getPool();
+        await pool.query(`
+            INSERT INTO cte_games (id, title, game_type, data_json)
+            VALUES (?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+            title=VALUES(title), game_type=VALUES(game_type), data_json=VALUES(data_json)
+        `, [g.id, g.title, g.type, JSON.stringify(g)]);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.delete('/sirila-v1/cte-games/:id', async (req, res) => {
+    if (!useMySQL) {
+        const data = readJSON();
+        if (data.cteGames) data.cteGames = data.cteGames.filter(g => g.id !== req.params.id);
+        writeJSON(data);
+        return res.json({ success: true });
+    }
+    try {
+        const pool = getPool();
+        await pool.query('DELETE FROM cte_games WHERE id = ?', [req.params.id]);
+        await pool.query('DELETE FROM cte_game_results WHERE game_id = ?', [req.params.id]);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// --- CTE Game Results ---
+app.post('/sirila-v1/cte-game-results', async (req, res) => {
+    const r = req.body;
+    if (!useMySQL) {
+        const data = readJSON();
+        if (!data.cteGameResults) data.cteGameResults = [];
+        const index = data.cteGameResults.findIndex(x => x.id === r.id);
+        if (index >= 0) data.cteGameResults[index] = r;
+        else data.cteGameResults.push(r);
+        writeJSON(data);
+        return res.json({ success: true });
+    }
+    try {
+        const pool = getPool();
+        await pool.query(`
+            INSERT INTO cte_game_results (id, game_id, staff_id, score, data_json)
+            VALUES (?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+            game_id=VALUES(game_id), staff_id=VALUES(staff_id), score=VALUES(score), data_json=VALUES(data_json)
+        `, [r.id, r.gameId, r.staffId, r.score, JSON.stringify(r)]);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// --- CTE Presentations ---
+app.post('/sirila-v1/cte-presentations', async (req, res) => {
+    const p = req.body;
+    if (!useMySQL) {
+        const data = readJSON();
+        if (!data.ctePresentations) data.ctePresentations = [];
+        const index = data.ctePresentations.findIndex(x => x.id === p.id);
+        if (index >= 0) data.ctePresentations[index] = p;
+        else data.ctePresentations.push(p);
+        writeJSON(data);
+        return res.json({ success: true });
+    }
+    try {
+        const pool = getPool();
+        await pool.query(`
+            INSERT INTO cte_presentations (id, title, pres_date, data_json)
+            VALUES (?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+            title=VALUES(title), pres_date=VALUES(pres_date), data_json=VALUES(data_json)
+        `, [p.id, p.title, p.date, JSON.stringify(p)]);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.delete('/sirila-v1/cte-presentations/:id', async (req, res) => {
+    if (!useMySQL) {
+        const data = readJSON();
+        if (data.ctePresentations) data.ctePresentations = data.ctePresentations.filter(p => p.id !== req.params.id);
+        writeJSON(data);
+        return res.json({ success: true });
+    }
+    try {
+        const pool = getPool();
+        await pool.query('DELETE FROM cte_presentations WHERE id = ?', [req.params.id]);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// --- Staff Attendance Records ---
+app.post('/sirila-v1/staff-attendance', async (req, res) => {
+    const r = req.body;
+    if (!useMySQL) {
+        const data = readJSON();
+        if (!data.staffAttendanceRecords) data.staffAttendanceRecords = [];
+        const index = data.staffAttendanceRecords.findIndex(x => x.id === r.id);
+        if (index >= 0) data.staffAttendanceRecords[index] = r;
+        else data.staffAttendanceRecords.push(r);
+        writeJSON(data);
+        return res.json({ success: true });
+    }
+    try {
+        const pool = getPool();
+        await pool.query(`
+            INSERT INTO staff_attendance (id, title, att_date, data_json)
+            VALUES (?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+            title=VALUES(title), att_date=VALUES(att_date), data_json=VALUES(data_json)
+        `, [r.id, r.title, r.date, JSON.stringify(r)]);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.delete('/sirila-v1/staff-attendance/:id', async (req, res) => {
+    if (!useMySQL) {
+        const data = readJSON();
+        if (data.staffAttendanceRecords) data.staffAttendanceRecords = data.staffAttendanceRecords.filter(r => r.id !== req.params.id);
+        writeJSON(data);
+        return res.json({ success: true });
+    }
+    try {
+        const pool = getPool();
+        await pool.query('DELETE FROM staff_attendance WHERE id = ?', [req.params.id]);
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: error.message });
