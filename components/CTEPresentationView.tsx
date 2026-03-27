@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
     Presentation, Plus, Trash2, Edit2, ChevronLeft, ChevronRight,
     FileText, Link, Image, Download, Play, X, Check, Upload,
-    GripVertical, Type, ListChecks, PartyPopper, Building2, Printer
+    GripVertical, Type, ListChecks, PartyPopper, Building2, Printer,
+    Sparkles, Loader2, FileUp, Brain
 } from 'lucide-react';
 import { CTEPresentation, CTESlide, CTEDocument, SchoolConfig } from '../types';
+import { generateCTEPresentation } from '../services/ai';
 import jsPDF from 'jspdf';
 
 interface CTEPresentationViewProps {
@@ -43,6 +45,14 @@ export const CTEPresentationView: React.FC<CTEPresentationViewProps> = ({
     const [docName, setDocName] = useState('');
     const [docType, setDocType] = useState<'PDF' | 'IMAGE' | 'LINK'>('LINK');
 
+    // AI Generation state
+    const [aiTopic, setAiTopic] = useState('');
+    const [aiFiles, setAiFiles] = useState<File[]>([]);
+    const [aiSlideCount, setAiSlideCount] = useState(7);
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [aiError, setAiError] = useState('');
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
     const resetForm = () => {
         setNewTitle('');
         setNewDate(new Date().toISOString().split('T')[0]);
@@ -53,6 +63,11 @@ export const CTEPresentationView: React.FC<CTEPresentationViewProps> = ({
         setEditingPres(null);
         setDocUrl('');
         setDocName('');
+        setAiTopic('');
+        setAiFiles([]);
+        setAiSlideCount(7);
+        setIsGenerating(false);
+        setAiError('');
     };
 
     const startEdit = (pres: CTEPresentation) => {
@@ -62,6 +77,47 @@ export const CTEPresentationView: React.FC<CTEPresentationViewProps> = ({
         setNewSlides([...pres.slides]);
         setNewDocuments([...pres.documents]);
         setShowCreateForm(true);
+    };
+
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
+        setAiFiles(prev => [...prev, ...files]);
+    };
+
+    const removeFile = (idx: number) => {
+        setAiFiles(prev => prev.filter((_, i) => i !== idx));
+    };
+
+    const generateWithAI = async () => {
+        if (!aiTopic.trim() && aiFiles.length === 0) {
+            setAiError('Escribe un tema o sube al menos un documento');
+            return;
+        }
+        setIsGenerating(true);
+        setAiError('');
+        try {
+            const result = await generateCTEPresentation(aiTopic, aiFiles, aiSlideCount);
+            if (result.slides && result.slides.length > 0) {
+                const slides: CTESlide[] = result.slides.map((s, i) => ({
+                    id: `ai-${Date.now()}-${i}`,
+                    title: s.title,
+                    content: s.content,
+                    type: (s.type as CTESlide['type']) || 'CONTENT',
+                    order: i
+                }));
+                setNewSlides(slides);
+                if (!newTitle.trim() && slides[0]) {
+                    const titleSlide = slides.find(s => s.type === 'TITLE');
+                    if (titleSlide) setNewTitle(titleSlide.title);
+                }
+            } else {
+                setAiError('La IA no generó diapositivas. Intenta con una descripción más detallada.');
+            }
+        } catch (e: any) {
+            setAiError(e.message || 'Error al generar con IA');
+        } finally {
+            setIsGenerating(false);
+        }
     };
 
     const addSlide = (templateIdx: number) => {
@@ -251,8 +307,90 @@ export const CTEPresentationView: React.FC<CTEPresentationViewProps> = ({
                                     </div>
                                 </div>
 
+                                {!editingPres && (
+                                    <div className="border-2 border-dashed border-purple-300 rounded-xl p-5 bg-gradient-to-br from-purple-50 to-indigo-50">
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <Sparkles size={20} className="text-purple-600" />
+                                            <h4 className="font-bold text-purple-800">Generar con Inteligencia Artificial</h4>
+                                        </div>
+                                        <p className="text-xs text-purple-600 mb-4">Sube documentos o describe el tema y la IA creará la presentación completa para tu sesión CTE.</p>
+
+                                        <div className="space-y-3">
+                                            <div>
+                                                <label className="block text-xs font-bold text-slate-600 mb-1">Tema o descripción de la sesión</label>
+                                                <textarea
+                                                    value={aiTopic}
+                                                    onChange={e => setAiTopic(e.target.value)}
+                                                    rows={3}
+                                                    placeholder="Ej: Sesión CTE sobre evaluación formativa NEM. Analizar los avances del Plan de Mejora Escolar 2025-2026. Revisar estrategias de atención a alumnos con BAP..."
+                                                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-xs font-bold text-slate-600 mb-1">Subir documentos (PDF, imágenes, texto)</label>
+                                                <input
+                                                    ref={fileInputRef}
+                                                    type="file"
+                                                    multiple
+                                                    accept=".pdf,.txt,.md,.png,.jpg,.jpeg,.webp"
+                                                    onChange={handleFileSelect}
+                                                    className="hidden"
+                                                />
+                                                <button
+                                                    onClick={() => fileInputRef.current?.click()}
+                                                    className="w-full border-2 border-dashed border-slate-300 rounded-lg py-3 text-sm text-slate-500 hover:border-purple-400 hover:text-purple-600 transition-colors flex items-center justify-center gap-2"
+                                                >
+                                                    <FileUp size={16} /> Seleccionar archivos
+                                                </button>
+                                                {aiFiles.length > 0 && (
+                                                    <div className="mt-2 space-y-1">
+                                                        {aiFiles.map((file, idx) => (
+                                                            <div key={idx} className="flex items-center justify-between bg-white rounded-lg px-3 py-1.5 border border-slate-200">
+                                                                <span className="text-xs text-slate-600 truncate flex-1">
+                                                                    {file.type.startsWith('image/') ? <Image size={12} className="inline mr-1 text-blue-500" /> : <FileText size={12} className="inline mr-1 text-red-500" />}
+                                                                    {file.name}
+                                                                </span>
+                                                                <button onClick={() => removeFile(idx)} className="text-red-400 hover:text-red-600 ml-2"><X size={14} /></button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <div className="flex items-center gap-3">
+                                                <label className="text-xs font-bold text-slate-600">Diapositivas:</label>
+                                                <input
+                                                    type="number"
+                                                    min={5}
+                                                    max={15}
+                                                    value={aiSlideCount}
+                                                    onChange={e => setAiSlideCount(Number(e.target.value))}
+                                                    className="w-20 border border-slate-300 rounded-lg px-2 py-1.5 text-sm text-center"
+                                                />
+                                            </div>
+
+                                            {aiError && (
+                                                <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-xs text-red-700">{aiError}</div>
+                                            )}
+
+                                            <button
+                                                onClick={generateWithAI}
+                                                disabled={isGenerating || (!aiTopic.trim() && aiFiles.length === 0)}
+                                                className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-3 rounded-xl font-bold text-sm hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50 transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-200"
+                                            >
+                                                {isGenerating ? (
+                                                    <><Loader2 size={16} className="animate-spin" /> Generando presentación...</>
+                                                ) : (
+                                                    <><Brain size={16} /> Generar Presentación con IA</>
+                                                )}
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Agregar Diapositiva</label>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Agregar Diapositiva Manualmente</label>
                                     <div className="flex flex-wrap gap-2">
                                         {SLIDE_TEMPLATES.map((tmpl, idx) => (
                                             <button

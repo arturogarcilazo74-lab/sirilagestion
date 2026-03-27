@@ -1,10 +1,12 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     Gamepad2, Plus, Trash2, Play, Square, Trophy,
     Shuffle, CheckCircle2, XCircle, Users, Zap,
-    RotateCcw, Star, ChevronRight, MessageSquare, X
+    RotateCcw, Star, ChevronRight, MessageSquare, X,
+    Sparkles, Loader2, FileUp, Brain, FileText, Image
 } from 'lucide-react';
 import { CTEGame, CTEQuestion, StaffMember, SchoolConfig } from '../types';
+import { generateCTEGameQuestions } from '../services/ai';
 
 interface CTEGamesViewProps {
     schoolConfig: SchoolConfig;
@@ -73,6 +75,14 @@ export const CTEGamesView: React.FC<CTEGamesViewProps> = ({
     const [newQOptions, setNewQOptions] = useState(['', '', '', '']);
     const [newQCorrect, setNewQCorrect] = useState(0);
 
+    // AI Generation state
+    const [aiTopic, setAiTopic] = useState('');
+    const [aiFiles, setAiFiles] = useState<File[]>([]);
+    const [aiQuestionCount, setAiQuestionCount] = useState(5);
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [aiError, setAiError] = useState('');
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
     const staff: StaffMember[] = schoolConfig.staff || [];
 
     const resetForm = () => {
@@ -83,6 +93,51 @@ export const CTEGamesView: React.FC<CTEGamesViewProps> = ({
         setNewQOptions(['', '', '', '']);
         setNewQCorrect(0);
         setShowCreateForm(false);
+        setAiTopic('');
+        setAiFiles([]);
+        setAiQuestionCount(5);
+        setIsGenerating(false);
+        setAiError('');
+    };
+
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
+        setAiFiles(prev => [...prev, ...files]);
+    };
+
+    const removeFile = (idx: number) => {
+        setAiFiles(prev => prev.filter((_, i) => i !== idx));
+    };
+
+    const generateWithAI = async () => {
+        if (!aiTopic.trim() && aiFiles.length === 0) {
+            setAiError('Escribe un tema o sube al menos un documento');
+            return;
+        }
+        setIsGenerating(true);
+        setAiError('');
+        try {
+            const result = await generateCTEGameQuestions(aiTopic, aiFiles, aiQuestionCount, newGameType);
+            if (result.questions && result.questions.length > 0) {
+                const questions: CTEQuestion[] = result.questions.map((q, i) => ({
+                    id: `ai-${Date.now()}-${i}`,
+                    text: q.text,
+                    options: q.options || [],
+                    correctIndex: q.correctIndex ?? 0,
+                }));
+                setNewQuestions(questions);
+                if (!newGameTitle.trim() && aiTopic.trim()) {
+                    const shortTopic = aiTopic.trim().substring(0, 50);
+                    setNewGameTitle(shortTopic + (aiTopic.length > 50 ? '...' : ''));
+                }
+            } else {
+                setAiError('La IA no generó preguntas. Intenta con una descripción más detallada.');
+            }
+        } catch (e: any) {
+            setAiError(e.message || 'Error al generar con IA');
+        } finally {
+            setIsGenerating(false);
+        }
     };
 
     const addQuestion = () => {
@@ -248,8 +303,88 @@ export const CTEGamesView: React.FC<CTEGamesViewProps> = ({
                                 </div>
                             </div>
 
+                            <div className="border-2 border-dashed border-purple-300 rounded-xl p-5 bg-gradient-to-br from-purple-50 to-indigo-50">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <Sparkles size={20} className="text-purple-600" />
+                                    <h4 className="font-bold text-purple-800">Generar con Inteligencia Artificial</h4>
+                                </div>
+                                <p className="text-xs text-purple-600 mb-4">Sube documentos o describe el tema y la IA creará preguntas automáticamente para tu juego CTE.</p>
+
+                                <div className="space-y-3">
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-600 mb-1">Tema o descripción del juego</label>
+                                        <textarea
+                                            value={aiTopic}
+                                            onChange={e => setAiTopic(e.target.value)}
+                                            rows={3}
+                                            placeholder="Ej: Trivia sobre la Nueva Escuela Mexicana para docentes. Incluir preguntas sobre los 4 campos formativos, ejes articuladores, evaluación formativa y Plan de Mejora Escolar..."
+                                            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-600 mb-1">Subir documentos (PDF, imágenes, texto)</label>
+                                        <input
+                                            ref={fileInputRef}
+                                            type="file"
+                                            multiple
+                                            accept=".pdf,.txt,.md,.png,.jpg,.jpeg,.webp"
+                                            onChange={handleFileSelect}
+                                            className="hidden"
+                                        />
+                                        <button
+                                            onClick={() => fileInputRef.current?.click()}
+                                            className="w-full border-2 border-dashed border-slate-300 rounded-lg py-3 text-sm text-slate-500 hover:border-purple-400 hover:text-purple-600 transition-colors flex items-center justify-center gap-2"
+                                        >
+                                            <FileUp size={16} /> Seleccionar archivos
+                                        </button>
+                                        {aiFiles.length > 0 && (
+                                            <div className="mt-2 space-y-1">
+                                                {aiFiles.map((file, idx) => (
+                                                    <div key={idx} className="flex items-center justify-between bg-white rounded-lg px-3 py-1.5 border border-slate-200">
+                                                        <span className="text-xs text-slate-600 truncate flex-1">
+                                                            {file.type.startsWith('image/') ? <Image size={12} className="inline mr-1 text-blue-500" /> : <FileText size={12} className="inline mr-1 text-red-500" />}
+                                                            {file.name}
+                                                        </span>
+                                                        <button onClick={() => removeFile(idx)} className="text-red-400 hover:text-red-600 ml-2"><X size={14} /></button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="flex items-center gap-3">
+                                        <label className="text-xs font-bold text-slate-600">Preguntas:</label>
+                                        <input
+                                            type="number"
+                                            min={3}
+                                            max={20}
+                                            value={aiQuestionCount}
+                                            onChange={e => setAiQuestionCount(Number(e.target.value))}
+                                            className="w-20 border border-slate-300 rounded-lg px-2 py-1.5 text-sm text-center"
+                                        />
+                                    </div>
+
+                                    {aiError && (
+                                        <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-xs text-red-700">{aiError}</div>
+                                    )}
+
+                                    <button
+                                        onClick={generateWithAI}
+                                        disabled={isGenerating || (!aiTopic.trim() && aiFiles.length === 0)}
+                                        className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-3 rounded-xl font-bold text-sm hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50 transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-200"
+                                    >
+                                        {isGenerating ? (
+                                            <><Loader2 size={16} className="animate-spin" /> Generando preguntas...</>
+                                        ) : (
+                                            <><Brain size={16} /> Generar Preguntas con IA</>
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+
                             <div className="border border-slate-200 rounded-xl p-4 bg-slate-50">
-                                <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Agregar Pregunta</label>
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Agregar Pregunta Manualmente</label>
                                 <input
                                     type="text"
                                     value={newQText}

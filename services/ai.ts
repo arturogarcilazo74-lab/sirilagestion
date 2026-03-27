@@ -10,6 +10,20 @@ const getApiKey = () => {
     ).trim();
 };
 
+// Helper to convert file to base64
+const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+            const result = reader.result as string;
+            const base64 = result.includes('base64,') ? result.split('base64,')[1] : result;
+            resolve(base64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+};
+
 // Helper to handle model fallbacks using direct REST API
 const generateWithFallback = async (input: string | any[], config?: any): Promise<string> => {
     const apiKey = getApiKey();
@@ -512,4 +526,159 @@ Usa tono profesional pero empático. Sé específico con los datos del alumno, n
     console.error("Error generando análisis del alumno:", e);
     return `No se pudo generar el análisis con IA. Error: ${e.message}`;
   }
+};
+
+// --- Generación de Presentaciones CTE con IA ---
+export const generateCTEPresentation = async (
+  topic: string,
+  files: File[],
+  slideCount: number = 7
+): Promise<{ slides: { title: string; content: string; type: string }[] }> => {
+  const parts: any[] = [];
+
+  if (topic.trim()) {
+    parts.push({ text: `TEMA/DESCRIPCIÓN DE LA SESIÓN CTE:\n${topic}` });
+  }
+
+  for (const file of files) {
+    try {
+      if (file.type.startsWith('image/')) {
+        const base64 = await fileToBase64(file);
+        parts.push({ inline_data: { mime_type: file.type, data: base64 } });
+      } else if (file.type === 'application/pdf' || file.type === 'text/plain' || file.name.endsWith('.txt')) {
+        const text = await file.text();
+        parts.push({ text: `DOCUMENTO ADJUNTO (${file.name}):\n${text.substring(0, 15000)}` });
+      }
+    } catch (e) {
+      console.warn(`No se pudo procesar el archivo ${file.name}:`, e);
+    }
+  }
+
+  parts.push({ text: `
+INSTRUCCIONES:
+Genera una presentación para una sesión de Consejo Técnico Escolar (CTE) en una primaria pública de México bajo el modelo NEM (Nueva Escuela Mexicana).
+Genera entre ${slideCount} y ${Math.max(slideCount, 10)} diapositivas.
+
+ESTRUCTURA OBLIGATORIA DE LA PRESENTACIÓN:
+1. PORTADA: Título de la sesión, nombre de la escuela, fecha
+2. AGENDA: Lista de puntos a tratar
+3. CONTENIDO: Varias diapositivas con el desarrollo del tema principal
+4. ACTIVIDAD: Una dinámica o actividad para el colectivo docente
+5. ACUERDOS: Compromisos y próximos pasos
+
+RESPONDE ÚNICAMENTE CON ESTE JSON (sin markdown, sin \`\`\`):
+{
+  "slides": [
+    { "title": "Título de la diapositiva", "content": "Contenido completo de la diapositiva con viñetas y puntos clave", "type": "TITLE" }
+  ]
+}
+
+Tipos válidos: TITLE, AGENDA, CONTENT, ACTIVITY, CLOSING
+Usa lenguaje profesional pero accesible para docentes de primaria.` });
+
+  try {
+    const text = await generateWithFallback(parts, { responseMimeType: "application/json", maxOutputTokens: 4096 });
+    const cleaned = text.replace(/```json|```/g, '').trim();
+    return JSON.parse(cleaned);
+  } catch (e: any) {
+    console.error("Error generando presentación CTE:", e);
+    throw new Error(`Error al generar presentación: ${e.message}`);
+  }
+};
+
+// --- Generación de Juegos CTE con IA ---
+export const generateCTEGameQuestions = async (
+  topic: string,
+  files: File[],
+  questionCount: number = 5,
+  gameType: string = 'TRIVIA'
+): Promise<{ questions: { text: string; options: string[]; correctIndex: number }[] }> => {
+  const parts: any[] = [];
+
+  if (topic.trim()) {
+    parts.push({ text: `TEMA/DESCRIPCIÓN DEL JUEGO CTE:\n${topic}` });
+  }
+
+  for (const file of files) {
+    try {
+      if (file.type.startsWith('image/')) {
+        const base64 = await fileToBase64(file);
+        parts.push({ inline_data: { mime_type: file.type, data: base64 } });
+      } else if (file.type === 'application/pdf' || file.type === 'text/plain' || file.name.endsWith('.txt')) {
+        const text = await file.text();
+        parts.push({ text: `DOCUMENTO ADJUNTO (${file.name}):\n${text.substring(0, 15000)}` });
+      }
+    } catch (e) {
+      console.warn(`No se pudo procesar el archivo ${file.name}:`, e);
+    }
+  }
+
+  parts.push({ text: `
+INSTRUCCIONES:
+Genera ${questionCount} preguntas para un juego interactivo tipo ${gameType} dirigido a DOCENTES de primaria durante una sesión de Consejo Técnico Escolar (CTE).
+
+El juego debe estar basado en:
+- El tema/descripción proporcionada
+- Los documentos adjuntos (si los hay)
+- Temáticas relevantes para docentes de primaria NEM (Nueva Escuela Mexicana)
+
+${gameType === 'TRIVIA' ? `
+Cada pregunta debe tener 4 opciones de respuesta, donde UNA sola sea correcta.
+Asegúrate de que las preguntas sean variadas en dificultad (fáciles, intermedias y desafiantes).
+` : gameType === 'SURVEY' ? `
+Genera preguntas tipo encuesta/de opinión sobre el tema. Las opciones deben reflejar diferentes posturas o grados de acuerdo.
+` : `
+Genera preguntas abiertas que fomenten la reflexión y discusión entre docentes.
+`}
+
+RESPONDE ÚNICAMENTE CON ESTE JSON (sin markdown, sin \`\`\`):
+{
+  "questions": [
+    { "text": "Pregunta", "options": ["Opción A", "Opción B", "Opción C", "Opción D"], "correctIndex": 0 }
+  ]
+}
+
+Las preguntas deben ser claras, precisas y estar directamente relacionadas con el contenido proporcionado.` });
+
+  try {
+    const text = await generateWithFallback(parts, { responseMimeType: "application/json", maxOutputTokens: 4096 });
+    const cleaned = text.replace(/```json|```/g, '').trim();
+    return JSON.parse(cleaned);
+  } catch (e: any) {
+    console.error("Error generando juego CTE:", e);
+    throw new Error(`Error al generar juego: ${e.message}`);
+  }
+};
+
+// --- Extraer texto de archivos para contexto ---
+export const extractTextFromFiles = async (files: File[]): Promise<string> => {
+  const texts: string[] = [];
+  for (const file of files) {
+    try {
+      if (file.type === 'application/pdf') {
+        // Para PDFs, intentamos leer el texto directamente
+        // Nota: esto funciona para PDFs con texto seleccionable
+        try {
+          const text = await file.text();
+          if (text.length > 50 && !text.startsWith('%PDF')) {
+            texts.push(`--- ${file.name} ---\n${text.substring(0, 10000)}`);
+          } else {
+            texts.push(`--- ${file.name} ---\n[Archivo PDF cargado - se enviará como imagen para análisis]`);
+          }
+        } catch {
+          texts.push(`--- ${file.name} ---\n[PDF cargado para análisis visual]`);
+        }
+      } else if (file.type === 'text/plain' || file.name.endsWith('.txt') || file.name.endsWith('.md')) {
+        const text = await file.text();
+        texts.push(`--- ${file.name} ---\n${text.substring(0, 10000)}`);
+      } else if (file.type.startsWith('image/')) {
+        texts.push(`--- ${file.name} ---\n[Imagen cargada para análisis visual]`);
+      } else {
+        texts.push(`--- ${file.name} ---\n[Archivo cargado: ${file.type}]`);
+      }
+    } catch (e) {
+      texts.push(`--- ${file.name} ---\n[Error al leer archivo]`);
+    }
+  }
+  return texts.join('\n\n');
 };
