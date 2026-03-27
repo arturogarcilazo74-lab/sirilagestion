@@ -228,8 +228,17 @@ export interface StaffAttendanceRecord {
   title: string; // Título editable (ej: "Consejo Técnico Escolar - 1ra Sesión")
   date: string; // YYYY-MM-DD
   attendees: Record<string, 'PRESENTE' | 'AUSENTE' | 'RETARDO' | 'JUSTIFICADO'>; // staffId -> status
+  guestAttendees?: GuestAttendee[]; // Personal invitado/externo
   notes?: string;
   createdAt: string;
+}
+
+export interface GuestAttendee {
+  id: string;
+  name: string;
+  school?: string; // Plantel de procedencia
+  role?: string; // Cargo
+  status: 'PRESENTE' | 'AUSENTE' | 'RETARDO' | 'JUSTIFICADO';
 }
 
 export interface CTEGame {

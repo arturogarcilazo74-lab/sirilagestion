@@ -3,7 +3,7 @@ import {
     Users, Printer, Plus, Trash2, Edit2, Check, X,
     FileText, Download, ChevronDown, ChevronUp, Building2
 } from 'lucide-react';
-import { SchoolConfig, StaffMember, StaffAttendanceRecord } from '../types';
+import { SchoolConfig, StaffMember, StaffAttendanceRecord, GuestAttendee } from '../types';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -31,11 +31,21 @@ export const StaffAttendanceView: React.FC<StaffAttendanceViewProps> = ({
     const [newAttendees, setNewAttendees] = useState<Record<string, 'PRESENTE' | 'AUSENTE' | 'RETARDO' | 'JUSTIFICADO' | ''>>({});
     const [newNotes, setNewNotes] = useState('');
 
+    // Guest attendees state
+    const [guestAttendees, setGuestAttendees] = useState<GuestAttendee[]>([]);
+    const [newGuestName, setNewGuestName] = useState('');
+    const [newGuestSchool, setNewGuestSchool] = useState('');
+    const [newGuestRole, setNewGuestRole] = useState('');
+
     const resetForm = () => {
         setNewTitle('');
         setNewDate(new Date().toISOString().split('T')[0]);
         setNewAttendees({});
         setNewNotes('');
+        setGuestAttendees([]);
+        setNewGuestName('');
+        setNewGuestSchool('');
+        setNewGuestRole('');
         setShowCreateForm(false);
         setEditingRecord(null);
     };
@@ -46,6 +56,7 @@ export const StaffAttendanceView: React.FC<StaffAttendanceViewProps> = ({
         setNewDate(record.date);
         setNewAttendees(record.attendees as any);
         setNewNotes(record.notes || '');
+        setGuestAttendees(record.guestAttendees || []);
         setShowCreateForm(true);
     };
 
@@ -65,6 +76,7 @@ export const StaffAttendanceView: React.FC<StaffAttendanceViewProps> = ({
             title: newTitle.trim(),
             date: newDate,
             attendees: filteredAttendees,
+            guestAttendees: guestAttendees.length > 0 ? guestAttendees : undefined,
             notes: newNotes.trim() || undefined,
             createdAt: editingRecord?.createdAt || new Date().toISOString()
         };
@@ -206,23 +218,66 @@ export const StaffAttendanceView: React.FC<StaffAttendanceViewProps> = ({
         const absentCount = Object.values(record.attendees).filter(v => v === 'AUSENTE').length;
         const lateCount = Object.values(record.attendees).filter(v => v === 'RETARDO').length;
         const excusedCount = Object.values(record.attendees).filter(v => v === 'JUSTIFICADO').length;
+        const guests = record.guestAttendees || [];
 
         doc.setFontSize(9);
         doc.setTextColor(30, 41, 59);
         doc.setFont('helvetica', 'bold');
         doc.text('Resumen:', 20, finalY);
         doc.setFont('helvetica', 'normal');
-        doc.text(`Presentes: ${presentCount} | Ausentes: ${absentCount} | Retardos: ${lateCount} | Justificados: ${excusedCount}`, 20, finalY + 5);
+        doc.text(`Presentes: ${presentCount} | Ausentes: ${absentCount} | Retardos: ${lateCount} | Justificados: ${excusedCount}${guests.length > 0 ? ` | Invitados: ${guests.length}` : ''}`, 20, finalY + 5);
+
+        let notesY = finalY + 14;
+
+        if (guests.length > 0) {
+            doc.setFont('helvetica', 'bold');
+            doc.text('Personal Invitado / Externo:', 20, notesY);
+            notesY += 6;
+
+            const guestData = guests.map((g, idx) => [
+                (idx + 1).toString(),
+                g.name,
+                g.school || '—',
+                g.role || '—',
+                g.status
+            ]);
+
+            autoTable(doc, {
+                startY: notesY,
+                head: [['#', 'Nombre', 'Plantel de Procedencia', 'Cargo', 'Asistencia']],
+                body: guestData,
+                theme: 'grid',
+                headStyles: {
+                    fillColor: [245, 158, 11],
+                    textColor: [255, 255, 255],
+                    fontStyle: 'bold',
+                    fontSize: 8
+                },
+                bodyStyles: {
+                    fontSize: 8,
+                    cellPadding: 3
+                },
+                columnStyles: {
+                    0: { halign: 'center', cellWidth: 8 },
+                    1: { cellWidth: 45 },
+                    2: { cellWidth: 50 },
+                    3: { cellWidth: 30 },
+                    4: { halign: 'center', cellWidth: 25 }
+                }
+            });
+
+            notesY = (doc as any).lastAutoTable.finalY + 10;
+        }
 
         if (record.notes) {
             doc.setFont('helvetica', 'bold');
-            doc.text('Observaciones:', 20, finalY + 14);
+            doc.text('Observaciones:', 20, notesY);
             doc.setFont('helvetica', 'normal');
             const lines = doc.splitTextToSize(record.notes, pageWidth - 40);
-            doc.text(lines, 20, finalY + 19);
+            doc.text(lines, 20, notesY + 5);
         }
 
-        const sigY = Math.max(finalY + 40, 240);
+        const sigY = Math.max(notesY + 30, 240);
         doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(30, 41, 59);
@@ -242,7 +297,9 @@ export const StaffAttendanceView: React.FC<StaffAttendanceViewProps> = ({
         const absent = Object.values(record.attendees).filter(v => v === 'AUSENTE').length;
         const late = Object.values(record.attendees).filter(v => v === 'RETARDO').length;
         const excused = Object.values(record.attendees).filter(v => v === 'JUSTIFICADO').length;
-        return { total, present, absent, late, excused };
+        const guestCount = (record.guestAttendees || []).length;
+        const guestPresent = (record.guestAttendees || []).filter(g => g.status === 'PRESENTE').length;
+        return { total, present, absent, late, excused, guestCount, guestPresent };
     };
 
     return (
@@ -324,6 +381,99 @@ export const StaffAttendanceView: React.FC<StaffAttendanceViewProps> = ({
                                 )}
                             </div>
 
+                            <div className="border border-amber-200 rounded-xl p-4 bg-amber-50">
+                                <label className="block text-xs font-bold text-amber-700 uppercase tracking-wide mb-3">
+                                    <Building2 size={14} className="inline mr-1" /> Personal Invitado / Externo
+                                </label>
+                                <p className="text-xs text-amber-600 mb-3">Docentes o personal de otros planteles que asisten al CTE en esta escuela</p>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 mb-3">
+                                    <input
+                                        type="text"
+                                        value={newGuestName}
+                                        onChange={e => setNewGuestName(e.target.value)}
+                                        placeholder="Nombre completo"
+                                        className="sm:col-span-2 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                                    />
+                                    <input
+                                        type="text"
+                                        value={newGuestSchool}
+                                        onChange={e => setNewGuestSchool(e.target.value)}
+                                        placeholder="Plantel de procedencia"
+                                        className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                                    />
+                                    <div className="flex gap-1">
+                                        <input
+                                            type="text"
+                                            value={newGuestRole}
+                                            onChange={e => setNewGuestRole(e.target.value)}
+                                            placeholder="Cargo"
+                                            className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                                        />
+                                        <button
+                                            onClick={() => {
+                                                if (!newGuestName.trim()) return;
+                                                const guest: GuestAttendee = {
+                                                    id: Date.now().toString(),
+                                                    name: newGuestName.trim(),
+                                                    school: newGuestSchool.trim() || undefined,
+                                                    role: newGuestRole.trim() || undefined,
+                                                    status: 'PRESENTE'
+                                                };
+                                                setGuestAttendees(prev => [...prev, guest]);
+                                                setNewGuestName('');
+                                                setNewGuestSchool('');
+                                                setNewGuestRole('');
+                                            }}
+                                            disabled={!newGuestName.trim()}
+                                            className="bg-amber-500 text-white px-3 rounded-lg hover:bg-amber-600 disabled:opacity-40 transition-colors"
+                                        >
+                                            <Plus size={16} />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {guestAttendees.length > 0 && (
+                                    <div className="space-y-2">
+                                        {guestAttendees.map(guest => (
+                                            <div key={guest.id} className="flex items-center justify-between bg-white rounded-lg p-2.5 border border-amber-200">
+                                                <div className="flex-1">
+                                                    <span className="font-bold text-sm text-slate-800">{guest.name}</span>
+                                                    {guest.school && <span className="text-xs text-slate-500 ml-2">{guest.school}</span>}
+                                                    {guest.role && <span className="text-xs text-amber-600 ml-2">({guest.role})</span>}
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    {(['PRESENTE', 'AUSENTE', 'RETARDO', 'JUSTIFICADO'] as const).map(status => (
+                                                        <button
+                                                            key={status}
+                                                            onClick={() => {
+                                                                setGuestAttendees(prev =>
+                                                                    prev.map(g => g.id === guest.id ? { ...g, status } : g)
+                                                                );
+                                                            }}
+                                                            className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${
+                                                                guest.status === status
+                                                                    ? getStatusColor(status) + ' ring-2 ring-offset-1 ring-amber-400'
+                                                                    : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+                                                            }`}
+                                                            title={status}
+                                                        >
+                                                            {getStatusLabel(status)}
+                                                        </button>
+                                                    ))}
+                                                    <button
+                                                        onClick={() => setGuestAttendees(prev => prev.filter(g => g.id !== guest.id))}
+                                                        className="text-red-400 hover:text-red-600 ml-1"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">Observaciones</label>
                                 <textarea
@@ -383,6 +533,9 @@ export const StaffAttendanceView: React.FC<StaffAttendanceViewProps> = ({
                                             <span className="px-2 py-1 rounded-full bg-red-100 text-red-700 font-bold">{stats.absent} A</span>
                                             <span className="px-2 py-1 rounded-full bg-amber-100 text-amber-700 font-bold">{stats.late} R</span>
                                             <span className="px-2 py-1 rounded-full bg-blue-100 text-blue-700 font-bold">{stats.excused} J</span>
+                                            {stats.guestCount > 0 && (
+                                                <span className="px-2 py-1 rounded-full bg-purple-100 text-purple-700 font-bold">{stats.guestPresent}/{stats.guestCount} Inv</span>
+                                            )}
                                         </div>
 
                                         <button
@@ -430,6 +583,25 @@ export const StaffAttendanceView: React.FC<StaffAttendanceViewProps> = ({
                                                 );
                                             })}
                                         </div>
+                                        {(record.guestAttendees && record.guestAttendees.length > 0) && (
+                                            <div className="mt-4">
+                                                <h4 className="text-xs font-bold text-amber-600 uppercase mb-2">
+                                                    <Building2 size={12} className="inline mr-1" /> Personal Invitado ({record.guestAttendees.length})
+                                                </h4>
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                                                    {record.guestAttendees.map(guest => (
+                                                        <div key={guest.id} className={`flex items-center justify-between p-3 rounded-lg border ${getStatusColor(guest.status)}`}>
+                                                            <div>
+                                                                <span className="font-semibold text-sm">{guest.name}</span>
+                                                                {guest.school && <span className="block text-xs opacity-70">{guest.school}</span>}
+                                                                {guest.role && <span className="text-xs opacity-70"> ({guest.role})</span>}
+                                                            </div>
+                                                            <span className="font-bold text-sm">{guest.status}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
                                         {record.notes && (
                                             <div className="mt-4 p-3 bg-white rounded-lg border border-slate-200">
                                                 <p className="text-xs font-bold text-slate-500 uppercase mb-1">Observaciones</p>
