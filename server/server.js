@@ -342,6 +342,86 @@ app.get('/sirila-v1/students/avatars', async (req, res) => {
     }
 });
 
+// School Calendar helpers copied from services/schoolCalendarUtils.ts for backend node environment compatibility
+const SCHOOL_PERIODS = [
+    {
+        id: 'P1',
+        name: 'Primer Periodo',
+        startDate: '2025-09-01',
+        endDate: '2025-11-28'
+    },
+    {
+        id: 'P2',
+        name: 'Segundo Periodo',
+        startDate: '2026-01-12',
+        endDate: '2026-03-27'
+    },
+    {
+        id: 'P3',
+        name: 'Tercer Periodo',
+        startDate: '2026-04-13',
+        endDate: '2026-07-15'
+    }
+];
+
+const SUSPENSION_DAYS = {
+    '2025-09-16': 'Aniversario de la Independencia de México',
+    '2025-09-26': 'Primera sesión CTE',
+    '2025-10-31': 'Segunda sesión CTE',
+    '2025-11-14': 'Descarga administrativa',
+    '2025-11-17': 'Puente 20 de noviembre',
+    '2025-11-28': 'Tercera sesión CTE',
+    '2026-01-30': 'Cuarta sesión CTE',
+    '2026-02-02': 'Aniversario de la Constitución',
+    '2026-02-27': 'Quinta sesión CTE',
+    '2026-03-13': 'Descarga administrativa',
+    '2026-03-16': 'Natalicio de Benito Juárez',
+    '2026-03-27': 'Sexta sesión CTE',
+    '2026-03-30': 'Vacaciones Semana Santa',
+    '2026-03-31': 'Vacaciones Semana Santa',
+    '2026-04-01': 'Vacaciones Semana Santa',
+    '2026-04-02': 'Vacaciones Semana Santa',
+    '2026-04-03': 'Vacaciones Semana Santa',
+    '2026-04-06': 'Vacaciones Semana Santa',
+    '2026-04-07': 'Vacaciones Semana Santa',
+    '2026-04-08': 'Vacaciones Semana Santa',
+    '2026-04-09': 'Vacaciones Semana Santa',
+    '2026-04-10': 'Vacaciones Semana Santa',
+    '2026-05-01': 'Día del Trabajo',
+    '2026-05-05': 'Batalla de Puebla',
+    '2026-05-15': 'Día del Maestro',
+    '2026-05-29': 'Séptima sesión CTE',
+    '2026-06-26': 'Octava sesión CTE',
+    '2026-07-03': 'Descarga administrativa'
+};
+
+function getSchoolPeriod(dateString) {
+    const date = new Date(dateString + 'T00:00:00');
+    for (const period of SCHOOL_PERIODS) {
+        const start = new Date(period.startDate + 'T00:00:00');
+        const end = new Date(period.endDate + 'T00:00:00');
+        if (date >= start && date <= end) {
+            return period;
+        }
+    }
+    return null;
+}
+
+function isSchoolDay(dateString) {
+    const date = new Date(dateString + 'T00:00:00');
+    const dayOfWeek = date.getDay();
+    if (dayOfWeek === 0 || dayOfWeek === 6) {
+        return false;
+    }
+    if (!getSchoolPeriod(dateString)) {
+        return false;
+    }
+    if (SUSPENSION_DAYS[dateString]) {
+        return false;
+    }
+    return true;
+}
+
 // NEW: Endpoint to fetch Honor Roll (Top performers by behavior points)
 app.get('/sirila-v1/honor-roll', async (req, res) => {
     try {
@@ -405,6 +485,7 @@ app.get('/sirila-v1/honor-roll', async (req, res) => {
                     const academicW = (schoolConfig.academicWeight ?? 70) / 100;
                     const homeworkW = (schoolConfig.homeworkWeight ?? 30) / 100;
                     const conductW = (schoolConfig.conductWeight ?? 0) / 100;
+                    const attendanceW = (schoolConfig.attendanceWeight ?? 0) / 100;
 
                     // Homework score: percentage of completed tasks mapped to 0-10 scale
                     const completedCount = Math.max(s.assignmentsCompleted || 0, (s.completedAssignmentIds?.length || 0));
@@ -414,8 +495,21 @@ app.get('/sirila-v1/honor-roll', async (req, res) => {
                     // Conduct score: base 8.0, min 5, max 10
                     const conductScore = Math.max(5, Math.min(10, 8 + ((s.behaviorPoints || 0) * 0.1)));
 
-                    let weightedAvg = (academicAvg * academicW) + (hwScore * homeworkW) + (conductScore * conductW);
-                    const totalW = academicW + homeworkW + conductW;
+                    // Attendance rate & score
+                    const schoolDays = Object.entries(s.attendance || {}).filter(([date]) => isSchoolDay(date));
+                    const totalDays = schoolDays.length;
+                    const presentDays = schoolDays.filter(([_, status]) => 
+                        status === 'Presente' || status === 'Retardo'
+                    ).length;
+                    const attendanceRate = totalDays > 0 ? (presentDays / totalDays) * 100 : 100;
+                    const attendanceScore = attendanceRate / 10;
+
+                    let weightedAvg = (academicAvg * academicW) + 
+                                       (hwScore * homeworkW) + 
+                                       (conductScore * conductW) + 
+                                       (attendanceScore * attendanceW);
+                                       
+                    const totalW = academicW + homeworkW + conductW + attendanceW;
                     if (totalW > 0 && Math.abs(totalW - 1) > 0.01) {
                         weightedAvg = weightedAvg / totalW;
                     }

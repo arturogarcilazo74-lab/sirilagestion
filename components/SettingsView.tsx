@@ -196,6 +196,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ config, onSave, onEx
                 className="hidden"
                 accept="image/*"
                 onChange={handleTeacherAvatarUpload}
+                title="Subir foto de perfil"
+                aria-label="Subir foto de perfil"
               />
             </div>
 
@@ -457,10 +459,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ config, onSave, onEx
                 {formData.includeHomeworkInAverage && (
                   <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-4 animate-fadeIn">
                     <p className="text-xs text-slate-500 font-medium">
-                      Configura el porcentaje de peso que tendrá cada elemento. La suma de los tres debe ser exactamente 100%.
+                      Configura el porcentaje de peso que tendrá cada elemento. La suma de los cuatro debe ser exactamente 100%.
                     </p>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                       <div>
                         <label className="block text-xs font-bold text-slate-500 mb-1">Calificaciones NEM (%)</label>
                         <input
@@ -494,11 +496,22 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ config, onSave, onEx
                           className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white text-slate-900 font-bold"
                         />
                       </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 mb-1">Asistencia (%)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={formData.attendanceWeight ?? 0}
+                          onChange={e => handleChange('attendanceWeight', Math.max(0, Math.min(100, parseInt(e.target.value) || 0)) as any)}
+                          className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white text-slate-900 font-bold"
+                        />
+                      </div>
                     </div>
 
-                    {((formData.academicWeight ?? 70) + (formData.homeworkWeight ?? 30) + (formData.conductWeight ?? 0)) !== 100 && (
+                    {((formData.academicWeight ?? 70) + (formData.homeworkWeight ?? 30) + (formData.conductWeight ?? 0) + (formData.attendanceWeight ?? 0)) !== 100 && (
                       <p className="text-xs text-rose-500 font-bold flex items-center gap-1">
-                        ⚠️ La suma de las ponderaciones debe ser 100% (Suma actual: {((formData.academicWeight ?? 70) + (formData.homeworkWeight ?? 30) + (formData.conductWeight ?? 0))}%).
+                        ⚠️ La suma de las ponderaciones debe ser 100% (Suma actual: {((formData.academicWeight ?? 70) + (formData.homeworkWeight ?? 30) + (formData.conductWeight ?? 0) + (formData.attendanceWeight ?? 0))}%).
                       </p>
                     )}
                   </div>

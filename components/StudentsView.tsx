@@ -1672,7 +1672,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
               <div className="grid grid-cols-2 gap-8 mb-8">
                 <div>
                   <h3 className="text-sm font-bold uppercase text-slate-600 border-b border-slate-200 pb-1 mb-3">Estadística de Asistencia</h3>
-                  <div className="grid grid-cols-3 gap-2 text-center">
+                  <div className="grid grid-cols-4 gap-2 text-center">
                     <div className="bg-green-50 p-2 rounded border border-green-100">
                       <div className="text-xl font-bold text-green-700">{Object.values(reportStudent.attendance).filter(x => x === 'Presente').length}</div>
                       <div className="text-[10px] uppercase font-bold text-green-600">Asistencias</div>
@@ -1685,6 +1685,12 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
                       <div className="text-xl font-bold text-yellow-700">{Object.values(reportStudent.attendance).filter(x => x === 'Retardo').length}</div>
                       <div className="text-[10px] uppercase font-bold text-yellow-600">Retardos</div>
                     </div>
+                    <div className="bg-blue-50 p-2 rounded border border-blue-100">
+                      <div className="text-xl font-bold text-blue-700">
+                        {Math.round(calculateStudentMetrics(reportStudent, assignments, config).attendanceRate)}%
+                      </div>
+                      <div className="text-[10px] uppercase font-bold text-blue-600">% Asistencia</div>
+                    </div>
                   </div>
                 </div>
                 <div>
@@ -1692,7 +1698,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
                   <div className="grid grid-cols-3 gap-2 text-center">
                     <div className="bg-slate-50 p-2 rounded border border-slate-200">
                       <div className="text-xl font-bold text-indigo-700">
-                        {calculateStudentMetrics(reportStudent, assignments).finalAvg}
+                        {calculateStudentMetrics(reportStudent, assignments, config).finalAvg}
                       </div>
                       <div className="text-[10px] uppercase font-bold text-slate-500">Promedio Gral.</div>
                     </div>
@@ -1719,6 +1725,86 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
                   </div>
                 </div>
               </div>
+
+              {/* Desglose de Ponderación del Promedio */}
+              {(() => {
+                const metrics = calculateStudentMetrics(reportStudent, assignments, config);
+                const isWeighted = !!config.includeHomeworkInAverage;
+                const academicW = config.academicWeight ?? 70;
+                const homeworkW = config.homeworkWeight ?? 30;
+                const conductW = config.conductWeight ?? 0;
+                const attendanceW = config.attendanceWeight ?? 0;
+
+                const hwScore = metrics.hwPercentage / 10;
+                const conductScore = Math.max(5, Math.min(10, 8 + (metrics.behaviorPoints * 0.1)));
+                const attendanceScore = metrics.attendanceRate / 10;
+
+                const academicVal = metrics.academicAvg;
+                const hwVal = hwScore;
+                const conductVal = conductScore;
+                const attendanceVal = attendanceScore;
+
+                const academicContrib = (academicVal * academicW) / 100;
+                const hwContrib = (hwVal * homeworkW) / 100;
+                const conductContrib = (conductVal * conductW) / 100;
+                const attendanceContrib = (attendanceVal * attendanceW) / 100;
+
+                return (
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-8 animate-fadeIn">
+                    <h3 className="text-sm font-bold uppercase text-slate-600 border-b border-slate-200 pb-1 mb-3">
+                      Criterios y Desglose del Promedio
+                    </h3>
+                    {isWeighted ? (
+                      <div className="space-y-3">
+                        <p className="text-xs text-slate-500 font-medium">
+                          El sistema está configurado con una ponderación de calificaciones. A continuación se detalla cómo se obtiene el promedio de <strong>{metrics.finalAvg}</strong>:
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 text-xs">
+                          {academicW > 0 && (
+                            <div className="bg-white p-2.5 rounded border border-slate-200 shadow-sm">
+                              <span className="font-bold block text-slate-700">Académico (NEM)</span>
+                              <span className="block text-slate-500">Nota: {academicVal.toFixed(1)}</span>
+                              <span className="block text-slate-500">Peso: {academicW}%</span>
+                              <span className="font-bold block text-indigo-600 mt-1">Suma: +{academicContrib.toFixed(2)}</span>
+                            </div>
+                          )}
+                          {homeworkW > 0 && (
+                            <div className="bg-white p-2.5 rounded border border-slate-200 shadow-sm">
+                              <span className="font-bold block text-slate-700">Tareas / Actividades</span>
+                              <span className="block text-slate-500">Nota: {hwVal.toFixed(1)} ({metrics.hwPercentage}%)</span>
+                              <span className="block text-slate-500">Peso: {homeworkW}%</span>
+                              <span className="font-bold block text-indigo-600 mt-1">Suma: +{hwContrib.toFixed(2)}</span>
+                            </div>
+                          )}
+                          {conductW > 0 && (
+                            <div className="bg-white p-2.5 rounded border border-slate-200 shadow-sm">
+                              <span className="font-bold block text-slate-700">Conducta</span>
+                              <span className="block text-slate-500">Nota: {conductVal.toFixed(1)}</span>
+                              <span className="block text-slate-500">Peso: {conductW}%</span>
+                              <span className="font-bold block text-indigo-600 mt-1">Suma: +{conductContrib.toFixed(2)}</span>
+                            </div>
+                          )}
+                          {attendanceW > 0 && (
+                            <div className="bg-white p-2.5 rounded border border-slate-200 shadow-sm">
+                              <span className="font-bold block text-slate-700">Asistencia</span>
+                              <span className="block text-slate-500">Nota: {attendanceVal.toFixed(1)} ({Math.round(metrics.attendanceRate)}%)</span>
+                              <span className="block text-slate-500">Peso: {attendanceW}%</span>
+                              <span className="font-bold block text-indigo-600 mt-1">Suma: +{attendanceContrib.toFixed(2)}</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-[10px] text-slate-400 bg-white px-3 py-1.5 rounded border border-slate-100 italic mt-2">
+                          Cálculo: {academicW > 0 && `(${academicVal.toFixed(1)} × ${academicW}%)`}{homeworkW > 0 && ` + (${hwVal.toFixed(1)} × ${homeworkW}%)`}{conductW > 0 && ` + (${conductVal.toFixed(1)} × ${conductW}%)`}{attendanceW > 0 && ` + (${attendanceVal.toFixed(1)} × ${attendanceW}%)`} = {metrics.finalAvg}
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-slate-500 italic font-medium">
+                        El promedio general se calcula actualmente mediante el promedio académico simple de los trimestres evaluados (100% Calificaciones NEM).
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* Grades Table - Detailed components */}
               <div className="mb-8">

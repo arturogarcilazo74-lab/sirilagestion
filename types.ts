@@ -187,6 +187,8 @@ export interface SchoolConfig {
   academicWeight?: number;
   homeworkWeight?: number;
   conductWeight?: number;
+  includeAttendanceInAverage?: boolean;
+  attendanceWeight?: number;
 }
 
 export interface Notification {

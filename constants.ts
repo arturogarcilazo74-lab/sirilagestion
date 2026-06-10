@@ -210,5 +210,7 @@ export const DEFAULT_CONFIG: SchoolConfig = {
     includeHomeworkInAverage: false,
     academicWeight: 70,
     homeworkWeight: 30,
-    conductWeight: 0
+    conductWeight: 0,
+    includeAttendanceInAverage: false,
+    attendanceWeight: 0
 };
