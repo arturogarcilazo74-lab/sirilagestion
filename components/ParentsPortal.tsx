@@ -4,6 +4,227 @@ import { calculateStudentMetrics, getTrimesterAvg } from '../services/gradeUtils
 import { Student, SchoolEvent, Notification, Assignment, DraggableItem, InteractiveZone, BehaviorLog } from '../types';
 import { Bell, Calendar as CalendarIcon, LogOut, MessageCircle, User, CheckCircle, Smartphone, Send, Play, Trophy, HelpCircle, X, Check, AlertCircle, BookOpen, Circle, Move, Trash2, LayoutDashboard, Medal, Star, Award, Users, ChevronRight } from 'lucide-react';
 
+const CelebrationCanvas: React.FC = () => {
+    const canvasRef = React.useRef<HTMLCanvasElement>(null);
+
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        let animationFrameId: number;
+        let width = (canvas.width = canvas.offsetWidth || canvas.parentElement?.offsetWidth || 300);
+        let height = (canvas.height = canvas.offsetHeight || canvas.parentElement?.offsetHeight || 200);
+
+        const handleResize = () => {
+            if (canvas) {
+                width = canvas.width = canvas.offsetWidth || canvas.parentElement?.offsetWidth || 300;
+                height = canvas.height = canvas.offsetHeight || canvas.parentElement?.offsetHeight || 200;
+            }
+        };
+        window.addEventListener('resize', handleResize);
+
+        // Particle definitions
+        const colors = ['#f43f5e', '#3b82f6', '#10b981', '#eab308', '#a855f7', '#ff7849', '#ffc82c'];
+
+        class Confetti {
+            x: number;
+            y: number;
+            size: number;
+            color: string;
+            speedX: number;
+            speedY: number;
+            rotation: number;
+            rotationSpeed: number;
+
+            constructor() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * -height - 20;
+                this.size = Math.random() * 6 + 4;
+                this.color = colors[Math.floor(Math.random() * colors.length)];
+                this.speedX = Math.random() * 2 - 1;
+                this.speedY = Math.random() * 3 + 2;
+                this.rotation = Math.random() * 360;
+                this.rotationSpeed = Math.random() * 4 - 2;
+            }
+
+            update() {
+                this.y += this.speedY;
+                this.x += this.speedX + Math.sin(this.y / 30) * 0.5;
+                this.rotation += this.rotationSpeed;
+                if (this.y > height) {
+                    this.y = -20;
+                    this.x = Math.random() * width;
+                }
+            }
+
+            draw() {
+                if (!ctx) return;
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate((this.rotation * Math.PI) / 180);
+                ctx.fillStyle = this.color;
+                ctx.fillRect(-this.size / 2, -this.size / 2, this.size, this.size);
+                ctx.restore();
+            }
+        }
+
+        class FireworkSpark {
+            x: number;
+            y: number;
+            color: string;
+            vx: number;
+            vy: number;
+            alpha: number;
+            decay: number;
+
+            constructor(x: number, y: number, color: string) {
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 4 + 1;
+                this.vx = Math.cos(angle) * speed;
+                this.vy = Math.sin(angle) * speed;
+                this.alpha = 1;
+                this.decay = Math.random() * 0.015 + 0.01;
+            }
+
+            update() {
+                this.vx *= 0.98;
+                this.vy *= 0.98;
+                this.vy += 0.08; // gravity
+                this.x += this.vx;
+                this.y += this.vy;
+                this.alpha -= this.decay;
+            }
+
+            draw() {
+                if (!ctx) return;
+                ctx.save();
+                ctx.globalAlpha = this.alpha;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        class FireworkRocket {
+            x: number;
+            y: number;
+            tx: number;
+            ty: number;
+            color: string;
+            vx: number;
+            vy: number;
+            isDead: boolean;
+
+            constructor() {
+                this.x = Math.random() * (width - 100) + 50;
+                this.y = height;
+                this.tx = Math.random() * (width - 100) + 50;
+                this.ty = Math.random() * (height * 0.5);
+                this.color = colors[Math.floor(Math.random() * colors.length)];
+                
+                const angle = Math.atan2(this.ty - this.y, this.tx - this.x);
+                const speed = Math.random() * 5 + 7;
+                this.vx = Math.cos(angle) * speed;
+                this.vy = Math.sin(angle) * speed;
+                this.isDead = false;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                // Add minor smoke trails
+                if (Math.random() < 0.3) {
+                    sparks.push(new FireworkSpark(this.x, this.y, '#f59e0b'));
+                }
+                if (this.vy >= 0 || this.y <= this.ty) {
+                    this.isDead = true;
+                    this.explode();
+                }
+            }
+
+            explode() {
+                for (let i = 0; i < 40; i++) {
+                    sparks.push(new FireworkSpark(this.x, this.y, this.color));
+                }
+            }
+
+            draw() {
+                if (!ctx) return;
+                ctx.save();
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        const confettis: Confetti[] = [];
+        const rockets: FireworkRocket[] = [];
+        const sparks: FireworkSpark[] = [];
+
+        // Initialize Confetti
+        for (let i = 0; i < 45; i++) {
+            confettis.push(new Confetti());
+        }
+
+        const loop = () => {
+            if (!ctx) return;
+            ctx.clearRect(0, 0, width, height);
+
+            // Confetti
+            confettis.forEach((c) => {
+                c.update();
+                c.draw();
+            });
+
+            // Rockets
+            if (Math.random() < 0.02 && rockets.length < 3) {
+                rockets.push(new FireworkRocket());
+            }
+
+            for (let i = rockets.length - 1; i >= 0; i--) {
+                const r = rockets[i];
+                r.update();
+                if (r.isDead) {
+                    rockets.splice(i, 1);
+                } else {
+                    r.draw();
+                }
+            }
+
+            // Sparks
+            for (let i = sparks.length - 1; i >= 0; i--) {
+                const s = sparks[i];
+                s.update();
+                if (s.alpha <= 0) {
+                    sparks.splice(i, 1);
+                } else {
+                    s.draw();
+                }
+            }
+
+            animationFrameId = requestAnimationFrame(loop);
+        };
+
+        loop();
+
+        return () => {
+            cancelAnimationFrame(animationFrameId);
+            window.removeEventListener('resize', handleResize);
+        };
+    }, []);
+
+    return <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none w-full h-full z-0" />;
+};
+
 interface ParentsPortalProps {
     onBack: () => void;
     standalone?: boolean;
@@ -1047,9 +1268,244 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
             <div className="px-4 -mt-8 relative z-20 space-y-6">
 
                 {/* TAB CONTENT RENDER */}
-                {/* TAB CONTENT RENDER */}
                 {currentTab === 'HOME' && (
                     <div className="space-y-6 animate-fadeIn pb-24">
+                        {/* HONOR ROLL SECTION - ALWAYS RENDERED FIRST */}
+                        {(() => {
+                            if (!student) return null;
+                            const studentRank = honorRoll.findIndex(h => h.id === student.id) + 1;
+                            const isInHonorRoll = studentRank > 0;
+
+                            const cachedConfig = localStorage.getItem('SIRILA_CACHE_CONFIG');
+                            const config = cachedConfig ? JSON.parse(cachedConfig) : {};
+
+                            // Calculate metrics
+                            const metrics = calculateStudentMetrics(student, assignments, config);
+                            const isWeighted = !!config.includeHomeworkInAverage;
+                            const academicW = config.academicWeight ?? 70;
+                            const homeworkW = config.homeworkWeight ?? 30;
+                            const conductW = config.conductWeight ?? 0;
+                            const attendanceW = config.attendanceWeight ?? 0;
+
+                            const hwScore = metrics.hwPercentage / 10;
+                            const conductScore = Math.max(5, Math.min(10, 8 + (metrics.behaviorPoints * 0.1)));
+                            const attendanceScore = metrics.attendanceRate / 10;
+
+                            const academicVal = metrics.academicAvg;
+                            const hwVal = hwScore;
+                            const conductVal = conductScore;
+                            const attendanceVal = attendanceScore;
+
+                            const academicContrib = (academicVal * academicW) / 100;
+                            const hwContrib = (hwVal * homeworkW) / 100;
+                            const conductContrib = (conductVal * conductW) / 100;
+                            const attendanceContrib = (attendanceVal * attendanceW) / 100;
+
+                            return (
+                                <div className="space-y-6">
+                                    {isInHonorRoll ? (
+                                        // CELEBRATION MODE: Student is in the Honor Roll
+                                        <div className="bg-gradient-to-br from-amber-500 via-indigo-600 to-purple-700 p-6 rounded-[2.5rem] text-white shadow-xl relative overflow-hidden animate-fadeIn">
+                                            {/* Confetti & Fireworks Canvas */}
+                                            <CelebrationCanvas />
+
+                                            <div className="absolute top-0 right-0 p-4 opacity-25 transform translate-x-4 -translate-y-4">
+                                                <Trophy size={120} className="text-yellow-300 animate-pulse" />
+                                            </div>
+
+                                            <div className="relative z-10 space-y-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="bg-white/20 p-2.5 rounded-2xl backdrop-blur-md border border-white/10 animate-bounce-subtle">
+                                                        <Award className="text-yellow-300" size={28} />
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="font-black text-xl tracking-tight uppercase text-yellow-300">¡Felicidades!</h3>
+                                                        <p className="text-xs text-indigo-100 font-bold opacity-90">{student.name.split(' ')[0]} está en el Cuadro de Honor</p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="bg-white/10 backdrop-blur-md border border-white/15 rounded-3xl p-4 flex items-center justify-between">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="relative">
+                                                            <img
+                                                                src={student.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random`}
+                                                                className="w-14 h-14 rounded-full border-2 border-yellow-400 shadow-lg object-cover"
+                                                                alt={student.name}
+                                                            />
+                                                            <div className="absolute -bottom-1 -right-1 bg-yellow-400 text-indigo-900 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black border-2 border-indigo-600">
+                                                                {studentRank}
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-extrabold text-sm">Tu Lugar Actual</p>
+                                                            <p className="text-[11px] text-indigo-100/90 font-medium">Basado en promedio general</p>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="text-right">
+                                                        <div className="flex flex-col items-end">
+                                                            <div className="flex items-center gap-1 text-yellow-300">
+                                                                <Medal size={16} fill="currentColor" />
+                                                                <span className="text-2xl font-black">{honorRoll.find(h => h.id === student.id)?.average || metrics.finalAvg}</span>
+                                                            </div>
+                                                            <p className="text-[9px] uppercase font-bold tracking-widest text-indigo-200">Promedio</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Top 5 list horizontal */}
+                                                <div className="space-y-2">
+                                                    <p className="text-[10px] uppercase font-bold tracking-wider text-indigo-200">Top del Cuadro de Honor:</p>
+                                                    <div className="flex gap-2 overflow-x-auto pb-1 custom-scrollbar-white">
+                                                        {honorRoll.slice(0, 5).map((h, idx) => (
+                                                            <div key={h.id} className={`flex-shrink-0 flex items-center gap-2 p-2 rounded-xl border ${h.id === student.id ? 'bg-white text-indigo-700 border-white shadow-md' : 'bg-white/10 border-white/10 text-white/90'}`}>
+                                                                <span className="text-[10px] font-black w-3">{idx + 1}</span>
+                                                                <img
+                                                                    src={h.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(h.name)}&background=random`}
+                                                                    className="w-6 h-6 rounded-full object-cover"
+                                                                    alt=""
+                                                                />
+                                                                <div className="flex flex-col">
+                                                                    <span className="text-[9px] font-bold truncate max-w-[70px]">{h.id === student.id ? 'Tú' : h.name.split(' ')[0]}</span>
+                                                                    {h.average && <span className="text-[8px] opacity-80 font-black">{Number(h.average).toFixed(1)}</span>}
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+
+                                                <p className="text-xs font-bold italic text-center text-yellow-200 pt-1">
+                                                    {studentRank === 1 ? "¡Eres el número 1! ¡Espectacular!" :
+                                                     studentRank <= 3 ? "¡Excelente! Estás en el podio de honor." :
+                                                     "¡Gran esfuerzo! Sigue así para escalar posiciones."}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        // STANDARD MODE: Student is NOT in the Honor Roll (motivated view)
+                                        <div className="bg-gradient-to-br from-slate-800 to-indigo-950 p-6 rounded-[2.5rem] text-white shadow-xl relative overflow-hidden animate-fadeIn border border-indigo-900/30">
+                                            <div className="absolute top-0 right-0 p-4 opacity-10 transform translate-x-4 -translate-y-4">
+                                                <Trophy size={120} />
+                                            </div>
+
+                                            <div className="relative z-10 space-y-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="bg-white/10 p-2.5 rounded-2xl border border-white/5">
+                                                        <Trophy className="text-yellow-400" size={24} />
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="font-extrabold text-lg tracking-tight uppercase text-slate-100">Cuadro de Honor Escolar</h3>
+                                                        <p className="text-xs text-slate-300 font-medium opacity-90">Los 5 mejores promedios generales</p>
+                                                    </div>
+                                                </div>
+
+                                                {/* Top 5 list horizontal */}
+                                                <div className="flex gap-2 overflow-x-auto pb-1 custom-scrollbar-white mt-2">
+                                                    {honorRoll.slice(0, 5).length === 0 ? (
+                                                        <p className="text-xs text-slate-400 italic">No hay registros de cuadro de honor aún.</p>
+                                                    ) : (
+                                                        honorRoll.slice(0, 5).map((h, idx) => (
+                                                            <div key={h.id} className="flex-shrink-0 flex items-center gap-2 p-2 rounded-xl bg-white/5 border border-white/10 text-white/90">
+                                                                <span className="text-[10px] font-black w-3 text-yellow-400">{idx + 1}</span>
+                                                                <img
+                                                                    src={h.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(h.name)}&background=random`}
+                                                                    className="w-6 h-6 rounded-full object-cover"
+                                                                    alt=""
+                                                                />
+                                                                <div className="flex flex-col">
+                                                                    <span className="text-[9px] font-bold truncate max-w-[70px]">{h.name.split(' ')[0]}</span>
+                                                                    {h.average && <span className="text-[8px] opacity-80 font-black">{Number(h.average).toFixed(1)}</span>}
+                                                                </div>
+                                                            </div>
+                                                        ))
+                                                    )}
+                                                </div>
+
+                                                <p className="text-xs font-bold italic text-center text-indigo-300 pt-1">
+                                                    ✨ ¡Sigue esforzándote para ingresar al Cuadro de Honor escolar!
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* DETAILED AVERAGE BREAKDOWN CARD */}
+                                    <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 animate-fadeIn">
+                                        <div className="flex items-center gap-2 border-b border-slate-100 pb-3 mb-4">
+                                            <div className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg">
+                                                <Award size={18} />
+                                            </div>
+                                            <div>
+                                                <h4 className="font-extrabold text-sm text-slate-800">Criterios y Desglose del Promedio</h4>
+                                                <p className="text-[10px] text-slate-400 font-medium">Detalle del cálculo para obtener {metrics.finalAvg}</p>
+                                            </div>
+                                        </div>
+
+                                        {isWeighted ? (
+                                            <div className="space-y-4">
+                                                <p className="text-xs text-slate-500 font-semibold leading-relaxed">
+                                                    El colegio aplica una ponderación de calificaciones. A continuación, se muestra cómo se obtiene la nota de su hijo(a):
+                                                </p>
+                                                
+                                                <div className="grid grid-cols-2 gap-3 text-xs">
+                                                    {academicW > 0 && (
+                                                        <div className="bg-slate-50/70 p-3 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
+                                                            <div>
+                                                                <span className="font-black text-slate-700 block text-[10px] uppercase tracking-wider mb-1">Académico (NEM)</span>
+                                                                <span className="block text-slate-500">Nota: <strong className="text-slate-700">{academicVal.toFixed(1)}</strong></span>
+                                                                <span className="block text-slate-500">Peso: {academicW}%</span>
+                                                            </div>
+                                                            <span className="font-black text-indigo-600 mt-2 block text-xs">Suma: +{academicContrib.toFixed(2)}</span>
+                                                        </div>
+                                                    )}
+
+                                                    {homeworkW > 0 && (
+                                                        <div className="bg-slate-50/70 p-3 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
+                                                            <div>
+                                                                <span className="font-black text-slate-700 block text-[10px] uppercase tracking-wider mb-1">Tareas</span>
+                                                                <span className="block text-slate-500">Nota: <strong className="text-slate-700">{hwVal.toFixed(1)}</strong> <span className="text-[10px]">({metrics.hwPercentage}%)</span></span>
+                                                                <span className="block text-slate-500">Peso: {homeworkW}%</span>
+                                                            </div>
+                                                            <span className="font-black text-indigo-600 mt-2 block text-xs">Suma: +{hwContrib.toFixed(2)}</span>
+                                                        </div>
+                                                    )}
+
+                                                    {conductW > 0 && (
+                                                        <div className="bg-slate-50/70 p-3 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
+                                                            <div>
+                                                                <span className="font-black text-slate-700 block text-[10px] uppercase tracking-wider mb-1">Conducta</span>
+                                                                <span className="block text-slate-500">Nota: <strong className="text-slate-700">{conductVal.toFixed(1)}</strong></span>
+                                                                <span className="block text-slate-500">Peso: {conductW}%</span>
+                                                            </div>
+                                                            <span className="font-black text-indigo-600 mt-2 block text-xs">Suma: +{conductContrib.toFixed(2)}</span>
+                                                        </div>
+                                                    )}
+
+                                                    {attendanceW > 0 && (
+                                                        <div className="bg-slate-50/70 p-3 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
+                                                            <div>
+                                                                <span className="font-black text-slate-700 block text-[10px] uppercase tracking-wider mb-1">Asistencia</span>
+                                                                <span className="block text-slate-500">Nota: <strong className="text-slate-700">{attendanceVal.toFixed(1)}</strong> <span className="text-[10px]">({Math.round(metrics.attendanceRate)}%)</span></span>
+                                                                <span className="block text-slate-500">Peso: {attendanceW}%</span>
+                                                            </div>
+                                                            <span className="font-black text-indigo-600 mt-2 block text-xs">Suma: +{attendanceContrib.toFixed(2)}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <div className="text-[10px] text-slate-400 bg-slate-50 px-3 py-2.5 rounded-xl border border-slate-100 font-mono text-center">
+                                                    Cálculo: {academicW > 0 && `(${academicVal.toFixed(1)} × ${academicW}%)`}{homeworkW > 0 && ` + (${hwVal.toFixed(1)} × ${homeworkW}%)`}{conductW > 0 && ` + (${conductVal.toFixed(1)} × ${conductW}%)`}{attendanceW > 0 && ` + (${attendanceVal.toFixed(1)} × ${attendanceW}%)`} = <strong className="text-indigo-600">{metrics.finalAvg}</strong>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <p className="text-xs text-slate-500 italic font-semibold leading-relaxed">
+                                                El promedio general de su hijo(a) se calcula actualmente mediante el promedio académico simple de los parciales evaluados (100% Calificaciones NEM).
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })()}
+
                         {/* Summary Cards Grid */}
                         <div className="grid grid-cols-2 gap-4">
                             {/* Grades Card */}
@@ -1113,86 +1569,6 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                 <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">Conducta</span>
                             </div>
                         </div>
-
-                        {/* HONOR ROLL SECTION - ONLY IF STUDENT IS IN IT */}
-                        {(() => {
-                            const studentRank = honorRoll.findIndex(h => h.id === student?.id) + 1;
-                            if (studentRank === 0) return null;
-
-                            return (
-                                <div className="bg-gradient-to-br from-indigo-600 to-purple-700 p-6 rounded-[2rem] text-white shadow-xl relative overflow-hidden animate-bounce-subtle">
-                                    <div className="absolute top-0 right-0 p-4 opacity-20 transform translate-x-4 -translate-y-4">
-                                        <Trophy size={100} />
-                                    </div>
-
-                                    <div className="relative z-10">
-                                        <div className="flex items-center gap-3 mb-2">
-                                            <div className="bg-white/20 p-2 rounded-xl backdrop-blur-md">
-                                                <Award className="text-yellow-300" size={24} />
-                                            </div>
-                                            <div>
-                                                <h3 className="font-black text-lg tracking-tight uppercase">¡Cuadro de Honor!</h3>
-                                                <p className="text-xs text-indigo-100 font-medium opacity-90">Estás entre los mejores de la escuela</p>
-                                            </div>
-                                        </div>
-
-                                        <div className="bg-white/10 backdrop-blur-lg border border-white/10 rounded-2xl p-4 mt-4 flex items-center justify-between">
-                                            <div className="flex items-center gap-4">
-                                                <div className="relative">
-                                                    <img
-                                                        src={student?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(student?.name || '')}&background=random`}
-                                                        className="w-12 h-12 rounded-full border-2 border-yellow-400 shadow-lg"
-                                                        alt="You"
-                                                    />
-                                                    <div className="absolute -bottom-1 -right-1 bg-yellow-400 text-indigo-900 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black border-2 border-indigo-600">
-                                                        {studentRank}
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <p className="font-bold text-sm">Tu Lugar actual</p>
-                                                    <p className="text-xs text-indigo-100">Basado en tu promedio general</p>
-                                                </div>
-                                            </div>
-
-                                            <div className="text-right">
-                                                <div className="flex flex-col items-end">
-                                                    <div className="flex items-center gap-1 text-yellow-300">
-                                                        <Medal size={14} fill="currentColor" />
-                                                        <span className="text-xl font-black">{honorRoll.find(h => h.id === student?.id)?.average || '-'}</span>
-                                                    </div>
-                                                    <p className="text-[10px] uppercase font-bold tracking-widest text-indigo-200">Promedio</p>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="mt-4 flex gap-2 overflow-x-auto pb-2 custom-scrollbar-white">
-                                            {honorRoll.slice(0, 5).map((h, idx) => (
-                                                <div key={h.id} className={`flex-shrink-0 flex items-center gap-2 p-2 rounded-xl border ${h.id === student?.id ? 'bg-white text-indigo-600 border-white' : 'bg-white/5 border-white/10 text-white/80'}`}>
-                                                    <span className="text-[10px] font-black w-3">{idx + 1}</span>
-                                                    <img
-                                                        src={h.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(h.name)}&background=random`}
-                                                        className="w-6 h-6 rounded-full"
-                                                        alt=""
-                                                    />
-                                                    <div className="flex flex-col">
-                                                        <span className="text-[10px] font-bold truncate max-w-[60px]">{h.id === student?.id ? 'Tú' : h.name.split(' ')[0]}</span>
-                                                        {h.average && <span className="text-[8px] opacity-80 font-black">{Number(h.average).toFixed(1)}</span>}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-
-                                        <div className="mt-4 text-center">
-                                            <p className="text-[11px] font-bold italic text-indigo-50">
-                                                {studentRank === 1 ? "¡Eres el mejor! Sigue así, campeón." :
-                                                    studentRank <= 3 ? "¡Increíble! Estás en el podio de honor." :
-                                                        "¡Excelente trabajo! Sigue esforzándote para subir más."}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                        })()}
 
                         {/* Behavior Summary Section (New) */}
                         {behaviorLogs.filter(l => l.studentId === student?.id).length > 0 && (
