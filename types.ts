@@ -183,6 +183,10 @@ export interface SchoolConfig {
   schoolYear?: string; // e.g. "2024-2025"
   directorName?: string;
   staff?: StaffMember[]; // List of teachers/staff
+  includeHomeworkInAverage?: boolean;
+  academicWeight?: number;
+  homeworkWeight?: number;
+  conductWeight?: number;
 }
 
 export interface Notification {

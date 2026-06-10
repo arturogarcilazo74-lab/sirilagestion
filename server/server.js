@@ -347,16 +347,26 @@ app.get('/sirila-v1/honor-roll', async (req, res) => {
     try {
         let students = [];
         let totalAssignmentsCount = 0;
+        let schoolConfig = null;
 
         if (!useMySQL) {
             const data = readJSON();
             students = data.students || [];
             totalAssignmentsCount = (data.assignments || []).length;
+            schoolConfig = data.schoolConfig;
         } else {
             const pool = getPool();
             const [rows] = await pool.query('SELECT id, name, avatar, behavior_points, data_json FROM students');
             const [aRows] = await pool.query('SELECT COUNT(*) as count FROM assignments');
             totalAssignmentsCount = aRows[0].count;
+            
+            const [configRows] = await pool.query('SELECT * FROM school_config WHERE config_key = ?', ['main_config']);
+            if (configRows.length > 0) {
+                try {
+                    const val = configRows[0].config_value;
+                    schoolConfig = typeof val === 'string' ? JSON.parse(val) : val;
+                } catch (e) { schoolConfig = {}; }
+            }
 
             students = rows.map(r => {
                 let base = {};
@@ -390,8 +400,30 @@ app.get('/sirila-v1/honor-roll', async (req, res) => {
             const activeTrims = trimAvgs.filter(a => a > 0);
             const academicAvg = activeTrims.length > 0 ? activeTrims.reduce((a, b) => a + b, 0) / activeTrims.length : 0;
 
-            // El promedio final es SOLO el académico (calificaciones NEM)
-            return academicAvg;
+            if (academicAvg > 0) {
+                if (schoolConfig && schoolConfig.includeHomeworkInAverage) {
+                    const academicW = (schoolConfig.academicWeight ?? 70) / 100;
+                    const homeworkW = (schoolConfig.homeworkWeight ?? 30) / 100;
+                    const conductW = (schoolConfig.conductWeight ?? 0) / 100;
+
+                    // Homework score: percentage of completed tasks mapped to 0-10 scale
+                    const completedCount = Math.max(s.assignmentsCompleted || 0, (s.completedAssignmentIds?.length || 0));
+                    const cappedCompleted = Math.min(totalAssignmentsCount, completedCount);
+                    const hwScore = totalAssignmentsCount > 0 ? (cappedCompleted / totalAssignmentsCount) * 10 : 0;
+
+                    // Conduct score: base 8.0, min 5, max 10
+                    const conductScore = Math.max(5, Math.min(10, 8 + ((s.behaviorPoints || 0) * 0.1)));
+
+                    let weightedAvg = (academicAvg * academicW) + (hwScore * homeworkW) + (conductScore * conductW);
+                    const totalW = academicW + homeworkW + conductW;
+                    if (totalW > 0 && Math.abs(totalW - 1) > 0.01) {
+                        weightedAvg = weightedAvg / totalW;
+                    }
+                    return Math.min(10, weightedAvg);
+                }
+                return academicAvg;
+            }
+            return 0;
         };
 
         const honorRoll = students
@@ -1007,8 +1039,9 @@ app.post('/sirila-v1/parent/login', async (req, res) => {
             s.guardianPhone === loginId
         );
         if (matches.length > 0) {
-            if (matches.length === 1) return res.json({ success: true, student: matches[0] });
-            return res.json({ success: true, multiple: true, students: matches });
+            const schoolConfig = data.schoolConfig;
+            if (matches.length === 1) return res.json({ success: true, student: matches[0], schoolConfig });
+            return res.json({ success: true, multiple: true, students: matches, schoolConfig });
         }
         return res.status(401).json({ success: false, message: 'No se encontraron alumnos vinculados.' });
     }
@@ -1022,6 +1055,15 @@ app.post('/sirila-v1/parent/login', async (req, res) => {
         );
 
         if (rows.length > 0) {
+            let schoolConfig = null;
+            const [configRows] = await pool.query('SELECT * FROM school_config WHERE config_key = ?', ['main_config']);
+            if (configRows.length > 0) {
+                try {
+                    const val = configRows[0].config_value;
+                    schoolConfig = typeof val === 'string' ? JSON.parse(val) : val;
+                } catch (e) { schoolConfig = {}; }
+            }
+
             const students = rows.map(student => {
                 let parsed = student.data_json;
                 if (typeof parsed === 'string') {
@@ -1048,9 +1090,9 @@ app.post('/sirila-v1/parent/login', async (req, res) => {
             // If only one student, return directly as before for backward compatibility
             // If multiple, return the list for selection
             if (students.length === 1) {
-                res.json({ success: true, student: students[0] });
+                res.json({ success: true, student: students[0], schoolConfig });
             } else {
-                res.json({ success: true, multiple: true, students });
+                res.json({ success: true, multiple: true, students, schoolConfig });
             }
         } else {
             res.status(401).json({ success: false, message: 'No se encontraron alumnos vinculados a este identificador.' });

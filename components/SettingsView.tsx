@@ -433,6 +433,79 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ config, onSave, onEx
               </div>
             </div>
 
+            {/* Criterios de Calificación y Promedios */}
+            <div className="glass-card p-8 rounded-2xl border-l-4 border-violet-500">
+              <h3 className="font-bold text-slate-800 mb-6 flex items-center gap-2 border-b border-slate-200/60 pb-4 text-lg">
+                <BookOpen className="text-violet-600" size={24} />
+                Criterios de Calificación y Promedios
+              </h3>
+
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="includeHomeworkInAverage"
+                    checked={!!formData.includeHomeworkInAverage}
+                    onChange={e => handleChange('includeHomeworkInAverage', e.target.checked as any)}
+                    className="w-5 h-5 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 bg-white"
+                  />
+                  <label htmlFor="includeHomeworkInAverage" className="text-sm font-bold text-slate-700 cursor-pointer select-none">
+                    Tomar en cuenta actividades (tareas) y conducta para el promedio
+                  </label>
+                </div>
+
+                {formData.includeHomeworkInAverage && (
+                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-4 animate-fadeIn">
+                    <p className="text-xs text-slate-500 font-medium">
+                      Configura el porcentaje de peso que tendrá cada elemento. La suma de los tres debe ser exactamente 100%.
+                    </p>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 mb-1">Calificaciones NEM (%)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={formData.academicWeight ?? 70}
+                          onChange={e => handleChange('academicWeight', Math.max(0, Math.min(100, parseInt(e.target.value) || 0)) as any)}
+                          className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white text-slate-900 font-bold"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 mb-1">Actividades / Tareas (%)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={formData.homeworkWeight ?? 30}
+                          onChange={e => handleChange('homeworkWeight', Math.max(0, Math.min(100, parseInt(e.target.value) || 0)) as any)}
+                          className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white text-slate-900 font-bold"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 mb-1">Conducta (%)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={formData.conductWeight ?? 0}
+                          onChange={e => handleChange('conductWeight', Math.max(0, Math.min(100, parseInt(e.target.value) || 0)) as any)}
+                          className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white text-slate-900 font-bold"
+                        />
+                      </div>
+                    </div>
+
+                    {((formData.academicWeight ?? 70) + (formData.homeworkWeight ?? 30) + (formData.conductWeight ?? 0)) !== 100 && (
+                      <p className="text-xs text-rose-500 font-bold flex items-center gap-1">
+                        ⚠️ La suma de las ponderaciones debe ser 100% (Suma actual: {((formData.academicWeight ?? 70) + (formData.homeworkWeight ?? 30) + (formData.conductWeight ?? 0))}%).
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
             <div className="glass-card p-8 rounded-2xl border-l-4 border-indigo-500">
               <h3 className="font-bold text-slate-800 mb-6 flex items-center gap-2 border-b border-slate-200/60 pb-4 text-lg">
                 <Upload className="text-indigo-600" size={24} />

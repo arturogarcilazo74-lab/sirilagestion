@@ -736,6 +736,9 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
             const res = await api.parentLogin(trimmedId);
             console.log('[ParentsPortal] Login response:', { success: res.success, multiple: res.multiple, studentGroup: res.student?.group, studentName: res.student?.name });
             if (res.success) {
+                if (res.schoolConfig) {
+                    localStorage.setItem('SIRILA_CACHE_CONFIG', JSON.stringify(res.schoolConfig));
+                }
                 if (res.multiple && res.students) {
                     setStudentsToSelect(res.students);
                     setHasMultipleStudents(true);
@@ -765,6 +768,9 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
             const res = await api.parentLogin(loginId.trim().toUpperCase());
             if (res.success && res.student) {
                 setStudent(res.student);
+                if (res.schoolConfig) {
+                    localStorage.setItem('SIRILA_CACHE_CONFIG', JSON.stringify(res.schoolConfig));
+                }
             }
         } catch (e) { console.error("Refresh failed", e); }
     };

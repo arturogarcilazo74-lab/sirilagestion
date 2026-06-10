@@ -1,4 +1,24 @@
-import { Student, TrimesterGrade } from '../types';
+import { Student, TrimesterGrade, SchoolConfig } from '../types';
+
+// Helper to get cached assignments
+const getCachedAssignments = (): any[] => {
+  try {
+    const cached = localStorage.getItem('SIRILA_CACHE_ASSIGNMENTS');
+    return cached ? JSON.parse(cached) : [];
+  } catch (e) {
+    return [];
+  }
+};
+
+// Helper to get cached config
+const getCachedConfig = (): SchoolConfig | undefined => {
+  try {
+    const cached = localStorage.getItem('SIRILA_CACHE_CONFIG');
+    return cached ? JSON.parse(cached) : undefined;
+  } catch (e) {
+    return undefined;
+  }
+};
 
 /**
  * Calcula el promedio de un trimestre individual.
@@ -34,8 +54,12 @@ export const calculateAcademicAverage = (grades: any[]): number => {
  */
 export const calculateStudentMetrics = (
   student: Student,
-  assignments: { targetGroup?: string; id: string }[] = []
+  assignments?: { targetGroup?: string; id: string }[],
+  config?: SchoolConfig
 ) => {
+  const finalAssignments = assignments || getCachedAssignments();
+  const finalConfig = config || getCachedConfig();
+
   // Calcular promedios por trimestre
   const trimAvgs = (student.grades || []).map(getTrimesterAvg);
 
@@ -46,7 +70,7 @@ export const calculateStudentMetrics = (
     : 0;
 
   // Porcentaje de tareas completadas
-  const studentAssignments = assignments.filter(a =>
+  const studentAssignments = finalAssignments.filter(a =>
     !a.targetGroup || a.targetGroup === student.group
   );
   const completedCount = studentAssignments.filter(a =>
@@ -60,22 +84,48 @@ export const calculateStudentMetrics = (
   // Puntos de conducta
   const behaviorPoints = student.behaviorPoints || 0;
 
-  // Promedio final formateado (solo académico, como en StudentsView)
-  const finalAvg = academicAvg > 0 ? academicAvg.toFixed(1) : '-';
+  // Promedio final (con ponderación de tareas/conducta si está activado)
+  let finalAvgStr = '-';
+  if (academicAvg > 0) {
+    if (finalConfig?.includeHomeworkInAverage) {
+      const academicW = (finalConfig.academicWeight ?? 70) / 100;
+      const homeworkW = (finalConfig.homeworkWeight ?? 30) / 100;
+      const conductW = (finalConfig.conductWeight ?? 0) / 100;
+
+      const hwScore = hwPercentage / 10;
+      const conductScore = Math.max(5, Math.min(10, 8 + (behaviorPoints * 0.1)));
+
+      let weightedAvg = (academicAvg * academicW) + (hwScore * homeworkW) + (conductScore * conductW);
+      const totalW = academicW + homeworkW + conductW;
+      
+      // Ajustar si la suma de pesos es mayor a 0 y no es exactamente 1.0 (evita divisiones raras si está en edición)
+      if (totalW > 0 && Math.abs(totalW - 1) > 0.01) {
+        weightedAvg = weightedAvg / totalW;
+      }
+      finalAvgStr = Math.min(10, weightedAvg).toFixed(1);
+    } else {
+      finalAvgStr = academicAvg.toFixed(1);
+    }
+  }
 
   return {
     trimAvgs,
     academicAvg,
     hwPercentage,
     behaviorPoints,
-    finalAvg
+    finalAvg: finalAvgStr
   };
 };
 
 /**
  * Calcula el promedio global de un estudiante para reportes y análisis.
- * Retorna el promedio académico como número (sin formato).
+ * Retorna el promedio final ponderado o académico como número (sin formato).
  */
-export const getStudentGlobalAverage = (student: Student): number => {
-  return calculateAcademicAverage(student.grades);
+export const getStudentGlobalAverage = (
+  student: Student,
+  assignments?: any[],
+  config?: SchoolConfig
+): number => {
+  const metrics = calculateStudentMetrics(student, assignments, config);
+  return metrics.finalAvg === '-' ? 0 : parseFloat(metrics.finalAvg);
 };

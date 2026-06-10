@@ -206,5 +206,9 @@ export const DEFAULT_CONFIG: SchoolConfig = {
     schedule: '13:00 - 18:00 hrs',
     location: 'Guasave, Sinaloa',
     schoolYear: '2025-2026',
-    directorName: 'Profr. Director General'
+    directorName: 'Profr. Director General',
+    includeHomeworkInAverage: false,
+    academicWeight: 70,
+    homeworkWeight: 30,
+    conductWeight: 0
 };

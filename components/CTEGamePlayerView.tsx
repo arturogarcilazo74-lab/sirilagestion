@@ -26,9 +26,16 @@ export const CTEGamePlayerView: React.FC<CTEGamePlayerViewProps> = ({
     const [finalScore, setFinalScore] = useState(0);
     const [finalCorrect, setFinalCorrect] = useState(0);
 
+    const isDirector = currentUser.role === 'Director' || currentUser.role === 'PRINCIPAL' || currentUser.group === 'Dirección';
+
     const myAssignedGames = games.filter(game => {
-        if (!game.assignedTo) return false;
-        return game.assignedTo === 'ALL' || (Array.isArray(game.assignedTo) && game.assignedTo.includes(currentUser.id));
+        if (isDirector) return true;
+        if (!game.assignedTo) return true;
+        if (game.assignedTo === 'ALL') return true;
+        if (Array.isArray(game.assignedTo)) {
+            return game.assignedTo.includes(currentUser.id);
+        }
+        return false;
     });
 
     const myCompletedGameIds = new Set(
@@ -251,11 +258,19 @@ export const CTEGamePlayerView: React.FC<CTEGamePlayerViewProps> = ({
                 <p className="text-sm text-slate-500">Juegos y trivias asignadas por la dirección</p>
             </div>
 
-            {myAssignedGames.length === 0 ? (
+            {games.length === 0 ? (
                 <div className="text-center py-16 bg-white rounded-2xl border border-slate-100">
                     <Gamepad2 size={48} className="mx-auto text-slate-300 mb-4" />
-                    <h3 className="text-lg font-bold text-slate-600">No hay actividades asignadas</h3>
-                    <p className="text-sm text-slate-400 mt-1">La dirección aún no ha asignado juegos o trivias</p>
+                    <h3 className="text-lg font-bold text-slate-600">No hay juegos creados aún</h3>
+                    <p className="text-sm text-slate-400 mt-1">La dirección debe crear y asignar juegos desde el módulo de Consejo Técnico</p>
+                    <p className="text-xs text-slate-300 mt-3">Si acabas de crear un juego, espera unos segundos y recarga la página</p>
+                </div>
+            ) : myAssignedGames.length === 0 ? (
+                <div className="text-center py-16 bg-white rounded-2xl border border-slate-100">
+                    <Gamepad2 size={48} className="mx-auto text-slate-300 mb-4" />
+                    <h3 className="text-lg font-bold text-slate-600">Hay {games.length} juego(s) creado(s)</h3>
+                    <p className="text-sm text-slate-400 mt-1">Pero no tienes juegos asignados. Contacta a la dirección.</p>
+                    <p className="text-xs text-slate-300 mt-3">Tu usuario: {currentUser.name} (ID: {currentUser.id})</p>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
