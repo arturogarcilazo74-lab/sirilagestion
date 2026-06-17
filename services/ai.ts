@@ -148,7 +148,88 @@ export const generateDocumentContent = async (type: string, data: any): Promise<
   } else if (type === 'CITATORIO') {
     prompt = `Citatorio escolar formal. Escuela: ${data.schoolName}, Tutor de ${data.studentName}. Motivo: ${data.reason}. Fecha: ${data.dateTime}.`;
   } else if (type === 'FICHA_DESCRIPTIVA') {
-    prompt = `Ficha Descriptiva NEM de ${data.studentName}. Promedio: ${data.average}, Asistencia: ${data.attendanceRate}%, Conducta: ${data.behaviorPoints}, BAP: ${data.bap}. Fortalezas y áreas de mejora.`;
+    prompt = `Actúa como un Especialista Docente de la Nueva Escuela Mexicana (NEM) en México.
+Diseña una Ficha Descriptiva Individual de un Alumno de forma muy completa y profesional.
+
+DATOS DEL ALUMNO:
+- Nombre: ${data.studentName}
+- Promedio General: ${data.average}
+- Asistencia: ${data.attendanceRate}%
+- Puntos de Conducta: ${data.behaviorPoints}
+- BAP/USAER: ${data.bap}
+- Docente: ${data.teacherName}
+- Escuela: ${data.schoolName}
+${data.keywords ? `- Enfoque/Palabras Clave: ${data.keywords}` : ''}
+${data.contextContent ? `- Contexto adicional: ${data.contextContent}` : ''}
+
+ESTRUCTURA DE LA FICHA DESCRIPTIVA INDIVIDUAL (Formato Markdown rico, profesional y formal):
+
+1. PORTADA Y DATOS DE IDENTIFICACIÓN:
+   - Nombre de la escuela, CCT, Zona Escolar, Grado y Grupo, Nombre del Docente, Alumno y Ciclo Escolar.
+
+2. FORTALEZAS DETECTADAS:
+   - Describir de forma positiva y objetiva las habilidades académicas, socioemocionales, de comunicación y de participación del alumno.
+
+3. ÁREAS DE MEJORA Y OPORTUNIDADES:
+   - Identificar de manera formativa las áreas del aprendizaje o de conducta que requieren atención o reforzamiento.
+
+4. RECOMENDACIONES PEDAGÓGICAS PARA EL DOCENTE DEL SIGUIENTE CICLO:
+   - Sugerencias metodológicas, adaptaciones o estrategias para apoyar su aprendizaje el próximo año.
+
+5. RECOMENDACIONES PARA EL TRABAJO EN CASA (CON LA FAMILIA):
+   - Acciones concretas y sencillas que los padres pueden realizar en casa para coadyuvar en su desarrollo.
+
+6. AJUSTES RAZONABLES (Sólo si tiene BAP o USAER):
+   - Adecuaciones específicas para superar sus barreras de aprendizaje.
+
+7. FIRMAS:
+   - Espacios para firma del Docente de Grupo, Director(a) y del Padre/Tutor.
+
+Usa un tono formal, empático, formativo y estructurado en Markdown limpio y legible.`;
+  } else if (type === 'FICHA_DESCRIPTIVA_GRUPO') {
+    prompt = `Actúa como un Especialista Docente de la Nueva Escuela Mexicana (NEM) en México.
+Diseña una Ficha Descriptiva Grupal del grupo de alumnos de forma muy completa, profesional y formal.
+
+DATOS GENERALES:
+- Escuela: ${data.schoolName}
+- Docente: ${data.teacherName}
+- Grupo: ${data.groupName}
+- Ciclo Escolar: ${data.schoolYear}
+
+ESTADÍSTICAS DEL GRUPO:
+- Promedio General del Grupo: ${data.groupAverage}
+- Porcentaje de Asistencia Promedio: ${data.groupAttendance}%
+- Total de alumnos: ${data.totalStudents} (Hombres: ${data.totalBoys}, Mujeres: ${data.totalGirls})
+- Alumnos en alerta por Rezago Académico: ${data.atRiskCount}
+- Alumnos con Alerta de Conducta: ${data.conductRiskCount}
+- Alumnos con apoyo USAER/BAP: ${data.bapCount}
+
+DETALLES DE ALUMNOS EN ALERTA O CON BAP (Para contextualizar el análisis grupal):
+${JSON.stringify(data.specialStudents, null, 2)}
+
+ESTRUCTURA DE LA FICHA DESCRIPTIVA GRUPAL (Formato Markdown rico, profesional y formal):
+
+1. PORTADA Y DATOS DE IDENTIFICACIÓN:
+   - Nombre de la escuela, CCT, Zona Escolar, Grado y Grupo, Nombre del Docente y Ciclo Escolar.
+
+2. ANÁLISIS DE FORTALEZAS DEL GRUPO:
+   - Áreas académicas fuertes, participación, habilidades socioemocionales destacadas de forma general.
+
+3. ÁREAS DE MEJORA Y OPORTUNIDADES DEL GRUPO:
+   - Campos formativos que requieren atención prioritaria (Lenguajes, Saberes y Pensamiento Científico, Ética Naturaleza y Sociedades, De lo Humano y lo Comunitario).
+   - Desafíos comunes detectados en tareas, asistencia o conducta.
+
+4. RECOMENDACIONES GENERALES Y ESTRATEGIAS PEDAGÓGICAS PARA EL PRÓXIMO CICLO:
+   - Sugerencias concretas y prácticas para el docente que reciba a este grupo el próximo ciclo.
+   - Estrategias de intervención grupal.
+
+5. ACCIONES DE INCLUSIÓN Y AJUSTES RAZONABLES SUGERIDOS (BAP/USAER):
+   - Recomendaciones generales para atender la diversidad del grupo.
+
+6. FIRMAS DE AUTORIZACIÓN:
+   - Espacio para firma del Docente de Grupo y Director(a).
+   
+Usa un tono formal, analítico, empático y estructurado en Markdown limpio y legible.`;
   } else if (type === 'PLANEACION') {
     prompt = `Planeación Didáctica 4to Primaria. Tema: ${data.topic}, Materia: ${data.subject}. NEM Comunitario. Inicio, Desarrollo, Cierre y Adecuación BAP. ${data.contextContent ? `Contexto: ${data.contextContent}` : ''}`;
   } else if (type === 'ACTA_HECHOS') {

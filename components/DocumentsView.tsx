@@ -39,6 +39,23 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({ students, config, 
     const [generatedContent, setGeneratedContent] = useState<string>('');
     const [isGenerating, setIsGenerating] = useState(false);
 
+    // Batch descriptive sheet generation states
+    const [isBatchMode, setIsBatchMode] = useState(false);
+    const [includeGroupSheet, setIncludeGroupSheet] = useState(true);
+    const [selectedStudentIds, setSelectedStudentIds] = useState<Record<string, boolean>>({});
+    const [batchProgress, setBatchProgress] = useState<string | null>(null);
+
+    // Initialize all students as selected by default when students list loads
+    React.useEffect(() => {
+        if (students && students.length > 0) {
+            const initialIds: Record<string, boolean> = {};
+            students.forEach(s => {
+                initialIds[s.id] = true;
+            });
+            setSelectedStudentIds(initialIds);
+        }
+    }, [students]);
+
     // Form States
     const [incidentDetails, setIncidentDetails] = useState('');
     const [citationReason, setCitationReason] = useState('');
@@ -95,6 +112,126 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({ students, config, 
     const handleGenerate = async () => {
         setIsGenerating(true);
         setGeneratedContent('');
+
+        // --- BATCH GENERATION FOR FICHA DESCRIPTIVA ---
+        if (selectedType === 'FICHA_DESCRIPTIVA' && isBatchMode) {
+            setBatchProgress('Iniciando generación en lote...');
+            let combinedContent = '';
+
+            // 1. Generate Group Descriptive Sheet if selected
+            if (includeGroupSheet) {
+                setBatchProgress('Generando Ficha Descriptiva del Grupo...');
+                try {
+                    const totalStudents = students.length;
+                    const totalBoys = students.filter(s => s.sex === 'HOMBRE').length;
+                    const totalGirls = students.filter(s => s.sex === 'MUJER').length;
+                    
+                    let groupAverage = '0';
+                    const studentsWithGrades = students.filter(s => s.grades && s.grades.length > 0);
+                    if (studentsWithGrades.length > 0) {
+                        const totalAvg = studentsWithGrades.reduce((acc, s) => acc + getStudentGlobalAverage(s), 0);
+                        groupAverage = (totalAvg / studentsWithGrades.length).toFixed(1);
+                    }
+
+                    let groupAttendance = '0';
+                    let totalDays = 0;
+                    let totalPresent = 0;
+                    students.forEach(s => {
+                        const dates = Object.values(s.attendance || {});
+                        totalDays += dates.length;
+                        totalPresent += dates.filter(d => d === 'Presente').length;
+                    });
+                    groupAttendance = totalDays > 0 ? ((totalPresent / totalDays) * 100).toFixed(0) : '0';
+
+                    const atRiskCount = students.filter(s => {
+                        const avg = getStudentGlobalAverage(s);
+                        return (avg > 0 && avg < 6);
+                    }).length;
+                    const conductRiskCount = students.filter(s => s.behaviorPoints < 0).length;
+                    const bapCount = students.filter(s => s.usaer || (s.bap && s.bap !== 'NINGUNA')).length;
+
+                    const specialStudents = students.filter(s => {
+                        const avg = getStudentGlobalAverage(s);
+                        return (avg > 0 && avg < 6.5) || s.behaviorPoints < 0 || s.usaer || (s.bap && s.bap !== 'NINGUNA');
+                    }).map(s => ({
+                        name: s.name,
+                        average: s.grades?.length ? getStudentGlobalAverage(s).toFixed(1) : 'N/A',
+                        bap: s.bap || 'Ninguna',
+                        usaer: s.usaer ? 'Sí' : 'No',
+                        behavior: s.behaviorPoints
+                    }));
+
+                    const groupData = {
+                        schoolName: config.schoolName,
+                        teacherName: config.teacherName,
+                        groupName: config.gradeGroup,
+                        schoolYear: config.schoolYear || `${new Date().getFullYear()}-${new Date().getFullYear() + 1}`,
+                        groupAverage,
+                        groupAttendance,
+                        totalStudents,
+                        totalBoys,
+                        totalGirls,
+                        atRiskCount,
+                        conductRiskCount,
+                        bapCount,
+                        specialStudents
+                    };
+
+                    const groupContent = await generateDocumentContent('FICHA_DESCRIPTIVA_GRUPO', groupData);
+                    combinedContent += groupContent;
+                } catch (error) {
+                    console.error("Error generating group sheet:", error);
+                    combinedContent += `# ERROR AL GENERAR FICHA DEL GRUPO\n\n${error instanceof Error ? error.message : String(error)}`;
+                }
+            }
+
+            // 2. Generate Student Descriptive Sheets
+            const selectedStudents = students.filter(s => selectedStudentIds[s.id]);
+            for (let i = 0; i < selectedStudents.length; i++) {
+                const student = selectedStudents[i];
+                setBatchProgress(`Generando Ficha de ${student.name} (${i + 1}/${selectedStudents.length})...`);
+                
+                if (combinedContent) {
+                    combinedContent += '\n\n<!-- PAGE_BREAK -->\n\n';
+                }
+
+                try {
+                    const average = student.grades?.length
+                        ? getStudentGlobalAverage(student).toFixed(1)
+                        : 'N/A';
+
+                    const totalAttendanceDays = Object.keys(student.attendance || {}).length;
+                    const presentDays = Object.values(student.attendance || {}).filter(s => s === 'Presente').length;
+                    const attendanceRate = totalAttendanceDays > 0 ? ((presentDays / totalAttendanceDays) * 100).toFixed(0) : '100';
+
+                    const studentData = {
+                        studentName: student.name,
+                        average,
+                        attendanceRate,
+                        behaviorPoints: student.behaviorPoints || 0,
+                        bap: student.bap || 'Ninguna',
+                        keywords: keywords,
+                        teacherName: config.teacherName,
+                        schoolName: config.schoolName,
+                        contextContent: contextContent
+                    };
+
+                    const studentContent = await generateDocumentContent('FICHA_DESCRIPTIVA', studentData);
+                    combinedContent += studentContent;
+                } catch (error) {
+                    console.error(`Error generating sheet for ${student.name}:`, error);
+                    combinedContent += `# ERROR AL GENERAR FICHA DE ${student.name.toUpperCase()}\n\n${error instanceof Error ? error.message : String(error)}`;
+                }
+
+                // Add a small delay between generations to avoid hitting rate limits or blocking UI
+                await new Promise(resolve => setTimeout(resolve, 800));
+            }
+
+            setGeneratedContent(combinedContent);
+            setBatchProgress(null);
+            setIsGenerating(false);
+            return;
+        }
 
         const student = students.find(s => s.id === selectedStudentId);
         const studentName = student ? student.name : "Alumno General";
@@ -626,10 +763,13 @@ Docente:               ${student ? getTeacherForStudent(config, student.group) :
                 </div>
             `);
 
-            // Content with Justification
+            // Content with Justification and Page Breaks
+            let formattedContent = generatedContent.replace(/\n/g, '<br>');
+            formattedContent = formattedContent.replace(/<!-- PAGE_BREAK -->/g, '<div style="page-break-before: always;"></div>');
+
             printWindow.document.write(`
                 <div style="text-align: justify; font-size: 12pt;">
-                    ${generatedContent.replace(/\n/g, '<br>')}
+                    ${formattedContent}
                 </div>
             `);
 
@@ -688,25 +828,111 @@ Docente:               ${student ? getTeacherForStudent(config, student.group) :
                     <div className="glass-card p-6 rounded-2xl">
                         <h3 className="font-bold text-slate-800 mb-4">Detalles</h3>
                         <div className="space-y-4">
-                            {selectedType !== 'PLANEACION' && selectedType !== 'PRESENTACION_RESULTADOS' && selectedType !== 'LISTA_ASISTENCIA_PADRES' && selectedType !== 'PLAN_REZAGO' && (
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
-                                        {(selectedType === 'INFORME_PADRES' || selectedType === 'INFORME_ACTIVIDADES') ? 'Alumno (Obligatorio)' : 'Estudiante'}
-                                    </label>
-                                    <select
-                                        value={selectedStudentId}
-                                        onChange={(e) => setSelectedStudentId(e.target.value)}
-                                        className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white/80 ${(selectedType === 'INFORME_PADRES' || selectedType === 'INFORME_ACTIVIDADES') && !selectedStudentId ? 'border-red-400 bg-red-50' : 'border-slate-300'}`}
-                                    >
-                                        <option value="">Seleccionar Alumno...</option>
-                                        {students.map(s => (
-                                            <option key={s.id} value={s.id}>{s.name}</option>
-                                        ))}
-                                    </select>
-                                    {(selectedType === 'INFORME_PADRES' || selectedType === 'INFORME_ACTIVIDADES') && !selectedStudentId && (
-                                        <p className="text-xs text-red-500 mt-1 font-medium">* Debes seleccionar un alumno para generar el informe</p>
-                                    )}
+                            {selectedType === 'FICHA_DESCRIPTIVA' && (
+                                <div className="mb-4">
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Modo de Generación</label>
+                                    <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl">
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsBatchMode(false)}
+                                            className={`py-2 text-xs font-bold rounded-lg transition-all ${!isBatchMode ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+                                        >
+                                            Individual
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsBatchMode(true)}
+                                            className={`py-2 text-xs font-bold rounded-lg transition-all ${isBatchMode ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+                                        >
+                                            Generar en Lote
+                                        </button>
+                                    </div>
                                 </div>
+                            )}
+
+                            {selectedType !== 'PLANEACION' && selectedType !== 'PRESENTACION_RESULTADOS' && selectedType !== 'LISTA_ASISTENCIA_PADRES' && selectedType !== 'PLAN_REZAGO' && (
+                                <>
+                                    {selectedType === 'FICHA_DESCRIPTIVA' && isBatchMode ? (
+                                        <div className="space-y-4 border border-indigo-100 bg-indigo-50/20 p-4 rounded-xl">
+                                            <div className="flex items-center gap-2">
+                                                <input
+                                                    type="checkbox"
+                                                    id="includeGroupSheet"
+                                                    checked={includeGroupSheet}
+                                                    onChange={(e) => setIncludeGroupSheet(e.target.checked)}
+                                                    className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 bg-white cursor-pointer"
+                                                />
+                                                <label htmlFor="includeGroupSheet" className="text-xs font-bold text-slate-700 cursor-pointer select-none">
+                                                    Generar Ficha del Grupo
+                                                </label>
+                                            </div>
+
+                                            <div className="border-t border-slate-200/60 pt-3">
+                                                <div className="flex justify-between items-center mb-2">
+                                                    <label className="block text-xs font-bold text-slate-500 uppercase">Alumnos a Generar</label>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <input
+                                                            type="checkbox"
+                                                            id="selectAllStudents"
+                                                            checked={students.length > 0 && students.every(s => selectedStudentIds[s.id])}
+                                                            onChange={(e) => {
+                                                                const checked = e.target.checked;
+                                                                const newIds: Record<string, boolean> = {};
+                                                                students.forEach(s => {
+                                                                    newIds[s.id] = checked;
+                                                                });
+                                                                setSelectedStudentIds(newIds);
+                                                            }}
+                                                            className="w-3.5 h-3.5 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 bg-white cursor-pointer"
+                                                        />
+                                                        <label htmlFor="selectAllStudents" className="text-xs font-bold text-slate-500 cursor-pointer select-none">Todos</label>
+                                                    </div>
+                                                </div>
+
+                                                <div className="max-h-48 overflow-y-auto border border-slate-200 rounded-lg p-2 bg-white/80 space-y-1.5 custom-scrollbar">
+                                                    {students.map(s => (
+                                                        <div key={s.id} className="flex items-center gap-2 hover:bg-slate-50 p-1.5 rounded transition-colors">
+                                                            <input
+                                                                type="checkbox"
+                                                                id={`check-${s.id}`}
+                                                                checked={!!selectedStudentIds[s.id]}
+                                                                onChange={(e) => {
+                                                                    setSelectedStudentIds(prev => ({
+                                                                        ...prev,
+                                                                        [s.id]: e.target.checked
+                                                                    }));
+                                                                }}
+                                                                className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 bg-white cursor-pointer"
+                                                            />
+                                                            <label htmlFor={`check-${s.id}`} className="text-xs font-medium text-slate-700 cursor-pointer select-none truncate">
+                                                                {s.name}
+                                                            </label>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+                                                {(selectedType === 'INFORME_PADRES' || selectedType === 'INFORME_ACTIVIDADES') ? 'Alumno (Obligatorio)' : 'Estudiante'}
+                                            </label>
+                                            <select
+                                                value={selectedStudentId}
+                                                onChange={(e) => setSelectedStudentId(e.target.value)}
+                                                className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white/80 ${(selectedType === 'INFORME_PADRES' || selectedType === 'INFORME_ACTIVIDADES') && !selectedStudentId ? 'border-red-400 bg-red-50' : 'border-slate-300'}`}
+                                            >
+                                                <option value="">Seleccionar Alumno...</option>
+                                                {students.map(s => (
+                                                    <option key={s.id} value={s.id}>{s.name}</option>
+                                                ))}
+                                            </select>
+                                            {(selectedType === 'INFORME_PADRES' || selectedType === 'INFORME_ACTIVIDADES') && !selectedStudentId && (
+                                                <p className="text-xs text-red-500 mt-1 font-medium">* Debes seleccionar un alumno para generar el informe</p>
+                                            )}
+                                        </div>
+                                    )}
+                                </>
                             )}
 
                             {selectedType === 'INCIDENCIA' && (
@@ -1007,11 +1233,11 @@ Docente:               ${student ? getTeacherForStudent(config, student.group) :
 
                             <button
                                 onClick={handleGenerate}
-                                disabled={isGenerating || ((selectedType === 'INFORME_PADRES' || selectedType === 'INFORME_ACTIVIDADES') && !selectedStudentId)}
+                                disabled={isGenerating || ((selectedType === 'INFORME_PADRES' || selectedType === 'INFORME_ACTIVIDADES') && !selectedStudentId) || (selectedType === 'FICHA_DESCRIPTIVA' && isBatchMode && !includeGroupSheet && !students.some(s => selectedStudentIds[s.id]))}
                                 className={`w-full py-3 rounded-xl font-bold shadow-lg transition-all active:scale-95 disabled:opacity-70 flex items-center justify-center gap-2 mt-4 ${selectedType === 'INFORME_PADRES' ? 'bg-teal-600 hover:bg-teal-700 text-white' : selectedType === 'INFORME_ACTIVIDADES' ? 'bg-orange-600 hover:bg-orange-700 text-white' : selectedType === 'LISTA_ASISTENCIA_PADRES' ? 'bg-purple-600 hover:bg-purple-700 text-white' : selectedType === 'PLAN_REZAGO' ? 'bg-amber-600 hover:bg-amber-700 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}
                             >
                                 {isGenerating ? <span className="animate-spin">✨</span> : <FileText size={18} />}
-                                {isGenerating ? 'Generando...' : selectedType === 'INFORME_PADRES' ? 'Generar Informe con Análisis IA' : selectedType === 'INFORME_ACTIVIDADES' ? 'Generar Informe de Actividades' : selectedType === 'LISTA_ASISTENCIA_PADRES' ? 'Generar Lista de Asistencia' : selectedType === 'PLAN_REZAGO' ? 'Generar Plan de Intervención' : 'Generar Documento'}
+                                {isGenerating ? (batchProgress || 'Generando...') : selectedType === 'FICHA_DESCRIPTIVA' && isBatchMode ? 'Generar Fichas en Lote' : selectedType === 'INFORME_PADRES' ? 'Generar Informe con Análisis IA' : selectedType === 'INFORME_ACTIVIDADES' ? 'Generar Informe de Actividades' : selectedType === 'LISTA_ASISTENCIA_PADRES' ? 'Generar Lista de Asistencia' : selectedType === 'PLAN_REZAGO' ? 'Generar Plan de Intervención' : 'Generar Documento'}
                             </button>
                         </div>
                     </div>
@@ -1051,8 +1277,19 @@ Docente:               ${student ? getTeacherForStudent(config, student.group) :
 
                         <div className="flex-1 bg-white border border-slate-200 rounded-xl p-8 shadow-inner overflow-y-auto custom-scrollbar">
                             {generatedContent ? (
-                                <div className="prose prose-slate max-w-none whitespace-pre-line font-serif text-slate-800">
-                                    {generatedContent}
+                                <div className="prose prose-slate max-w-none whitespace-pre-line font-serif text-slate-800 space-y-6">
+                                    {generatedContent.split('<!-- PAGE_BREAK -->').map((part, index) => (
+                                        <React.Fragment key={index}>
+                                            {index > 0 && (
+                                                <div className="my-8 border-t-2 border-dashed border-indigo-300 relative print:hidden py-4">
+                                                    <span className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-white px-3 text-xs font-bold text-indigo-500 uppercase tracking-wider border border-indigo-200 rounded-full shadow-sm">
+                                                        Salto de Página
+                                                    </span>
+                                                </div>
+                                            )}
+                                            <div className="min-h-[200px]">{part.trim()}</div>
+                                        </React.Fragment>
+                                    ))}
                                 </div>
                             ) : (
                                 <div className="h-full flex flex-col items-center justify-center text-slate-400">
