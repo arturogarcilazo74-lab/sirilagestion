@@ -161,6 +161,57 @@ export const generateDocumentContent = async (type: string, data: any): Promise<
     prompt = `Guion para junta de padres. Escuela: ${data.schoolName}. Datos grupo: Promedio ${data.groupAverage}, Asistencia ${data.groupAttendance}%, Riesgo ${data.atRiskCount}. Puntos: Bienvenida, Logros, Oportunidades, Plan, Cierre. Tono NEM.`;
   } else if (type === 'OBSERVACIONES_BOLETA') {
     prompt = `Observaciones boleta NEM para ${data.studentName}. Campos: Lenguajes, Saberes, Ética, Humano. Breve (40 palabras cada uno).`;
+  } else if (type === 'PLAN_REZAGO') {
+    prompt = `Actúa como un Especialista Docente de la Nueva Escuela Mexicana (NEM) en México.
+Diseña un Plan de Trabajo de Intervención Educativa para atender el rezago escolar del grupo.
+
+DATOS GENERALES:
+- Escuela: ${data.schoolName}
+- Docente: ${data.teacherName}
+- Periodo de Aplicación: Del 22 al 30 de junio de 2026 (7 días hábiles de clases: lunes 22, martes 23, miércoles 24, jueves 25, viernes 26, lunes 29, martes 30 de junio)
+- Enfoque / Campos Formativos priorizados: ${data.subject || 'Lenguajes y Saberes y Pensamiento Científico'}
+- Temas priorizados: ${data.topic || 'Comprensión lectora, operaciones básicas y cálculo mental'}
+
+ALUMNOS EN SITUACIÓN DE REZAGO ACADÉMICO / ALERTA:
+${JSON.stringify(data.laggingStudents, null, 2)}
+
+ESTRUCTURA DEL PLAN DE INTERVENCIÓN (Formato Markdown rico, profesional y formal):
+
+1. PORTADA Y DATOS DE IDENTIFICACIÓN:
+   - Nombre de la escuela, CCT, Zona Escolar, Grado y Grupo, Nombre del Docente y Ciclo Escolar.
+
+2. JUSTIFICACIÓN Y DIAGNÓSTICO DEL GRUPO:
+   - Describe brevemente la situación de rezago del grupo, fundamentado en los datos de los alumnos en alerta (menciona nombres de los alumnos en rezago y sus principales debilidades/desafíos en tareas, asistencia o conducta de forma resumida).
+   - Justifica la intervención en este periodo final de junio.
+
+3. PROPÓSITOS Y METAS PEDAGÓGICAS:
+   - Objetivos medibles para los alumnos en rezago.
+
+4. CRONOGRAMA DE ACTIVIDADES DIARIAS (Del 22 al 30 de junio - Detallado día por día):
+   - Genera actividades diarias específicas y muy dinámicas enfocadas en consolidar los aprendizajes prioritarios (lectura comprensiva, producción de textos, cálculo mental, operaciones básicas y problemas razonados).
+   - Para cada día de clases (lunes 22 al martes 30 de junio de 2026, excluyendo fin de semana), detalla:
+     * Inicio (Actividad de activación o lúdica - 15 min)
+     * Desarrollo (Actividad central con andamiaje pedagógico y hojas de trabajo - 35 min)
+     * Cierre (Evaluación formativa rápida o reflexión - 10 min)
+   - Debe incluir cronograma para:
+     - Lunes 22 de junio
+     - Martes 23 de junio
+     - Miércoles 24 de junio
+     - Jueves 25 de junio
+     - Viernes 26 de junio
+     - Lunes 29 de junio
+     - Martes 30 de junio
+
+5. ESTRATEGIAS DE INCLUSIÓN Y AJUSTES RAZONABLES (BAP/USAER):
+   - Adecuaciones curriculares específicas basadas en los alumnos con BAP o USAER de la lista.
+
+6. EVALUACIÓN FORMATIVA Y SEGUIMIENTO:
+   - Criterios e instrumentos de evaluación formativa recomendados.
+
+7. FIRMAS DE AUTORIZACIÓN:
+   - Espacios para firmas de: Docente de Grupo, Director(a) de la Escuela, y Maestro(a) de Apoyo USAER.
+
+Usa un tono formal, empático y estructurado en Markdown limpio y legible.`;
   }
 
   try {

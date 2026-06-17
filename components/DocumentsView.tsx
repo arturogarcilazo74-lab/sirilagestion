@@ -4,7 +4,7 @@ import { generateDocumentContent } from '../services/ai';
 import { generateStudentAnalysis } from '../services/ai';
 import { getTeacherForStudent, generateAttendanceListPDF } from '../services/pdfGenerator';
 import { calculateStudentMetrics, getTrimesterAvg, getStudentGlobalAverage } from '../services/gradeUtils';
-import { FileText, Download, Printer, Copy, CheckCircle, AlertTriangle, Calendar, User, FileOutput, Bus, Upload } from 'lucide-react';
+import { FileText, Download, Printer, Copy, CheckCircle, AlertTriangle, Calendar, User, FileOutput, Bus, Upload, ClipboardList } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 
 // Set worker source for pdfjs
@@ -31,7 +31,7 @@ interface DocumentsViewProps {
     assignments?: Assignment[];
 }
 
-type DocumentType = 'INCIDENCIA' | 'CITATORIO' | 'FICHA_DESCRIPTIVA' | 'PLANEACION' | 'ACTA_HECHOS' | 'PERMISO_SALIDA' | 'AUTORIZACION_EVENTO' | 'PRESENTACION_RESULTADOS' | 'OBSERVACIONES_BOLETA' | 'INFORME_PADRES' | 'INFORME_ACTIVIDADES' | 'LISTA_ASISTENCIA_PADRES';
+type DocumentType = 'INCIDENCIA' | 'CITATORIO' | 'FICHA_DESCRIPTIVA' | 'PLANEACION' | 'ACTA_HECHOS' | 'PERMISO_SALIDA' | 'AUTORIZACION_EVENTO' | 'PRESENTACION_RESULTADOS' | 'OBSERVACIONES_BOLETA' | 'INFORME_PADRES' | 'INFORME_ACTIVIDADES' | 'LISTA_ASISTENCIA_PADRES' | 'PLAN_REZAGO';
 
 export const DocumentsView: React.FC<DocumentsViewProps> = ({ students, config, initialType, assignments = [] }) => {
     const [selectedType, setSelectedType] = useState<DocumentType>(initialType || 'INCIDENCIA');
@@ -527,12 +527,39 @@ Docente:               ${student ? getTeacherForStudent(config, student.group) :
             assignmentsCount = students.reduce((acc, s) => acc + (s.completedAssignmentIds?.length || 0), 0);
         }
 
+        // Detect students in academic lag (rezago)
+        const laggingStudentsList = students.filter(s => {
+            const average = s.grades?.length ? getStudentGlobalAverage(s) : 0;
+            const hasLowGrades = average > 0 && average < 6.5;
+
+            const homeworkRate = s.totalAssignments > 0 ? (s.assignmentsCompleted / s.totalAssignments) : 1;
+            const hasLowHomework = homeworkRate < 0.6;
+
+            const totalAttendanceDays = Object.keys(s.attendance || {}).length;
+            const presentDays = Object.values(s.attendance || {}).filter(st => st === 'Presente').length;
+            const attendanceRate = totalAttendanceDays > 0 ? (presentDays / totalAttendanceDays) : 1;
+            const hasLowAttendance = attendanceRate < 0.8;
+
+            return hasLowGrades || hasLowHomework || hasLowAttendance || s.behaviorPoints < 0;
+        }).map(s => ({
+            name: s.name,
+            average: s.grades?.length ? getStudentGlobalAverage(s).toFixed(1) : 'N/A',
+            bap: s.bap || 'Ninguna',
+            usaer: s.usaer ? 'Sí' : 'No',
+            attendance: Object.keys(s.attendance || {}).length > 0
+                ? (Object.values(s.attendance || {}).filter(st => st === 'Presente').length / Object.keys(s.attendance || {}).length * 100).toFixed(0) + '%'
+                : '100%',
+            homework: s.totalAssignments > 0 ? Math.round(s.assignmentsCompleted / s.totalAssignments * 100) + '%' : '100%',
+            behavior: s.behaviorPoints
+        }));
+
         const data = {
             studentName,
             guardianName,
             schoolName: config.schoolName,
             teacherName: config.teacherName,
             date: new Date().toLocaleDateString(),
+            laggingStudents: laggingStudentsList,
             incidentDetails,
             reason: citationReason,
             dateTime: citationDate,
@@ -632,6 +659,7 @@ Docente:               ${student ? getTeacherForStudent(config, student.group) :
                                 { id: 'INFORME_PADRES', label: 'Informe para Padres (Completo)', icon: FileText },
                                 { id: 'INFORME_ACTIVIDADES', label: 'Informe de Actividades Pendientes', icon: AlertTriangle },
                                 { id: 'LISTA_ASISTENCIA_PADRES', label: 'Lista de Asistencia - Junta Padres', icon: Calendar },
+                                { id: 'PLAN_REZAGO', label: 'Plan de Intervención de Rezago (22-30 Jun)', icon: ClipboardList },
                                 { id: 'INCIDENCIA', label: 'Reporte de Incidencia', icon: AlertTriangle },
                                 { id: 'ACTA_HECHOS', label: 'Acta de Hechos', icon: FileText },
                                 { id: 'AUTORIZACION_EVENTO', label: 'Autorización Evento', icon: Bus },
@@ -660,7 +688,7 @@ Docente:               ${student ? getTeacherForStudent(config, student.group) :
                     <div className="glass-card p-6 rounded-2xl">
                         <h3 className="font-bold text-slate-800 mb-4">Detalles</h3>
                         <div className="space-y-4">
-                            {selectedType !== 'PLANEACION' && selectedType !== 'PRESENTACION_RESULTADOS' && selectedType !== 'LISTA_ASISTENCIA_PADRES' && (
+                            {selectedType !== 'PLANEACION' && selectedType !== 'PRESENTACION_RESULTADOS' && selectedType !== 'LISTA_ASISTENCIA_PADRES' && selectedType !== 'PLAN_REZAGO' && (
                                 <div>
                                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
                                         {(selectedType === 'INFORME_PADRES' || selectedType === 'INFORME_ACTIVIDADES') ? 'Alumno (Obligatorio)' : 'Estudiante'}
@@ -731,28 +759,43 @@ Docente:               ${student ? getTeacherForStudent(config, student.group) :
                                 </div>
                             )}
 
-                            {selectedType === 'PLANEACION' && (
+                            {(selectedType === 'PLANEACION' || selectedType === 'PLAN_REZAGO') && (
                                 <>
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Materia / Campo Formativo</label>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+                                            {selectedType === 'PLAN_REZAGO' ? 'Campos Formativos / Asignaturas a Atender' : 'Materia / Campo Formativo'}
+                                        </label>
                                         <input
                                             type="text"
                                             value={planningSubject}
                                             onChange={(e) => setPlanningSubject(e.target.value)}
-                                            placeholder="Ej. Saberes y Pensamiento Científico"
+                                            placeholder={selectedType === 'PLAN_REZAGO' ? 'Ej. Lenguajes y Saberes' : 'Ej. Saberes y Pensamiento Científico'}
                                             className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white/80"
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Tema</label>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+                                            {selectedType === 'PLAN_REZAGO' ? 'Temas o Aprendizajes Clave a Priorizar' : 'Tema'}
+                                        </label>
                                         <input
                                             type="text"
                                             value={planningTopic}
                                             onChange={(e) => setPlanningTopic(e.target.value)}
-                                            placeholder="Ej. El ciclo del agua"
+                                            placeholder={selectedType === 'PLAN_REZAGO' ? 'Ej. Operaciones básicas, lectoescritura' : 'Ej. El ciclo del agua'}
                                             className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white/80"
                                         />
                                     </div>
+                                    {selectedType === 'PLAN_REZAGO' && (
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Periodo de Aplicación</label>
+                                            <input
+                                                type="text"
+                                                disabled
+                                                value="Del 22 al 30 de junio de 2026 (7 días hábiles)"
+                                                className="w-full p-3 border border-slate-200 rounded-lg bg-slate-50 text-slate-500 outline-none"
+                                            />
+                                        </div>
+                                    )}
                                 </>
                             )}
 
@@ -965,10 +1008,10 @@ Docente:               ${student ? getTeacherForStudent(config, student.group) :
                             <button
                                 onClick={handleGenerate}
                                 disabled={isGenerating || ((selectedType === 'INFORME_PADRES' || selectedType === 'INFORME_ACTIVIDADES') && !selectedStudentId)}
-                                className={`w-full py-3 rounded-xl font-bold shadow-lg transition-all active:scale-95 disabled:opacity-70 flex items-center justify-center gap-2 mt-4 ${selectedType === 'INFORME_PADRES' ? 'bg-teal-600 hover:bg-teal-700 text-white' : selectedType === 'INFORME_ACTIVIDADES' ? 'bg-orange-600 hover:bg-orange-700 text-white' : selectedType === 'LISTA_ASISTENCIA_PADRES' ? 'bg-purple-600 hover:bg-purple-700 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}
+                                className={`w-full py-3 rounded-xl font-bold shadow-lg transition-all active:scale-95 disabled:opacity-70 flex items-center justify-center gap-2 mt-4 ${selectedType === 'INFORME_PADRES' ? 'bg-teal-600 hover:bg-teal-700 text-white' : selectedType === 'INFORME_ACTIVIDADES' ? 'bg-orange-600 hover:bg-orange-700 text-white' : selectedType === 'LISTA_ASISTENCIA_PADRES' ? 'bg-purple-600 hover:bg-purple-700 text-white' : selectedType === 'PLAN_REZAGO' ? 'bg-amber-600 hover:bg-amber-700 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}
                             >
                                 {isGenerating ? <span className="animate-spin">✨</span> : <FileText size={18} />}
-                                {isGenerating ? 'Generando...' : selectedType === 'INFORME_PADRES' ? 'Generar Informe con Análisis IA' : selectedType === 'INFORME_ACTIVIDADES' ? 'Generar Informe de Actividades' : selectedType === 'LISTA_ASISTENCIA_PADRES' ? 'Generar Lista de Asistencia' : 'Generar Documento'}
+                                {isGenerating ? 'Generando...' : selectedType === 'INFORME_PADRES' ? 'Generar Informe con Análisis IA' : selectedType === 'INFORME_ACTIVIDADES' ? 'Generar Informe de Actividades' : selectedType === 'LISTA_ASISTENCIA_PADRES' ? 'Generar Lista de Asistencia' : selectedType === 'PLAN_REZAGO' ? 'Generar Plan de Intervención' : 'Generar Documento'}
                             </button>
                         </div>
                     </div>
