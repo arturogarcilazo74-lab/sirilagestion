@@ -27,7 +27,7 @@ const debugHost = process.env.DB_HOST || process.env.MYSQLHOST || 'localhost';
 console.log(`[DEBUG] Attempting to connect to Host: ${debugHost.substring(0, 15)}...`);
 
 export async function initDB() {
-    let retries = 5;
+    let retries = 3;
     while (retries > 0) {
         try {
             const dbName = process.env.DB_NAME || process.env.MYSQLDATABASE || 'sirila_db';
@@ -38,6 +38,10 @@ export async function initDB() {
                 await connection.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\`;`);
                 await connection.end();
             } catch (e) {
+                // If it is a DNS/host lookup failure or network unreachable, throw immediately
+                const isDnsError = e.code === 'ENOTFOUND' || e.code === 'EAI_AGAIN' || e.code === 'ENETUNREACH' || e.code === 'EHOSTUNREACH';
+                if (isDnsError) throw e;
+                
                 console.warn('⚠️  Could not create database (might already exist or permission denied). Attempting to connect anyway...');
                 // In cloud (Aiven), we might not have permission to CREATE DATABASE, or we just connect to the default one.
                 // We proceed to create the pool.
@@ -93,10 +97,18 @@ export async function initDB() {
             return pool;
         } catch (error) {
             console.error(`Error initializing database (Attempts left: ${retries}):`, error.message);
+            
+            // Check if it is a DNS/host lookup failure or network unreachable
+            const isDnsError = error.code === 'ENOTFOUND' || error.code === 'EAI_AGAIN' || error.code === 'ENETUNREACH' || error.code === 'EHOSTUNREACH';
+            if (isDnsError) {
+                console.log('🌐 Network/DNS error detected. Skipping retries to fall back to JSON storage immediately.');
+                throw error;
+            }
+
             retries--;
             if (retries === 0) throw error;
-            console.log('Waiting 5 seconds before retrying...');
-            await new Promise(res => setTimeout(res, 5000));
+            console.log('Waiting 2 seconds before retrying...');
+            await new Promise(res => setTimeout(res, 2000));
         }
     }
 }
