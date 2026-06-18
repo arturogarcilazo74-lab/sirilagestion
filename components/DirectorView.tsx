@@ -5,7 +5,7 @@ import {
     Megaphone, Search, UserCheck, RotateCw,
     ChevronLeft, ChevronRight, Settings, CheckCircle2,
     Edit2, Trash2, AlertTriangle, X, User, TrendingUp, Phone, Printer, FileText, FilePlus, Menu, Plus, Shuffle, FileDown, AlertCircle,
-    ClipboardList, Gamepad2, Presentation
+    ClipboardList, Gamepad2, Presentation, Award
 } from 'lucide-react';
 import { calculateStudentMetrics, getStudentGlobalAverage } from '../services/gradeUtils';
 import { StudentsView } from './StudentsView';
@@ -16,7 +16,7 @@ import { StaffAttendanceView } from './StaffAttendanceView';
 import { CTEGamesView } from './CTEGamesView';
 import { CTEPresentationView } from './CTEPresentationView';
 import { SchoolConfig, Student, StaffMember } from '../types';
-import { generateSchoolDocument, generateGroupList, generateReportCard, generateBehaviorReport } from '../services/pdfGenerator';
+import { generateSchoolDocument, generateGroupList, generateReportCard, generateBehaviorReport, generateDashboardReportPDF } from '../services/pdfGenerator';
 import { api } from '../services/api'; // Import API for saving events
 
 interface DirectorViewProps {
@@ -1379,9 +1379,20 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                             </label>
                         </div>
 
-                        <button onClick={handleGenerateList} className="w-full py-3 bg-white border-2 border-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all flex justify-center items-center gap-2">
-                            <Printer size={18} /> Generar Lista
-                        </button>
+                        <div className="flex flex-col gap-2">
+                            <button onClick={handleGenerateList} className="w-full py-3 bg-white border-2 border-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all flex justify-center items-center gap-2">
+                                <Printer size={18} /> Generar Lista de Control
+                            </button>
+                            <button
+                                onClick={() => {
+                                    const groupStudents = students.filter((s: Student) => (s.group || schoolConfig.gradeGroup) === listGroup);
+                                    generateDashboardReportPDF(groupStudents, { ...schoolConfig, gradeGroup: listGroup }, store.assignments);
+                                }}
+                                className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-all shadow-md shadow-indigo-100 flex justify-center items-center gap-2"
+                            >
+                                <Award size={18} /> Imprimir Reporte de Rendimiento y Cuadro de Honor
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
