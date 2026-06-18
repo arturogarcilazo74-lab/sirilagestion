@@ -480,44 +480,7 @@ app.get('/sirila-v1/honor-roll', async (req, res) => {
             const activeTrims = trimAvgs.filter(a => a > 0);
             const academicAvg = activeTrims.length > 0 ? activeTrims.reduce((a, b) => a + b, 0) / activeTrims.length : 0;
 
-            if (academicAvg > 0) {
-                if (schoolConfig && schoolConfig.includeHomeworkInAverage) {
-                    const academicW = (schoolConfig.academicWeight ?? 70) / 100;
-                    const homeworkW = (schoolConfig.homeworkWeight ?? 30) / 100;
-                    const conductW = (schoolConfig.conductWeight ?? 0) / 100;
-                    const attendanceW = (schoolConfig.attendanceWeight ?? 0) / 100;
-
-                    // Homework score: percentage of completed tasks mapped to 0-10 scale
-                    const completedCount = Math.max(s.assignmentsCompleted || 0, (s.completedAssignmentIds?.length || 0));
-                    const cappedCompleted = Math.min(totalAssignmentsCount, completedCount);
-                    const hwScore = totalAssignmentsCount > 0 ? (cappedCompleted / totalAssignmentsCount) * 10 : 0;
-
-                    // Conduct score: base 8.0, min 5, max 10
-                    const conductScore = Math.max(5, Math.min(10, 8 + ((s.behaviorPoints || 0) * 0.1)));
-
-                    // Attendance rate & score
-                    const schoolDays = Object.entries(s.attendance || {}).filter(([date]) => isSchoolDay(date));
-                    const totalDays = schoolDays.length;
-                    const presentDays = schoolDays.filter(([_, status]) => 
-                        status === 'Presente' || status === 'Retardo'
-                    ).length;
-                    const attendanceRate = totalDays > 0 ? (presentDays / totalDays) * 100 : 100;
-                    const attendanceScore = attendanceRate / 10;
-
-                    let weightedAvg = (academicAvg * academicW) + 
-                                       (hwScore * homeworkW) + 
-                                       (conductScore * conductW) + 
-                                       (attendanceScore * attendanceW);
-                                       
-                    const totalW = academicW + homeworkW + conductW + attendanceW;
-                    if (totalW > 0 && Math.abs(totalW - 1) > 0.01) {
-                        weightedAvg = weightedAvg / totalW;
-                    }
-                    return Math.min(10, weightedAvg);
-                }
-                return academicAvg;
-            }
-            return 0;
+            return academicAvg;
         };
 
         const honorRoll = students

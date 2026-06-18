@@ -93,34 +93,10 @@ export const calculateStudentMetrics = (
   ).length;
   const attendanceRate = totalDays > 0 ? (presentDays / totalDays) * 100 : 100;
 
-  // Promedio final (con ponderación de tareas/conducta/asistencia si está activado)
+  // Promedio final (siempre es el promedio académico basado estrictamente en las calificaciones)
   let finalAvgStr = '-';
   if (academicAvg > 0) {
-    if (finalConfig?.includeHomeworkInAverage) {
-      const academicW = (finalConfig.academicWeight ?? 70) / 100;
-      const homeworkW = (finalConfig.homeworkWeight ?? 30) / 100;
-      const conductW = (finalConfig.conductWeight ?? 0) / 100;
-      const attendanceW = (finalConfig.attendanceWeight ?? 0) / 100;
-
-      const hwScore = hwPercentage / 10;
-      const conductScore = Math.max(5, Math.min(10, 8 + (behaviorPoints * 0.1)));
-      const attendanceScore = attendanceRate / 10;
-
-      let weightedAvg = (academicAvg * academicW) + 
-                         (hwScore * homeworkW) + 
-                         (conductScore * conductW) + 
-                         (attendanceScore * attendanceW);
-                         
-      const totalW = academicW + homeworkW + conductW + attendanceW;
-      
-      // Ajustar si la suma de pesos es mayor a 0 y no es exactamente 1.0 (evita divisiones raras si está en edición)
-      if (totalW > 0 && Math.abs(totalW - 1) > 0.01) {
-        weightedAvg = weightedAvg / totalW;
-      }
-      finalAvgStr = Math.min(10, weightedAvg).toFixed(1);
-    } else {
-      finalAvgStr = academicAvg.toFixed(1);
-    }
+    finalAvgStr = academicAvg.toFixed(1);
   }
 
   return {
