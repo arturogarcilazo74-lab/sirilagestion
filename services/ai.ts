@@ -241,7 +241,29 @@ Usa un tono formal, analítico, empático y estructurado en Markdown limpio y le
   } else if (type === 'PRESENTACION_RESULTADOS') {
     prompt = `Guion para junta de padres. Escuela: ${data.schoolName}. Datos grupo: Promedio ${data.groupAverage}, Asistencia ${data.groupAttendance}%, Riesgo ${data.atRiskCount}. Puntos: Bienvenida, Logros, Oportunidades, Plan, Cierre. Tono NEM.`;
   } else if (type === 'OBSERVACIONES_BOLETA') {
-    prompt = `Observaciones boleta NEM para ${data.studentName}. Campos: Lenguajes, Saberes, Ética, Humano. Breve (40 palabras cada uno).`;
+    prompt = `Actúa como un Especialista Docente de la Nueva Escuela Mexicana (NEM) en México.
+Diseña las observaciones y sugerencias de los campos formativos para la boleta de evaluación.
+
+DATOS DEL ALUMNO:
+- Nombre: ${data.studentName}
+- Promedio General: ${data.average || 'N/A'}
+- Asistencia: ${data.attendanceRate || '100'}%
+- Puntos de Conducta: ${data.behaviorPoints || 0}
+- BAP/USAER: ${data.bap || 'Ninguna'}
+${data.gradesText ? `- Calificaciones actuales:\n${data.gradesText}` : ''}
+${data.keywords ? `- Enfoque/Palabras Clave: ${data.keywords}` : ''}
+${data.contextContent ? `- Contexto adicional: ${data.contextContent}` : ''}
+
+Requisitos de la respuesta:
+1. Escribe observaciones breves y constructivas para cada uno de los 4 Campos Formativos de la NEM (aproximadamente 30-40 palabras por campo):
+   - Lenguajes
+   - Saberes y Pensamiento Científico
+   - Ética, Naturaleza y Sociedades
+   - De lo Humano y lo Comunitario
+2. Cada observación debe incluir:
+   - Un logro o fortaleza del alumno en ese campo (basado en sus calificaciones y desempeño).
+   - Una sugerencia concreta o área de mejora para continuar reforzando.
+3. Formato: Markdown estructurado, formal y profesional.`;
   } else if (type === 'PLAN_REZAGO') {
     prompt = `Actúa como un Especialista Docente de la Nueva Escuela Mexicana (NEM) en México.
 Diseña un Plan de Trabajo de Intervención Educativa para atender el rezago escolar del grupo.

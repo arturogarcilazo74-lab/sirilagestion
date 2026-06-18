@@ -828,7 +828,7 @@ Docente:               ${student ? getTeacherForStudent(config, student.group) :
                     <div className="glass-card p-6 rounded-2xl">
                         <h3 className="font-bold text-slate-800 mb-4">Detalles</h3>
                         <div className="space-y-4">
-                            {selectedType === 'FICHA_DESCRIPTIVA' && (
+                            {(selectedType === 'FICHA_DESCRIPTIVA' || selectedType === 'OBSERVACIONES_BOLETA') && (
                                 <div className="mb-4">
                                     <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Modo de Generación</label>
                                     <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl">
@@ -852,22 +852,24 @@ Docente:               ${student ? getTeacherForStudent(config, student.group) :
 
                             {selectedType !== 'PLANEACION' && selectedType !== 'PRESENTACION_RESULTADOS' && selectedType !== 'LISTA_ASISTENCIA_PADRES' && selectedType !== 'PLAN_REZAGO' && (
                                 <>
-                                    {selectedType === 'FICHA_DESCRIPTIVA' && isBatchMode ? (
+                                    {(selectedType === 'FICHA_DESCRIPTIVA' || selectedType === 'OBSERVACIONES_BOLETA') && isBatchMode ? (
                                         <div className="space-y-4 border border-indigo-100 bg-indigo-50/20 p-4 rounded-xl">
-                                            <div className="flex items-center gap-2">
-                                                <input
-                                                    type="checkbox"
-                                                    id="includeGroupSheet"
-                                                    checked={includeGroupSheet}
-                                                    onChange={(e) => setIncludeGroupSheet(e.target.checked)}
-                                                    className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 bg-white cursor-pointer"
-                                                />
-                                                <label htmlFor="includeGroupSheet" className="text-xs font-bold text-slate-700 cursor-pointer select-none">
-                                                    Generar Ficha del Grupo
-                                                </label>
-                                            </div>
+                                            {selectedType === 'FICHA_DESCRIPTIVA' && (
+                                                <div className="flex items-center gap-2">
+                                                    <input
+                                                        type="checkbox"
+                                                        id="includeGroupSheet"
+                                                        checked={includeGroupSheet}
+                                                        onChange={(e) => setIncludeGroupSheet(e.target.checked)}
+                                                        className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 bg-white cursor-pointer"
+                                                    />
+                                                    <label htmlFor="includeGroupSheet" className="text-xs font-bold text-slate-700 cursor-pointer select-none">
+                                                        Generar Ficha del Grupo
+                                                    </label>
+                                                </div>
+                                            )}
 
-                                            <div className="border-t border-slate-200/60 pt-3">
+                                            <div className={selectedType === 'FICHA_DESCRIPTIVA' ? "border-t border-slate-200/60 pt-3" : "pt-1"}>
                                                 <div className="flex justify-between items-center mb-2">
                                                     <label className="block text-xs font-bold text-slate-500 uppercase">Alumnos a Generar</label>
                                                     <div className="flex items-center gap-1.5">
@@ -1233,11 +1235,16 @@ Docente:               ${student ? getTeacherForStudent(config, student.group) :
 
                             <button
                                 onClick={handleGenerate}
-                                disabled={isGenerating || ((selectedType === 'INFORME_PADRES' || selectedType === 'INFORME_ACTIVIDADES') && !selectedStudentId) || (selectedType === 'FICHA_DESCRIPTIVA' && isBatchMode && !includeGroupSheet && !students.some(s => selectedStudentIds[s.id]))}
+                                disabled={
+                                    isGenerating ||
+                                    (!isBatchMode && ['FICHA_DESCRIPTIVA', 'OBSERVACIONES_BOLETA', 'INFORME_PADRES', 'INFORME_ACTIVIDADES'].includes(selectedType) && !selectedStudentId) ||
+                                    (selectedType === 'FICHA_DESCRIPTIVA' && isBatchMode && !includeGroupSheet && !students.some(s => selectedStudentIds[s.id])) ||
+                                    (selectedType === 'OBSERVACIONES_BOLETA' && isBatchMode && !students.some(s => selectedStudentIds[s.id]))
+                                }
                                 className={`w-full py-3 rounded-xl font-bold shadow-lg transition-all active:scale-95 disabled:opacity-70 flex items-center justify-center gap-2 mt-4 ${selectedType === 'INFORME_PADRES' ? 'bg-teal-600 hover:bg-teal-700 text-white' : selectedType === 'INFORME_ACTIVIDADES' ? 'bg-orange-600 hover:bg-orange-700 text-white' : selectedType === 'LISTA_ASISTENCIA_PADRES' ? 'bg-purple-600 hover:bg-purple-700 text-white' : selectedType === 'PLAN_REZAGO' ? 'bg-amber-600 hover:bg-amber-700 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}
                             >
                                 {isGenerating ? <span className="animate-spin">✨</span> : <FileText size={18} />}
-                                {isGenerating ? (batchProgress || 'Generando...') : selectedType === 'FICHA_DESCRIPTIVA' && isBatchMode ? 'Generar Fichas en Lote' : selectedType === 'INFORME_PADRES' ? 'Generar Informe con Análisis IA' : selectedType === 'INFORME_ACTIVIDADES' ? 'Generar Informe de Actividades' : selectedType === 'LISTA_ASISTENCIA_PADRES' ? 'Generar Lista de Asistencia' : selectedType === 'PLAN_REZAGO' ? 'Generar Plan de Intervención' : 'Generar Documento'}
+                                {isGenerating ? (batchProgress || 'Generando...') : selectedType === 'FICHA_DESCRIPTIVA' && isBatchMode ? 'Generar Fichas en Lote' : selectedType === 'OBSERVACIONES_BOLETA' && isBatchMode ? 'Generar Observaciones en Lote' : selectedType === 'INFORME_PADRES' ? 'Generar Informe con Análisis IA' : selectedType === 'INFORME_ACTIVIDADES' ? 'Generar Informe de Actividades' : selectedType === 'LISTA_ASISTENCIA_PADRES' ? 'Generar Lista de Asistencia' : selectedType === 'PLAN_REZAGO' ? 'Generar Plan de Intervención' : 'Generar Documento'}
                             </button>
                         </div>
                     </div>
