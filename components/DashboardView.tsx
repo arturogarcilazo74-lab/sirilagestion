@@ -1,14 +1,16 @@
 
 import React, { useEffect, useState } from 'react';
-import { Student, BehaviorLog, SchoolEvent, Assignment, ViewState, StaffTask, StaffMember } from '../types';
+import { Student, BehaviorLog, SchoolEvent, Assignment, ViewState, StaffTask, StaffMember, SchoolConfig } from '../types';
 import { generateRiskPlan, analyzeClassPerformance } from '../services/ai';
 import { api } from '../services/api';
-import { getTrimesterAvg } from '../services/gradeUtils';
-import { Sparkles, TrendingUp, Users, AlertCircle, History, X, Phone, User, CheckCircle, Calendar as CalendarIcon, BookOpen, Clock, Download, ClipboardList, ThumbsUp, ThumbsDown, ChevronLeft, ChevronRight, Plus, Edit2, Trash2, Save, MoreHorizontal, ArrowRight, Send, Megaphone, AlertTriangle, CheckSquare, MessageCircle } from 'lucide-react';
+import { getTrimesterAvg, getStudentGlobalAverage, calculateStudentMetrics } from '../services/gradeUtils';
+import { generateDashboardReportPDF } from '../services/pdfGenerator';
+import { Sparkles, TrendingUp, Users, AlertCircle, History, X, Phone, User, CheckCircle, Calendar as CalendarIcon, BookOpen, Clock, Download, ClipboardList, ThumbsUp, ThumbsDown, ChevronLeft, ChevronRight, Plus, Edit2, Trash2, Save, MoreHorizontal, ArrowRight, Send, Megaphone, AlertTriangle, CheckSquare, MessageCircle, Award } from 'lucide-react';
 import { sendWhatsAppMessage, getEventMessage } from '../whatsappUtils';
 
 interface DashboardProps {
   students: Student[];
+  config?: SchoolConfig;
   logs?: BehaviorLog[];
   events?: SchoolEvent[];
   assignments?: Assignment[];
@@ -44,6 +46,7 @@ const DAYS_OF_WEEK = ["Dom", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab"];
 
 export const DashboardView: React.FC<DashboardProps> = ({
   students = [],
+  config,
   logs = [],
   events = [],
   assignments = [],
@@ -57,6 +60,34 @@ export const DashboardView: React.FC<DashboardProps> = ({
 }) => {
   // Sort students alphabetically
   const sortedStudents = [...students].sort((a, b) => a.name.localeCompare(b.name));
+
+  // Calculate students' metrics and averages
+  const studentsWithMetrics = sortedStudents.map(student => {
+    const studentAssignments = assignments.filter(a => !a.targetGroup || a.targetGroup === student.group);
+    const metrics = calculateStudentMetrics(student, studentAssignments, config || store?.schoolConfig);
+    const globalAvg = metrics.finalAvg === '-' ? 0 : parseFloat(metrics.finalAvg);
+    return {
+      student,
+      metrics,
+      globalAvg
+    };
+  });
+
+  // Calculate Group Average
+  const activeStudentsWithGrades = studentsWithMetrics.filter(s => s.globalAvg > 0);
+  const groupAverage = activeStudentsWithGrades.length > 0
+    ? activeStudentsWithGrades.reduce((sum, s) => sum + s.globalAvg, 0) / activeStudentsWithGrades.length
+    : 0;
+
+  // Filter lists
+  const honorRollStudents = studentsWithMetrics.filter(s => s.globalAvg >= 9.0).sort((a, b) => b.globalAvg - a.globalAvg);
+  const interventionStudents = studentsWithMetrics.filter(s => {
+    const avg = s.globalAvg;
+    const behavior = s.metrics.behaviorPoints;
+    const attendance = s.metrics.attendanceRate;
+    const homework = s.metrics.hwPercentage;
+    return (avg > 0 && avg < 6.5) || behavior < 0 || attendance < 80 || homework < 50;
+  });
 
   const [aiInsight, setAiInsight] = useState<string>("");
   const [loadingAi, setLoadingAi] = useState(false);
@@ -1021,6 +1052,164 @@ export const DashboardView: React.FC<DashboardProps> = ({
             </table>
           </div>
           <p className="text-xs text-slate-400 mt-4 text-center">Haz clic en un estudiante para ver el reporte detallado.</p>
+        </div>
+      </div>
+
+      {/* RENDIMIENTO GRUPAL Y PLAN DE INTERVENCIÓN */}
+      <div className="glass-card p-6 rounded-2xl space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
+              <Award size={22} className="text-indigo-600" />
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-800 text-lg">Rendimiento del Grupo y Plan de Intervención</h3>
+              <p className="text-slate-500 text-xs font-medium">Cuadro de honor, listado de promedios y seguimiento de alumnos con rezago</p>
+            </div>
+          </div>
+          <button
+            onClick={() => generateDashboardReportPDF(students, config || store?.schoolConfig, assignments)}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium shadow-md shadow-indigo-100 self-start sm:self-center"
+          >
+            <Download size={18} />
+            Imprimir Reporte PDF
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* COL 1: CUADRO DE HONOR & PROMEDIO GENERAL */}
+          <div className="bg-slate-50/50 border border-slate-100 rounded-xl p-5 flex flex-col h-[400px]">
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="font-bold text-slate-800 text-sm flex items-center gap-2">
+                <Award className="text-yellow-500" size={18} />
+                Cuadro de Honor (Promedio &ge; 9.0)
+              </h4>
+              <span className="bg-yellow-100 text-yellow-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                {honorRollStudents.length} Alumnos
+              </span>
+            </div>
+
+            {/* General Group Average Card */}
+            <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 text-white rounded-lg p-3 mb-4 flex items-center justify-between shadow-sm">
+              <div>
+                <div className="text-xs font-bold uppercase tracking-wider opacity-85">Promedio del Grupo</div>
+                <div className="text-2xl font-black">{groupAverage > 0 ? groupAverage.toFixed(1) : '-'}</div>
+              </div>
+              <div className="text-xs text-indigo-100 text-right">
+                <div>Basado en</div>
+                <div>{activeStudentsWithGrades.length} alumnos evaluados</div>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+              {honorRollStudents.length === 0 ? (
+                <div className="text-center py-12 text-slate-400 text-xs">
+                  Aún no hay alumnos con promedio &ge; 9.0
+                </div>
+              ) : (
+                honorRollStudents.map(({ student, globalAvg }) => (
+                  <div key={student.id} className="bg-white border border-slate-100 p-2.5 rounded-lg flex items-center justify-between shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex items-center gap-2 truncate">
+                      <img
+                        src={student.avatar === "PENDING_LOAD" ? `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random` : (student.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random`)}
+                        alt={student.name}
+                        className="w-7 h-7 rounded-full object-cover border border-slate-100 shrink-0"
+                      />
+                      <span className="font-semibold text-slate-700 text-xs truncate">{student.name}</span>
+                    </div>
+                    <span className="bg-emerald-50 text-emerald-700 font-bold text-xs px-2 py-0.5 rounded-full shrink-0">
+                      {globalAvg.toFixed(1)}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* COL 2: LISTA DE PROMEDIOS GENERAL */}
+          <div className="bg-slate-50/50 border border-slate-100 rounded-xl p-5 flex flex-col h-[400px]">
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="font-bold text-slate-800 text-sm flex items-center gap-2">
+                <ClipboardList className="text-slate-500" size={18} />
+                Lista de Promedios
+              </h4>
+              <span className="bg-slate-200 text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                {studentsWithMetrics.length} Alumnos
+              </span>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+              {studentsWithMetrics.map(({ student, globalAvg, metrics }) => {
+                let badgeColor = 'bg-slate-100 text-slate-700 border-slate-200';
+                if (globalAvg >= 9.0) badgeColor = 'bg-emerald-50 text-emerald-700 border-emerald-100';
+                else if (globalAvg > 0 && globalAvg < 6.5) badgeColor = 'bg-red-50 text-red-700 border-red-100';
+                else if (globalAvg >= 6.5) badgeColor = 'bg-blue-50 text-blue-700 border-blue-100';
+
+                return (
+                  <div key={student.id} className="bg-white border border-slate-100 p-2.5 rounded-lg flex items-center justify-between shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex items-center gap-2 truncate">
+                      <img
+                        src={student.avatar === "PENDING_LOAD" ? `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random` : (student.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random`)}
+                        alt={student.name}
+                        className="w-7 h-7 rounded-full object-cover border border-slate-100 shrink-0"
+                      />
+                      <span className="font-semibold text-slate-700 text-xs truncate">{student.name}</span>
+                    </div>
+                    <span className={`font-bold text-xs px-2 py-0.5 border rounded-full shrink-0 ${badgeColor}`}>
+                      {globalAvg > 0 ? globalAvg.toFixed(1) : '-'}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* COL 3: PLAN DE INTERVENCIÓN */}
+          <div className="bg-slate-50/50 border border-slate-100 rounded-xl p-5 flex flex-col h-[400px]">
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="font-bold text-slate-800 text-sm flex items-center gap-2">
+                <AlertCircle className="text-red-500 animate-pulse" size={18} />
+                Plan de Intervención (22-30 Jun)
+              </h4>
+              <span className="bg-red-100 text-red-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                {interventionStudents.length} Alumnos
+              </span>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-2.5 pr-1 custom-scrollbar">
+              {interventionStudents.length === 0 ? (
+                <div className="text-center py-12 text-slate-400 text-xs">
+                  Ningún alumno requiere plan de intervención
+                </div>
+              ) : (
+                interventionStudents.map(({ student, globalAvg, metrics }) => {
+                  const alerts = [];
+                  if (globalAvg > 0 && globalAvg < 6.5) alerts.push('Promedio');
+                  if (metrics.behaviorPoints < 0) alerts.push('Conducta');
+                  if (metrics.attendanceRate < 80) alerts.push('Asistencia');
+                  if (metrics.hwPercentage < 50) alerts.push('Tareas');
+
+                  return (
+                    <div key={student.id} className="bg-white border border-l-4 border-l-red-500 border-slate-100 p-2.5 rounded-r-lg shadow-sm hover:shadow-md transition-shadow">
+                      <div className="flex justify-between items-start mb-1 gap-1">
+                        <span className="font-bold text-slate-800 text-xs truncate">{student.name}</span>
+                        <span className="text-[10px] font-bold text-red-600 shrink-0">
+                          {globalAvg > 0 ? globalAvg.toFixed(1) : '-'}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-1 mt-1.5">
+                        {alerts.map(alertText => (
+                          <span key={alertText} className="bg-red-50 text-red-600 text-[8px] font-bold px-1.5 py-0.5 rounded-full border border-red-100 uppercase tracking-wide">
+                            {alertText}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
         </div>
       </div>
 

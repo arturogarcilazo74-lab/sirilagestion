@@ -277,6 +277,7 @@ const App: React.FC = () => {
             return (
               <DashboardView
                 students={visibleStudents}
+                config={store.schoolConfig}
                 logs={visibleLogs}
                 events={visibleEvents}
                 assignments={visibleAssignments}

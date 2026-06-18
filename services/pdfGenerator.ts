@@ -3,6 +3,8 @@ import autoTable from 'jspdf-autotable';
 import { Student, SchoolConfig, BehaviorLog, Assignment, AttendanceStatus } from '../types';
 import QRCode from 'qrcode';
 import { SCHOOL_PERIODS, isSchoolDay, getSchoolPeriod } from './schoolCalendarUtils';
+import { getStudentGlobalAverage, calculateStudentMetrics } from './gradeUtils';
+
 
 type ColorTuple = [number, number, number];
 
@@ -1855,3 +1857,274 @@ export const generateAttendanceListPDF = async (
 
     doc.save(`Lista_Asistencia_${options.meetingType.replace(/\s+/g, '_')}_${options.date || 'hoy'}.pdf`);
 };
+
+export const generateDashboardReportPDF = async (
+    students: Student[],
+    config: SchoolConfig,
+    assignments?: any[]
+) => {
+    try {
+        const doc = new jsPDF();
+        const pageWidth = doc.internal.pageSize.width;
+        const pageHeight = doc.internal.pageSize.height;
+        const margin = 20;
+
+        // Pre-load logo if needed
+        let printConfig = { ...config };
+        if (config.schoolLogo && !config.schoolLogo.startsWith('data:')) {
+            const base64Logo = await getBase64ImageFromUrl(config.schoolLogo);
+            if (base64Logo) printConfig.schoolLogo = base64Logo;
+        }
+
+        const sortedStudents = [...students].sort((a, b) => a.name.localeCompare(b.name));
+
+        // Calculate Group Average and gather metrics
+        let totalAvgSum = 0;
+        let validAvgCount = 0;
+        const studentDataList = sortedStudents.map((student) => {
+            const metrics = calculateStudentMetrics(student, assignments, printConfig);
+            const globalAvg = metrics.finalAvg === '-' ? 0 : parseFloat(metrics.finalAvg);
+            if (globalAvg > 0) {
+                totalAvgSum += globalAvg;
+                validAvgCount++;
+            }
+            return {
+                student,
+                metrics,
+                globalAvg,
+            };
+        });
+
+        const groupAverage = validAvgCount > 0 ? (totalAvgSum / validAvgCount) : 0;
+
+        // Gather lists
+        const honorRoll = studentDataList.filter(d => d.globalAvg >= 9.0);
+        const averagesList = studentDataList; // All students
+        const interventionList = studentDataList.filter(d => {
+            const avg = d.globalAvg;
+            const behavior = d.metrics.behaviorPoints;
+            const attendance = d.metrics.attendanceRate;
+            const homework = d.metrics.hwPercentage;
+            return (avg > 0 && avg < 6.5) || behavior < 0 || attendance < 80 || homework < 50;
+        });
+
+        // ==================== PAGE 1: RESUMEN Y CUADRO DE HONOR ====================
+        addHeader(doc, printConfig, 'RESUMEN GENERAL Y CUADRO DE HONOR');
+
+        // Group summary card
+        let currentY = 55;
+        doc.setFillColor(248, 250, 252); // Very light grey bg
+        doc.setDrawColor(226, 232, 240);
+        doc.setLineWidth(0.5);
+        doc.roundedRect(margin, currentY, pageWidth - (margin * 2), 32, 4, 4, 'FD');
+
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2]);
+        doc.text('INFORMACIÓN GENERAL DEL GRUPO', margin + 6, currentY + 7);
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.text(`Grado y Grupo: ${printConfig.gradeGroup || 'N/A'}`, margin + 6, currentY + 14);
+        doc.text(`Docente: ${printConfig.teacherName}`, margin + 6, currentY + 20);
+        doc.text(`Director(a): ${printConfig.directorName || 'No asignado'}`, margin + 6, currentY + 26);
+
+        // Group statistics in the card
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Total Alumnos: ${sortedStudents.length}`, pageWidth - margin - 65, currentY + 14);
+        doc.text(`Alumnos en Cuadro de Honor: ${honorRoll.length}`, pageWidth - margin - 65, currentY + 20);
+        doc.text(`Alumnos en Plan de Intervención: ${interventionList.length}`, pageWidth - margin - 65, currentY + 26);
+
+        // Prominent Group Average Badge inside summary card
+        doc.setFillColor(79, 70, 229); // indigo
+        doc.roundedRect(pageWidth - margin - 22, currentY + 4, 16, 16, 2, 2, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text(groupAverage > 0 ? groupAverage.toFixed(1) : '-', pageWidth - margin - 14, currentY + 12, { align: 'center' });
+        doc.setFontSize(5);
+        doc.text('PROMEDIO', pageWidth - margin - 14, currentY + 17, { align: 'center' });
+
+        currentY += 40;
+
+        // Section Title: Cuadro de Honor
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(COLORS.primary[0], COLORS.primary[1], COLORS.primary[2]);
+        doc.text('CUADRO DE HONOR (PROMEDIO \u2265 9.0)', margin, currentY);
+        currentY += 4;
+
+        if (honorRoll.length === 0) {
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'italic');
+            doc.setTextColor(COLORS.secondary[0], COLORS.secondary[1], COLORS.secondary[2]);
+            doc.text('Ningún alumno ha alcanzado un promedio mayor o igual a 9.0 en este periodo.', margin, currentY + 6);
+        } else {
+            // Sort Honor Roll by average descending, then by name
+            const sortedHonorRoll = [...honorRoll].sort((a, b) => {
+                if (b.globalAvg !== a.globalAvg) return b.globalAvg - a.globalAvg;
+                return a.student.name.localeCompare(b.student.name);
+            });
+
+            autoTable(doc, {
+                startY: currentY + 2,
+                head: [['#', 'Nombre del Alumno', 'Promedio General']],
+                body: sortedHonorRoll.map((d, index) => [
+                    (index + 1).toString(),
+                    d.student.name,
+                    d.globalAvg.toFixed(1)
+                ]),
+                theme: 'grid',
+                headStyles: { fillColor: [79, 70, 229] }, // Indigo 600
+                styles: { fontSize: 9, cellPadding: 3 },
+                columnStyles: {
+                    0: { cellWidth: 12, halign: 'center' },
+                    1: { cellWidth: 'auto' },
+                    2: { cellWidth: 35, halign: 'center', fontStyle: 'bold' }
+                }
+            });
+        }
+
+        addFooter(doc, printConfig);
+
+        // ==================== PAGE 2: LISTA DE PROMEDIOS ====================
+        doc.addPage();
+        addHeader(doc, printConfig, 'LISTA DE PROMEDIOS DEL GRUPO');
+        
+        currentY = 55;
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2]);
+        doc.text('LISTADO COMPLETO DE PROMEDIOS', margin, currentY);
+        
+        // Sort alphabetically
+        const sortedAverages = [...averagesList].sort((a, b) => a.student.name.localeCompare(b.student.name));
+
+        autoTable(doc, {
+            startY: currentY + 4,
+            head: [['#', 'Nombre del Alumno', 'Asistencia', 'Tareas', 'Incidencias', 'Promedio Final']],
+            body: sortedAverages.map((d, index) => [
+                (index + 1).toString(),
+                d.student.name,
+                `${Math.round(d.metrics.attendanceRate)}%`,
+                `${d.student.assignmentsCompleted}/${d.student.totalAssignments} (${d.metrics.hwPercentage}%)`,
+                d.student.behaviorPoints.toString(),
+                d.globalAvg > 0 ? d.globalAvg.toFixed(1) : '-'
+            ]),
+            theme: 'grid',
+            headStyles: { fillColor: [100, 116, 139] }, // Slate 500
+            styles: { fontSize: 8, cellPadding: 2.5 },
+            columnStyles: {
+                0: { cellWidth: 10, halign: 'center' },
+                1: { cellWidth: 'auto' },
+                2: { cellWidth: 22, halign: 'center' },
+                3: { cellWidth: 38, halign: 'center' },
+                4: { cellWidth: 22, halign: 'center' },
+                5: { cellWidth: 28, halign: 'center', fontStyle: 'bold' }
+            },
+            didParseCell: (data) => {
+                if (data.section === 'body' && data.column.index === 5) {
+                    const valStr = data.cell.raw;
+                    const val = parseFloat(valStr as string);
+                    if (!isNaN(val)) {
+                        if (val >= 9.0) {
+                            data.cell.styles.textColor = [16, 185, 129]; // Emerald 500
+                        } else if (val < 6.5) {
+                            data.cell.styles.textColor = [239, 68, 68]; // Red 500
+                        }
+                    }
+                }
+            }
+        });
+
+        addFooter(doc, printConfig);
+
+        // ==================== PAGE 3: PLAN DE INTERVENCIÓN ====================
+        doc.addPage();
+        addHeader(doc, printConfig, 'PLAN DE INTERVENCIÓN Y REFORZAMIENTO');
+        
+        currentY = 55;
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2]);
+        doc.text('ALUMNOS QUE REQUIEREN REFORZAMIENTO (22 AL 30 DE JUNIO)', margin, currentY);
+        currentY += 4;
+
+        if (interventionList.length === 0) {
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'italic');
+            doc.setTextColor(COLORS.secondary[0], COLORS.secondary[1], COLORS.secondary[2]);
+            doc.text('Ningún alumno requiere plan de intervención según los criterios de rezago establecidos.', margin, currentY + 6);
+        } else {
+            // Sort intervention list alphabetically
+            const sortedIntervention = [...interventionList].sort((a, b) => a.student.name.localeCompare(b.student.name));
+
+            autoTable(doc, {
+                startY: currentY + 2,
+                head: [['#', 'Nombre del Alumno', 'Métricas de Alerta', 'Factores de Rezago']],
+                body: sortedIntervention.map((d, index) => {
+                    const alerts = [];
+                    const factors = [];
+                    if (d.globalAvg > 0 && d.globalAvg < 6.5) {
+                        alerts.push(`Promedio: ${d.globalAvg.toFixed(1)}`);
+                        factors.push('Bajo rendimiento académico');
+                    }
+                    if (d.metrics.behaviorPoints < 0) {
+                        alerts.push(`Conducta: ${d.metrics.behaviorPoints}`);
+                        factors.push('Incidencias de comportamiento');
+                    }
+                    if (d.metrics.attendanceRate < 80) {
+                        alerts.push(`Asistencia: ${Math.round(d.metrics.attendanceRate)}%`);
+                        factors.push('Inasistencia frecuente');
+                    }
+                    if (d.metrics.hwPercentage < 50) {
+                        alerts.push(`Tareas: ${d.metrics.hwPercentage}%`);
+                        factors.push('Incumplimiento de tareas');
+                    }
+                    return [
+                        (index + 1).toString(),
+                        d.student.name,
+                        alerts.join(' | '),
+                        factors.join(', ')
+                    ];
+                }),
+                theme: 'grid',
+                headStyles: { fillColor: [244, 63, 94] }, // Rose 500
+                styles: { fontSize: 8.5, cellPadding: 3 },
+                columnStyles: {
+                    0: { cellWidth: 10, halign: 'center' },
+                    1: { cellWidth: 55 },
+                    2: { cellWidth: 45, halign: 'center' },
+                    3: { cellWidth: 'auto' }
+                }
+            });
+
+            const nextY = (doc as any).lastAutoTable.finalY + 12;
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(COLORS.accent[0], COLORS.accent[1], COLORS.accent[2]);
+            doc.text('ACCIONES SUGERIDAS PARA EL PERIODO DE REFORZAMIENTO (22 AL 30 DE JUNIO):', margin, nextY);
+
+            doc.setFontSize(8.5);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2]);
+            const suggestions = [
+                '- Diseñar y aplicar actividades didácticas personalizadas en español y matemáticas (NEM).',
+                '- Establecer compromisos específicos por escrito con los padres de familia o tutores.',
+                '- Llevar a cabo sesiones presenciales breves de tutoría individual durante las jornadas de refuerzo.',
+                '- Dar seguimiento estrecho a la entrega de tareas pendientes y asistencia diaria de los alumnos detectados.'
+            ];
+            suggestions.forEach((sugg, idx) => {
+                doc.text(sugg, margin, nextY + 6 + (idx * 5));
+            });
+        }
+
+        addFooter(doc, printConfig);
+
+        // Save PDF
+        doc.save(`Reporte_Rendimiento_y_Intervencion_${printConfig.gradeGroup || 'Grupo'}.pdf`);
+    } catch (e) {
+        console.error('Error generating dashboard general report PDF:', e);
+    }
+};
+
