@@ -460,6 +460,7 @@ app.get('/sirila-v1/honor-roll', async (req, res) => {
                     avatar: r.avatar,
                     behaviorPoints: r.behavior_points || 0
                 };
+            });
         }
 
         if (req.query.group) {
