@@ -460,7 +460,11 @@ app.get('/sirila-v1/honor-roll', async (req, res) => {
                     avatar: r.avatar,
                     behaviorPoints: r.behavior_points || 0
                 };
-            });
+        }
+
+        if (req.query.group) {
+            const targetGroup = req.query.group.trim().toLowerCase();
+            students = students.filter(s => s.group && s.group.trim().toLowerCase() === targetGroup);
         }
 
         const calculateAvg = (s) => {
@@ -468,6 +472,7 @@ app.get('/sirila-v1/honor-roll', async (req, res) => {
             const getTrimesterAvg = (g) => {
                 if (!g) return 0;
                 if (typeof g === 'number') return g;
+                if (typeof g === 'string') return parseFloat(g) || 0;
                 if (typeof g === 'object') {
                     // Siempre usar los 4 campos NEM y dividir entre 4
                     const suma = Number(g.lenguajes || 0) + Number(g.saberes || 0) + Number(g.etica || 0) + Number(g.humano || 0);
@@ -502,7 +507,10 @@ app.get('/sirila-v1/honor-roll', async (req, res) => {
                     average: Number(avg.toFixed(1))
                 };
             })
-            .sort((a, b) => b.average - a.average)
+            .sort((a, b) => {
+                if (b.average !== a.average) return b.average - a.average;
+                return a.name.localeCompare(b.name);
+            })
             .slice(0, 10);
 
         res.json(honorRoll);

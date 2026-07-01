@@ -383,8 +383,11 @@ export const api = {
     },
 
     // --- PARENT PORTAL ---
-    getHonorRoll: async () => {
-        const res = await fetch(`${API_URL}/honor-roll`);
+    getHonorRoll: async (group?: string) => {
+        const url = group 
+            ? `${API_URL}/honor-roll?group=${encodeURIComponent(group)}`
+            : `${API_URL}/honor-roll`;
+        const res = await fetch(url);
         if (!res.ok) throw new Error('Failed to fetch honor roll');
         return await res.json();
     },

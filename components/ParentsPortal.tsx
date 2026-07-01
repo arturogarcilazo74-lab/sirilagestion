@@ -338,7 +338,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
         const interval = setInterval(() => {
             loadMessages(student.id);
             loadNotifications(student.id);
-            loadHonorRoll();
+            loadHonorRoll(student.group);
             refreshStudentData(); // Keep progress in sync
             loadAssignments(student.group);   // Check for new tasks
         }, 15000);
@@ -940,7 +940,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
         api.getStudentBehaviorLogs(selStudent.id).then(logs => setBehaviorLogs(logs)).catch(err => console.error(err));
 
         // Fetch Honor Roll
-        loadHonorRoll();
+        loadHonorRoll(selStudent.group);
     };
 
     const handleLogin = async (e: React.FormEvent) => {
@@ -974,9 +974,9 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
         }
     };
 
-    const loadHonorRoll = async () => {
+    const loadHonorRoll = async (groupName?: string) => {
         try {
-            const hr = await api.getHonorRoll();
+            const hr = await api.getHonorRoll(groupName);
             setHonorRoll(hr);
         } catch (e) {
             console.error("Failed to load honor roll", e);
