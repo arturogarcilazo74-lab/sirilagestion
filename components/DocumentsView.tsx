@@ -71,6 +71,7 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({ students, config, 
     const [cost, setCost] = useState('');
     const [contextContent, setContextContent] = useState('');
     const [fileName, setFileName] = useState('');
+    const [showAverageInDeliveryList, setShowAverageInDeliveryList] = useState(true);
 
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -626,6 +627,7 @@ Docente:               ${student ? getTeacherForStudent(config, student.group) :
                 await generateReportCardDeliveryListPDF(students, config, {
                     period: citationReason || 'Trimestre 1',
                     date: citationDate,
+                    showAverage: showAverageInDeliveryList,
                 });
                 setGeneratedContent('✅ PDF de la Lista de Entrega de Boletas generado y descargado exitosamente.\n\nRevisa tu carpeta de descargas.');
             } catch (error) {
@@ -1029,6 +1031,18 @@ Docente:               ${student ? getTeacherForStudent(config, student.group) :
                                             onChange={(e) => setCitationDate(e.target.value)}
                                             className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white/80"
                                         />
+                                    </div>
+                                    <div className="flex items-center gap-2 mt-2">
+                                        <input
+                                            type="checkbox"
+                                            id="showAverageInDeliveryList"
+                                            checked={showAverageInDeliveryList}
+                                            onChange={(e) => setShowAverageInDeliveryList(e.target.checked)}
+                                            className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 bg-white cursor-pointer"
+                                        />
+                                        <label htmlFor="showAverageInDeliveryList" className="text-xs font-bold text-slate-700 cursor-pointer select-none">
+                                            Mostrar Promedio en la lista
+                                        </label>
                                     </div>
                                 </>
                             )}

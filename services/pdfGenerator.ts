@@ -2134,6 +2134,7 @@ export const generateReportCardDeliveryListPDF = async (
     options: {
         period: string;
         date: string;
+        showAverage?: boolean;
     }
 ) => {
     const doc = new jsPDF();
@@ -2219,37 +2220,65 @@ export const generateReportCardDeliveryListPDF = async (
 
     const sortedStudents = [...students].sort((a, b) => a.name.localeCompare(b.name));
     
+    const showAvg = options.showAverage !== false;
+
     // Construct table body
     const tableBody = sortedStudents.map((s, idx) => {
         // Calculate average for this period or final average
         let gradeStr = '-';
-        if (options.period === 'Trimestre 1' && s.grades?.[0]) {
-            const avg = getTrimesterAvg(s.grades[0]);
-            gradeStr = avg > 0 ? avg.toFixed(1) : '-';
-        } else if (options.period === 'Trimestre 2' && s.grades?.[1]) {
-            const avg = getTrimesterAvg(s.grades[1]);
-            gradeStr = avg > 0 ? avg.toFixed(1) : '-';
-        } else if (options.period === 'Trimestre 3' && s.grades?.[2]) {
-            const avg = getTrimesterAvg(s.grades[2]);
-            gradeStr = avg > 0 ? avg.toFixed(1) : '-';
-        } else {
-            // General/Final average
-            const avg = getStudentGlobalAverage(s);
-            gradeStr = avg > 0 ? avg.toFixed(1) : '-';
+        if (showAvg) {
+            if (options.period === 'Trimestre 1' && s.grades?.[0]) {
+                const avg = getTrimesterAvg(s.grades[0]);
+                gradeStr = avg > 0 ? avg.toFixed(1) : '-';
+            } else if (options.period === 'Trimestre 2' && s.grades?.[1]) {
+                const avg = getTrimesterAvg(s.grades[1]);
+                gradeStr = avg > 0 ? avg.toFixed(1) : '-';
+            } else if (options.period === 'Trimestre 3' && s.grades?.[2]) {
+                const avg = getTrimesterAvg(s.grades[2]);
+                gradeStr = avg > 0 ? avg.toFixed(1) : '-';
+            } else {
+                // General/Final average
+                const avg = getStudentGlobalAverage(s);
+                gradeStr = avg > 0 ? avg.toFixed(1) : '-';
+            }
         }
 
-        return [
+        const row = [
             (idx + 1).toString(),
             s.name,
             s.guardianName || 'Sin registrar',
-            gradeStr,
-            '' // Space for signature
         ];
+
+        if (showAvg) {
+            row.push(gradeStr);
+        }
+
+        row.push(''); // Space for signature
+        return row;
     });
+
+    const headRow = ['No.', 'Nombre del Alumno', 'Nombre del Padre/Tutor'];
+    if (showAvg) {
+        headRow.push('Promedio');
+    }
+    headRow.push('Firma de Recibido');
+
+    const columnStyles: Record<number, any> = showAvg ? {
+        0: { cellWidth: 10, halign: 'center' },
+        1: { cellWidth: 55 },
+        2: { cellWidth: 55 },
+        3: { cellWidth: 18, halign: 'center' },
+        4: { cellWidth: 42 },
+    } : {
+        0: { cellWidth: 10, halign: 'center' },
+        1: { cellWidth: 60 },
+        2: { cellWidth: 60 },
+        3: { cellWidth: 50 },
+    };
 
     autoTable(doc, {
         startY: 72,
-        head: [['No.', 'Nombre del Alumno', 'Nombre del Padre/Tutor', 'Promedio', 'Firma de Recibido']],
+        head: [headRow],
         body: tableBody,
         theme: 'grid',
         headStyles: {
@@ -2262,13 +2291,7 @@ export const generateReportCardDeliveryListPDF = async (
             fontSize: 7.5,
             cellPadding: 4, // More padding for better writing height in signature field
         },
-        columnStyles: {
-            0: { cellWidth: 10, halign: 'center' },
-            1: { cellWidth: 55 },
-            2: { cellWidth: 55 },
-            3: { cellWidth: 18, halign: 'center' },
-            4: { cellWidth: 42 },
-        },
+        columnStyles: columnStyles,
         alternateRowStyles: { fillColor: [248, 250, 252] },
     });
 
