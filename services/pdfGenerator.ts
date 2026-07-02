@@ -3,7 +3,7 @@ import autoTable from 'jspdf-autotable';
 import { Student, SchoolConfig, BehaviorLog, Assignment, AttendanceStatus } from '../types';
 import QRCode from 'qrcode';
 import { SCHOOL_PERIODS, isSchoolDay, getSchoolPeriod } from './schoolCalendarUtils';
-import { getStudentGlobalAverage, calculateStudentMetrics } from './gradeUtils';
+import { getStudentGlobalAverage, calculateStudentMetrics, getTrimesterAvg } from './gradeUtils';
 
 
 type ColorTuple = [number, number, number];
@@ -2128,3 +2128,195 @@ export const generateDashboardReportPDF = async (
     }
 };
 
+export const generateReportCardDeliveryListPDF = async (
+    students: Student[],
+    config: SchoolConfig,
+    options: {
+        period: string;
+        date: string;
+    }
+) => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.width;
+    const pageHeight = doc.internal.pageSize.height;
+
+    // Pre-load logo
+    let printConfig = { ...config };
+    if (config.schoolLogo && !config.schoolLogo.startsWith('data:')) {
+        const base64Logo = await getBase64ImageFromUrl(config.schoolLogo);
+        if (base64Logo) printConfig.schoolLogo = base64Logo;
+    }
+
+    // Header with logo
+    const margin = 15;
+    if (printConfig.schoolLogo && printConfig.schoolLogo.startsWith('data:')) {
+        try {
+            const imgFormat = printConfig.schoolLogo.includes('image/png') ? 'PNG' : 'JPEG';
+            doc.addImage(printConfig.schoolLogo, imgFormat, margin, 10, 20, 20);
+        } catch (e) {
+            console.warn('Logo error', e);
+        }
+    }
+
+    // School name
+    doc.setFontSize(14);
+    doc.setTextColor(COLORS.primary[0], COLORS.primary[1], COLORS.primary[2]);
+    doc.setFont('helvetica', 'bold');
+    doc.text(printConfig.schoolName.toUpperCase(), pageWidth / 2, 18, { align: 'center' });
+
+    // School info
+    doc.setFontSize(8);
+    doc.setTextColor(COLORS.secondary[0], COLORS.secondary[1], COLORS.secondary[2]);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`CCT: ${printConfig.cct} | Zona: ${printConfig.zone} | Sector: ${printConfig.sector || 'N/A'}`, pageWidth / 2, 23, { align: 'center' });
+    doc.text(`Ciclo Escolar: ${printConfig.schoolYear || new Date().getFullYear().toString()}`, pageWidth / 2, 27, { align: 'center' });
+
+    // Separator line
+    doc.setDrawColor(COLORS.primary[0], COLORS.primary[1], COLORS.primary[2]);
+    doc.setLineWidth(0.5);
+    doc.line(margin, 31, pageWidth - margin, 31);
+
+    // Title
+    doc.setFontSize(16);
+    doc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2]);
+    doc.setFont('helvetica', 'bold');
+    doc.text('LISTA DE ENTREGA DE BOLETAS', pageWidth / 2, 40, { align: 'center' });
+
+    // Period info
+    doc.setFontSize(11);
+    doc.setTextColor(COLORS.secondary[0], COLORS.secondary[1], COLORS.secondary[2]);
+    doc.text(`Control de Entrega y Firma de Recibido - ${options.period}`, pageWidth / 2, 46, { align: 'center' });
+
+    // Delivery details
+    doc.setFontSize(9);
+    doc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2]);
+    doc.setFont('helvetica', 'normal');
+
+    const formattedDate = options.date
+        ? new Date(options.date + 'T00:00:00').toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+        : new Date().toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+    const teacherName = getTeacherForStudent(printConfig, printConfig.gradeGroup);
+
+    // Info box
+    doc.setFillColor(245, 247, 250);
+    doc.roundedRect(margin, 50, pageWidth - (margin * 2), 18, 2, 2, 'F');
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Grupo:', margin + 5, 56);
+    doc.setFont('helvetica', 'normal');
+    doc.text(printConfig.gradeGroup, margin + 20, 56);
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Docente:', margin + 60, 56);
+    doc.setFont('helvetica', 'normal');
+    doc.text(teacherName, margin + 80, 56);
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Fecha de Entrega:', margin + 5, 63);
+    doc.setFont('helvetica', 'normal');
+    doc.text(formattedDate, margin + 38, 63);
+
+    const sortedStudents = [...students].sort((a, b) => a.name.localeCompare(b.name));
+    
+    // Construct table body
+    const tableBody = sortedStudents.map((s, idx) => {
+        // Calculate average for this period or final average
+        let gradeStr = '-';
+        if (options.period === 'Trimestre 1' && s.grades?.[0]) {
+            const avg = getTrimesterAvg(s.grades[0]);
+            gradeStr = avg > 0 ? avg.toFixed(1) : '-';
+        } else if (options.period === 'Trimestre 2' && s.grades?.[1]) {
+            const avg = getTrimesterAvg(s.grades[1]);
+            gradeStr = avg > 0 ? avg.toFixed(1) : '-';
+        } else if (options.period === 'Trimestre 3' && s.grades?.[2]) {
+            const avg = getTrimesterAvg(s.grades[2]);
+            gradeStr = avg > 0 ? avg.toFixed(1) : '-';
+        } else {
+            // General/Final average
+            const avg = getStudentGlobalAverage(s);
+            gradeStr = avg > 0 ? avg.toFixed(1) : '-';
+        }
+
+        return [
+            (idx + 1).toString(),
+            s.name,
+            s.guardianName || 'Sin registrar',
+            gradeStr,
+            '' // Space for signature
+        ];
+    });
+
+    autoTable(doc, {
+        startY: 72,
+        head: [['No.', 'Nombre del Alumno', 'Nombre del Padre/Tutor', 'Promedio', 'Firma de Recibido']],
+        body: tableBody,
+        theme: 'grid',
+        headStyles: {
+            fillColor: COLORS.primary,
+            fontSize: 8,
+            fontStyle: 'bold',
+            halign: 'center',
+        },
+        styles: {
+            fontSize: 7.5,
+            cellPadding: 4, // More padding for better writing height in signature field
+        },
+        columnStyles: {
+            0: { cellWidth: 10, halign: 'center' },
+            1: { cellWidth: 55 },
+            2: { cellWidth: 55 },
+            3: { cellWidth: 18, halign: 'center' },
+            4: { cellWidth: 42 },
+        },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+    });
+
+    let currentY = (doc as any).lastAutoTable.finalY + 12;
+
+    // Counters
+    doc.setFontSize(9);
+    doc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2]);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Total de Alumnos: ${sortedStudents.length}`, margin, currentY);
+    doc.text('Entregados: ________', margin + 60, currentY);
+    doc.text('Pendientes: ________', margin + 120, currentY);
+    
+    currentY += 15;
+
+    // Signatures block
+    if (currentY > pageHeight - 35) {
+        doc.addPage();
+        currentY = 30;
+    }
+
+    const sigY = Math.max(currentY + 10, pageHeight - 35);
+
+    doc.setDrawColor(COLORS.secondary[0], COLORS.secondary[1], COLORS.secondary[2]);
+    doc.setLineWidth(0.5);
+
+    // Teacher signature
+    doc.line(margin + 10, sigY, margin + 70, sigY);
+    doc.setFontSize(8);
+    doc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2]);
+    doc.text(teacherName, margin + 40, sigY + 5, { align: 'center' });
+    doc.setFontSize(7);
+    doc.setTextColor(COLORS.lightText[0], COLORS.lightText[1], COLORS.lightText[2]);
+    doc.text('Docente de Grupo', margin + 40, sigY + 9, { align: 'center' });
+
+    // Director signature
+    doc.line(pageWidth / 2 + 10, sigY, pageWidth / 2 + 70, sigY);
+    doc.setFontSize(8);
+    doc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2]);
+    doc.text(printConfig.directorName || 'Director(a)', pageWidth / 2 + 40, sigY + 5, { align: 'center' });
+    doc.setFontSize(7);
+    doc.setTextColor(COLORS.lightText[0], COLORS.lightText[1], COLORS.lightText[2]);
+    doc.text('Director(a) de la Escuela', pageWidth / 2 + 40, sigY + 9, { align: 'center' });
+
+    // Footer page info
+    doc.setFontSize(6);
+    doc.setTextColor(COLORS.lightText[0], COLORS.lightText[1], COLORS.lightText[2]);
+    doc.text(`Documento generado por Sistema SIRILA - ${new Date().toLocaleDateString('es-MX')}`, pageWidth / 2, pageHeight - 5, { align: 'center' });
+
+    doc.save(`Lista_Entrega_Boletas_${options.period.replace(/\s+/g, '_')}_${options.date || 'hoy'}.pdf`);
+};

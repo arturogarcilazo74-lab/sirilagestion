@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Student, SchoolConfig, Assignment } from '../types';
 import { generateDocumentContent } from '../services/ai';
 import { generateStudentAnalysis } from '../services/ai';
-import { getTeacherForStudent, generateAttendanceListPDF, generateDashboardReportPDF } from '../services/pdfGenerator';
+import { getTeacherForStudent, generateAttendanceListPDF, generateDashboardReportPDF, generateReportCardDeliveryListPDF } from '../services/pdfGenerator';
 import { calculateStudentMetrics, getTrimesterAvg, getStudentGlobalAverage } from '../services/gradeUtils';
 import { FileText, Download, Printer, Copy, CheckCircle, AlertTriangle, Calendar, User, FileOutput, Bus, Upload, ClipboardList, Award } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
@@ -31,7 +31,7 @@ interface DocumentsViewProps {
     assignments?: Assignment[];
 }
 
-type DocumentType = 'INCIDENCIA' | 'CITATORIO' | 'FICHA_DESCRIPTIVA' | 'PLANEACION' | 'ACTA_HECHOS' | 'PERMISO_SALIDA' | 'AUTORIZACION_EVENTO' | 'PRESENTACION_RESULTADOS' | 'OBSERVACIONES_BOLETA' | 'INFORME_PADRES' | 'INFORME_ACTIVIDADES' | 'LISTA_ASISTENCIA_PADRES' | 'PLAN_REZAGO' | 'REPORTE_RENDIMIENTO_GRUPO';
+type DocumentType = 'INCIDENCIA' | 'CITATORIO' | 'FICHA_DESCRIPTIVA' | 'PLANEACION' | 'ACTA_HECHOS' | 'PERMISO_SALIDA' | 'AUTORIZACION_EVENTO' | 'PRESENTACION_RESULTADOS' | 'OBSERVACIONES_BOLETA' | 'INFORME_PADRES' | 'INFORME_ACTIVIDADES' | 'LISTA_ASISTENCIA_PADRES' | 'PLAN_REZAGO' | 'REPORTE_RENDIMIENTO_GRUPO' | 'LISTA_ENTREGA_BOLETAS';
 
 export const DocumentsView: React.FC<DocumentsViewProps> = ({ students, config, initialType, assignments = [] }) => {
     const [selectedType, setSelectedType] = useState<DocumentType>(initialType || 'INCIDENCIA');
@@ -620,6 +620,23 @@ Docente:               ${student ? getTeacherForStudent(config, student.group) :
             return;
         }
 
+        // --- LISTA DE ENTREGA DE BOLETAS (PDF) ---
+        if (selectedType === 'LISTA_ENTREGA_BOLETAS') {
+            try {
+                await generateReportCardDeliveryListPDF(students, config, {
+                    period: citationReason || 'Trimestre 1',
+                    date: citationDate,
+                });
+                setGeneratedContent('✅ PDF de la Lista de Entrega de Boletas generado y descargado exitosamente.\n\nRevisa tu carpeta de descargas.');
+            } catch (error) {
+                console.error("Error generando PDF:", error);
+                setGeneratedContent(`Error al generar el PDF: ${error instanceof Error ? error.message : String(error)}`);
+            } finally {
+                setIsGenerating(false);
+            }
+            return;
+        }
+
         // --- REPORTE DE RENDIMIENTO Y CUADRO DE HONOR (PDF) ---
         if (selectedType === 'REPORTE_RENDIMIENTO_GRUPO') {
             try {
@@ -813,6 +830,7 @@ Docente:               ${student ? getTeacherForStudent(config, student.group) :
                                 { id: 'INFORME_PADRES', label: 'Informe para Padres (Completo)', icon: FileText },
                                 { id: 'INFORME_ACTIVIDADES', label: 'Informe de Actividades Pendientes', icon: AlertTriangle },
                                 { id: 'LISTA_ASISTENCIA_PADRES', label: 'Lista de Asistencia - Junta Padres', icon: Calendar },
+                                { id: 'LISTA_ENTREGA_BOLETAS', label: 'Lista de Entrega de Boletas', icon: ClipboardList },
                                 { id: 'PLAN_REZAGO', label: 'Plan de Intervención de Rezago (22-30 Jun)', icon: ClipboardList },
                                 { id: 'REPORTE_RENDIMIENTO_GRUPO', label: 'Reporte de Rendimiento y Cuadro de Honor', icon: Award },
                                 { id: 'INCIDENCIA', label: 'Reporte de Incidencia', icon: AlertTriangle },
@@ -865,7 +883,7 @@ Docente:               ${student ? getTeacherForStudent(config, student.group) :
                                 </div>
                             )}
 
-                            {selectedType !== 'PLANEACION' && selectedType !== 'PRESENTACION_RESULTADOS' && selectedType !== 'LISTA_ASISTENCIA_PADRES' && selectedType !== 'PLAN_REZAGO' && selectedType !== 'REPORTE_RENDIMIENTO_GRUPO' && (
+                             {selectedType !== 'PLANEACION' && selectedType !== 'PRESENTACION_RESULTADOS' && selectedType !== 'LISTA_ASISTENCIA_PADRES' && selectedType !== 'LISTA_ENTREGA_BOLETAS' && selectedType !== 'PLAN_REZAGO' && selectedType !== 'REPORTE_RENDIMIENTO_GRUPO' && (
                                 <>
                                     {(selectedType === 'FICHA_DESCRIPTIVA' || selectedType === 'OBSERVACIONES_BOLETA') && isBatchMode ? (
                                         <div className="space-y-4 border border-indigo-100 bg-indigo-50/20 p-4 rounded-xl">
@@ -980,6 +998,33 @@ Docente:               ${student ? getTeacherForStudent(config, student.group) :
                                         <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha y Hora</label>
                                         <input
                                             type="datetime-local"
+                                            value={citationDate}
+                                            onChange={(e) => setCitationDate(e.target.value)}
+                                            className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white/80"
+                                        />
+                                    </div>
+                                </>
+                            )}
+
+                            {selectedType === 'LISTA_ENTREGA_BOLETAS' && (
+                                <>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Periodo / Trimestre</label>
+                                        <select
+                                            value={citationReason || 'Trimestre 1'}
+                                            onChange={(e) => setCitationReason(e.target.value)}
+                                            className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white/80"
+                                        >
+                                            <option value="Trimestre 1">Trimestre 1</option>
+                                            <option value="Trimestre 2">Trimestre 2</option>
+                                            <option value="Trimestre 3">Trimestre 3</option>
+                                            <option value="Promedio Final">Promedio Final</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha de Entrega</label>
+                                        <input
+                                            type="date"
                                             value={citationDate}
                                             onChange={(e) => setCitationDate(e.target.value)}
                                             className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white/80"
