@@ -995,6 +995,107 @@ app.delete('/sirila-v1/finance/:id', async (req, res) => {
     }
 });
 
+// BULK IMPORT PAYMENTS DATA (For local or production sync)
+app.post('/sirila-v1/import-payments-data', async (req, res) => {
+    const { payments } = req.body;
+    if (!Array.isArray(payments)) {
+        return res.status(400).json({ error: 'payments must be an array' });
+    }
+
+    try {
+        console.log(`[API IMPORT] Received ${payments.length} payment records`);
+        
+        if (!useMySQL) {
+            const data = readJSON();
+            let updatedCount = 0;
+            const updatedStudents = data.students.map(s => {
+                const curp = (s.curp || '').trim().toUpperCase();
+                const name = (s.name || '').trim().toUpperCase();
+                const match = payments.find(p => p.curp.trim().toUpperCase() === curp || p.name.trim().toUpperCase() === name);
+                if (match) {
+                    updatedCount++;
+                    s.annualFeePaid = !!match.annualFeePaid;
+                    s.annualFeeStatus = match.annualFeeStatus;
+                    s.annualFeeAbono = match.annualFeeAbono;
+                    s.annualFeeTotal = match.annualFeeTotal;
+                    s.tieneHermanos = !!match.tieneHermanos;
+                    if (match.siblingGrade) s.siblingGrade = String(match.siblingGrade);
+                    
+                    if (match.guardianName && match.guardianName.toUpperCase() !== 'N/A') {
+                        if (!s.guardianName || ['', 'N/A', 'NONE', 'NULL'].includes(s.guardianName.toUpperCase())) {
+                            s.guardianName = match.guardianName;
+                        }
+                    }
+                    if (match.guardianPhone && match.guardianPhone.toUpperCase() !== 'N/A') {
+                        if (!s.guardianPhone || ['', 'N/A', 'NONE', 'NULL'].includes(s.guardianPhone.toUpperCase())) {
+                            s.guardianPhone = String(match.guardianPhone);
+                        }
+                    }
+                }
+                return s;
+            });
+            data.students = updatedStudents;
+            writeJSON(data);
+            return res.json({ success: true, message: `Updated ${updatedCount} students in JSON fallback storage.` });
+        }
+
+        const pool = getPool();
+        const [dbStudents] = await pool.query("SELECT id, curp, name, guardian_name, guardian_phone, data_json FROM students");
+        let updatedCount = 0;
+        
+        for (const s of dbStudents) {
+            const curp = (s.curp || '').trim().toUpperCase();
+            const name = (s.name || '').trim().toUpperCase();
+            const match = payments.find(p => p.curp.trim().toUpperCase() === curp || p.name.trim().toUpperCase() === name);
+            if (match) {
+                updatedCount++;
+                const isPaid = match.annualFeePaid ? 1 : 0;
+                
+                let finalTutorName = s.guardian_name || '';
+                if (match.guardianName && match.guardianName.toUpperCase() !== 'N/A') {
+                    if (!finalTutorName || ['', 'N/A', 'NONE', 'NULL'].includes(finalTutorName.toUpperCase())) {
+                        finalTutorName = match.guardianName;
+                    }
+                }
+                let finalTutorPhone = s.guardian_phone || '';
+                if (match.guardianPhone && match.guardianPhone.toUpperCase() !== 'N/A') {
+                    if (!finalTutorPhone || ['', 'N/A', 'NONE', 'NULL'].includes(finalTutorPhone.toUpperCase())) {
+                        finalTutorPhone = String(match.guardianPhone);
+                    }
+                }
+
+                let studentData = {};
+                try {
+                    studentData = typeof s.data_json === 'string' ? JSON.parse(s.data_json) : (s.data_json || {});
+                } catch(e) { studentData = {}; }
+
+                studentData.annualFeePaid = !!match.annualFeePaid;
+                studentData.annualFeeStatus = match.annualFeeStatus;
+                studentData.annualFeeAbono = match.annualFeeAbono;
+                studentData.annualFeeTotal = match.annualFeeTotal;
+                studentData.tieneHermanos = !!match.tieneHermanos;
+                if (match.siblingGrade) studentData.siblingGrade = String(match.siblingGrade);
+                studentData.guardianName = finalTutorName;
+                studentData.guardianPhone = finalTutorPhone;
+
+                await pool.query(`
+                    UPDATE students
+                    SET annual_fee_paid = ?,
+                        guardian_name = ?,
+                        guardian_phone = ?,
+                        data_json = ?
+                    WHERE id = ?
+                `, [isPaid, finalTutorName, finalTutorPhone, JSON.stringify(studentData), s.id]);
+            }
+        }
+        
+        res.json({ success: true, message: `Updated ${updatedCount} students in MySQL database.` });
+    } catch (error) {
+        console.error('[API IMPORT ERROR]', error.message);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // CONFIG
 app.post('/sirila-v1/config', async (req, res) => {
     const config = req.body;
