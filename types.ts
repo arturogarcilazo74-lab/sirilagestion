@@ -44,6 +44,11 @@ export interface Student {
   participationCount: number;
   grades: TrimesterGrade[]; // Array of exactly 3 trimesters (indices 0, 1, 2)
   annualFeePaid: boolean; // Cuota Anual
+  annualFeeStatus?: 'PAGADO' | 'PENDIENTE' | 'PARCIAL'; // Estado de cuota anual
+  annualFeeAbono?: number; // Monto abonado
+  annualFeeTotal?: number; // Monto total de la cuota
+  tieneHermanos?: boolean; // Si tiene hermanos inscritos
+  siblingGrade?: string; // Grado del hermano inscrito
   eventFeePaid?: boolean; // Cooperación Eventos (Generico)
   examFeePaid?: boolean; // Exámenes (Generico)
 }

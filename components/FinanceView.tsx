@@ -30,11 +30,13 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
     const [newEventDate, setNewEventDate] = useState(new Date().toISOString().split('T')[0]);
 
     // Annual Fee Stats
-    const paidCount = students.filter(s => s.annualFeePaid).length;
     const totalStudents = students.length;
-    const annualProgress = totalStudents > 0 ? Math.round((paidCount / totalStudents) * 100) : 0;
-    const estimatedAnnualTotal = totalStudents * 350; // Assuming 350 is the fee, can be configurable later
-    const collectedAnnualTotal = paidCount * 350;
+    const collectedAnnualTotal = students.reduce((sum, s) => sum + (s.annualFeeAbono || 0), 0);
+    const estimatedAnnualTotal = students.reduce((sum, s) => sum + (typeof s.annualFeeTotal === 'number' ? s.annualFeeTotal : 350), 0);
+    const paidCount = students.filter(s => s.annualFeePaid || s.annualFeeStatus === 'PAGADO').length;
+    const partialCount = students.filter(s => s.annualFeeStatus === 'PARCIAL').length;
+    const unpaidCount = totalStudents - paidCount - partialCount;
+    const annualProgress = estimatedAnnualTotal > 0 ? Math.round((collectedAnnualTotal / estimatedAnnualTotal) * 100) : 0;
 
     const handleCreateEvent = (e: React.FormEvent) => {
         e.preventDefault();
@@ -169,15 +171,31 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                                                 </div>
                                             </td>
                                             <td className="p-4 text-center">
-                                                {student.annualFeePaid ? (
-                                                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold border border-emerald-200">
-                                                        <CheckCircle size={14} /> PAGADO
-                                                    </span>
-                                                ) : (
-                                                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-red-100 text-red-700 text-xs font-bold border border-red-200">
-                                                        <AlertCircle size={14} /> PENDIENTE
-                                                    </span>
-                                                )}
+                                                <div className="flex flex-col items-center gap-1">
+                                                    {(student.annualFeePaid || student.annualFeeStatus === 'PAGADO') ? (
+                                                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold border border-emerald-200">
+                                                            <CheckCircle size={14} /> PAGADO
+                                                        </span>
+                                                    ) : student.annualFeeStatus === 'PARCIAL' ? (
+                                                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-amber-100 text-amber-700 text-xs font-bold border border-amber-200">
+                                                            <AlertCircle size={14} /> PARCIAL
+                                                        </span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-red-100 text-red-700 text-xs font-bold border border-red-200">
+                                                            <AlertCircle size={14} /> PENDIENTE
+                                                        </span>
+                                                    )}
+                                                    {(typeof student.annualFeeAbono === 'number' || typeof student.annualFeeTotal === 'number') && (
+                                                        <span className="text-[10px] text-slate-500 font-semibold">
+                                                            Abono: ${student.annualFeeAbono || 0} / Total: ${typeof student.annualFeeTotal === 'number' ? student.annualFeeTotal : 350}
+                                                        </span>
+                                                    )}
+                                                    {student.tieneHermanos && (
+                                                        <span className="text-[9px] bg-sky-50 text-sky-600 px-1.5 py-0.5 rounded font-bold border border-sky-100">
+                                                            Tiene Hermanos {student.siblingGrade ? `(${student.siblingGrade}° Grado)` : ''}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td className="p-4 text-right">
                                                 <button
