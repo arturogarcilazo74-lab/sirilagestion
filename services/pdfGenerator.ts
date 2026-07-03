@@ -2343,3 +2343,74 @@ export const generateReportCardDeliveryListPDF = async (
 
     doc.save(`Lista_Entrega_Boletas_${options.period.replace(/\s+/g, '_')}_${options.date || 'hoy'}.pdf`);
 };
+
+// Reporte de cuotas anuales
+export const generateFinanceReportPDF = (
+    students: Student[],
+    config: SchoolConfig,
+    groupName: string
+) => {
+    const doc = new jsPDF();
+    const date = new Date().toLocaleDateString('es-MX');
+
+    const title = groupName === 'TODOS' ? 'REPORTE FINANCIERO GENERAL - CUOTA ANUAL' : `REPORTE FINANCIERO - GRUPO: ${groupName}`;
+    addHeader(doc, config, title);
+    
+    doc.setFontSize(9);
+    doc.text(`Fecha de Impresión: ${date}`, 20, 55);
+
+    const headers = ['No.', 'Nombre Completo', 'CURP', 'Grupo', 'Estado', 'Abonado', 'Total', 'Hermanos'];
+
+    const targetStudents = (groupName === 'TODOS' ? students : students.filter(s => (s.group || config.gradeGroup) === groupName))
+        .sort((a, b) => {
+            const groupA = a.group || '';
+            const groupB = b.group || '';
+            if (groupA !== groupB) return groupA.localeCompare(groupB);
+            return a.name.localeCompare(b.name);
+        });
+
+    let totalRecaudado = 0;
+    let totalEsperado = 0;
+
+    const body = targetStudents.map((s, idx) => {
+        const status = s.annualFeeStatus || (s.annualFeePaid ? 'PAGADO' : 'PENDIENTE');
+        const abono = s.annualFeeAbono !== undefined ? s.annualFeeAbono : (s.annualFeePaid ? 350 : 0);
+        const total = s.annualFeeTotal !== undefined ? s.annualFeeTotal : 350;
+        const tieneHermanos = s.tieneHermanos ? 'Sí' : 'No';
+
+        totalRecaudado += abono;
+        totalEsperado += total;
+
+        return [
+            (idx + 1).toString(),
+            s.name,
+            s.curp || 'N/A',
+            s.group || 'N/A',
+            status,
+            `$${abono.toFixed(2)}`,
+            `$${total.toFixed(2)}`,
+            tieneHermanos
+        ];
+    });
+
+    autoTable(doc, {
+        startY: 60,
+        head: [headers],
+        body: body,
+        theme: 'grid',
+        headStyles: { fillColor: COLORS.primary },
+        styles: { fontSize: 8 },
+    });
+
+    const finalY = (doc as any).lastAutoTable.finalY + 10;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Resumen Financiero:', 20, finalY);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Total Alumnos: ${targetStudents.length}`, 20, finalY + 5);
+    doc.text(`Total Recaudado (Abonos): $${totalRecaudado.toFixed(2)}`, 20, finalY + 10);
+    doc.text(`Total Esperado (Estimado): $${totalEsperado.toFixed(2)}`, 20, finalY + 15);
+    doc.text(`Progreso de Recaudación: ${totalEsperado > 0 ? ((totalRecaudado / totalEsperado) * 100).toFixed(1) : '0'}%`, 20, finalY + 20);
+
+    doc.save(`Reporte_Financiero_${groupName.replace(/\s+/g, '_')}.pdf`);
+};
