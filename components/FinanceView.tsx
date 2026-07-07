@@ -45,13 +45,35 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
     const [siblingSearchQuery, setSiblingSearchQuery] = useState('');
     const [selectedSiblings, setSelectedSiblings] = useState<Student[]>([]);
 
-    // Annual Fee Stats
+    // Annual Fee Stats (Deduplicating linked siblings to count only one fee per family)
+    const processedUnits = new Set<string>();
+    let collectedAnnualTotal = 0;
+    let estimatedAnnualTotal = 0;
+    let paidCount = 0;
+    let partialCount = 0;
+    let unpaidCount = 0;
+
+    students.forEach(s => {
+        if (processedUnits.has(s.id)) return;
+
+        // Mark siblings as processed so they aren't added to the totals again
+        const linkedIds = s.siblingIds || (s.siblingId ? [s.siblingId] : []);
+        linkedIds.forEach(id => processedUnits.add(id));
+        processedUnits.add(s.id);
+
+        collectedAnnualTotal += (s.annualFeeAbono || 0);
+        estimatedAnnualTotal += (typeof s.annualFeeTotal === 'number' ? s.annualFeeTotal : 350);
+
+        if (s.annualFeePaid || s.annualFeeStatus === 'PAGADO') {
+            paidCount++;
+        } else if (s.annualFeeStatus === 'PARCIAL') {
+            partialCount++;
+        } else {
+            unpaidCount++;
+        }
+    });
+
     const totalStudents = students.length;
-    const collectedAnnualTotal = students.reduce((sum, s) => sum + (s.annualFeeAbono || 0), 0);
-    const estimatedAnnualTotal = students.reduce((sum, s) => sum + (typeof s.annualFeeTotal === 'number' ? s.annualFeeTotal : 350), 0);
-    const paidCount = students.filter(s => s.annualFeePaid || s.annualFeeStatus === 'PAGADO').length;
-    const partialCount = students.filter(s => s.annualFeeStatus === 'PARCIAL').length;
-    const unpaidCount = totalStudents - paidCount - partialCount;
     const annualProgress = estimatedAnnualTotal > 0 ? Math.round((collectedAnnualTotal / estimatedAnnualTotal) * 100) : 0;
 
     const handleCreateEvent = (e: React.FormEvent) => {
