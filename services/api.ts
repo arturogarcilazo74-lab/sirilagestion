@@ -67,6 +67,9 @@ const addToQueue = (endpoint: string, method: string, data: any) => {
         queue.push({ endpoint: safeEndpoint, method, data, timestamp: Date.now() });
         localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
         console.log(`Action queued for offline sync: ${method} ${safeEndpoint}`);
+        
+        // Dispatch custom event to notify useAppStore of queue length change
+        window.dispatchEvent(new CustomEvent('sirila-action-queued', { detail: { length: queue.length } }));
     } catch (e) {
         console.error("CRITICAL: Failed to add to offline queue", e);
     }

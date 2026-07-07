@@ -217,6 +217,89 @@ export const useAppStore = () => {
         catch (e) { console.warn("Cache CTE Game Results failed", e); }
     }, [cteGameResults]);
 
+    const [isServerOffline, setIsServerOffline] = useState(false);
+
+    // -- AUTO-SYNC FROM SERVER UTIL --
+    const reloadFromServer = async () => {
+        try {
+            console.log("%c☁ Buscando datos en el servidor...", "color: blue; font-weight: bold;");
+            const result = await api.checkStatus();
+
+            if (result) {
+                console.log("%c✓ Datos recibidos del servidor", "color: green; font-weight: bold;");
+                if (result.schoolConfig) setSchoolConfig(result.schoolConfig);
+
+                if (!result.isEmpty) {
+                    const s = result.students || [];
+                    const a = result.assignments || [];
+                    const e = result.events || [];
+                    const l = (result.behaviorLogs || []).map((log: any) => ({
+                        ...log,
+                        points: log.points !== undefined ? log.points : (log.type === 'POSITIVE' ? 1 : -1)
+                    }));
+                    const f = result.financeEvents || [];
+                    const t = result.staffTasks || [];
+                    const b = result.books || [];
+
+                    // Clean invalid attendance records
+                    const cleanedStudents = s.map((student: Student) => {
+                        const cleanedAttendance = cleanInvalidAttendance(student.attendance || {}) as Record<string, AttendanceStatus>;
+                        return {
+                            ...student,
+                            attendance: cleanedAttendance
+                        };
+                    });
+
+                    setStudents(cleanedStudents);
+                    setAssignments(a);
+                    setEvents(e);
+                    setBehaviorLogs(l);
+                    setFinanceEvents(f);
+                    setStaffTasks(t);
+                    setBooks(b);
+
+                    // CTE data from server
+                    if (result.cteGames) setCteGames(result.cteGames);
+                    if (result.cteGameResults) setCteGameResults(result.cteGameResults);
+                    if (result.ctePresentations) setCtePresentations(result.ctePresentations);
+                    if (result.staffAttendanceRecords) setStaffAttendanceRecords(result.staffAttendanceRecords);
+
+                    // If response was optimized (stripped avatars), fetch them now
+                    if (result.isOptimized) {
+                        console.log("%c🖼 Iniciando carga de avatars...", "color: purple;");
+                        api.getAvatars().then(avatarMap => {
+                            const count = Object.keys(avatarMap).length;
+                            console.log(`%c🖼 Avatars recibidos: ${count}`, "color: purple; font-weight: bold;");
+
+                            setStudents(prev => {
+                                const updated = prev.map(student => {
+                                    if (avatarMap[student.id]) {
+                                        return { ...student, avatar: avatarMap[student.id] };
+                                    }
+                                    return student;
+                                });
+                                saveToCache('SIRILA_CACHE_STUDENTS', updated);
+                                return updated;
+                            });
+                            console.log("%c✓ Avatars aplicados y cacheados", "color: purple; font-weight: bold;");
+                        }).catch(err => console.error("Failed to lazy load avatars:", err));
+                    }
+
+                    // Flush to cache immediately
+                    flushCache(cleanedStudents, a, e, l, result.schoolConfig || schoolConfig, f, t, b);
+                } else {
+                    console.warn("Servidor vacío. Intentando recuperación local...");
+                    recoverLocalData(true);
+                }
+                return true;
+            }
+            return false;
+        } catch (e) {
+            console.log("%c📵 Servidor desconectado. Usando memoria local del dispositivo.", "color: orange; font-weight: bold;");
+            return false;
+        }
+    };
+
     // Background Sync when online OR periodically
     useEffect(() => {
         const checkQueue = async () => {
@@ -225,41 +308,35 @@ export const useAppStore = () => {
             if (count > 0) {
                 const remaining = await api.processQueue();
                 setPendingActions(remaining || 0);
+                // If we successfully processed the queue, refresh the state from the server
+                if (remaining === 0) {
+                    await reloadFromServer();
+                }
+            } else if (isServerOffline) {
+                // If server was offline, poll to see if it came back up
+                const success = await reloadFromServer();
+                if (success) {
+                    setIsServerOffline(false);
+                }
             }
         };
 
         const handleOnline = async () => {
             console.log("%c✓ Conexión restaurada. Sincronizando...", "color: green; font-weight: bold;");
-            // First process offline queue
             await checkQueue();
-            // Then reload fresh data from server
-            try {
-                const result = await api.checkStatus();
-                if (result && !result.isEmpty) {
-                    setStudents(result.students || []);
-                    setAssignments(result.assignments || []);
-                    setEvents(result.events || []);
-                    setBehaviorLogs((result.behaviorLogs || []).map((log: any) => ({
-                        ...log,
-                        points: log.points !== undefined ? log.points : (log.type === 'POSITIVE' ? 1 : -1)
-                    })));
-                    setFinanceEvents(result.financeEvents || []);
-                    setStaffTasks(result.staffTasks || []);
-                    setBooks(result.books || []);
-                    if (result.cteGames) setCteGames(result.cteGames);
-                    if (result.cteGameResults) setCteGameResults(result.cteGameResults);
-                    if (result.ctePresentations) setCtePresentations(result.ctePresentations);
-                    if (result.staffAttendanceRecords) setStaffAttendanceRecords(result.staffAttendanceRecords);
-                    if (result.schoolConfig) setSchoolConfig(result.schoolConfig);
-                    flushCache(result.students, result.assignments, result.events, result.behaviorLogs, result.schoolConfig, result.financeEvents, result.staffTasks, result.books);
-                    console.log("%c✓ Datos sincronizados desde el servidor", "color: green; font-weight: bold;");
-                }
-            } catch (e) {
-                console.warn("No se pudo recargar datos del servidor al reconectar:", e);
+            const success = await reloadFromServer();
+            setIsServerOffline(!success);
+        };
+
+        const handleActionQueued = (e: Event) => {
+            const detail = (e as CustomEvent).detail;
+            if (detail && typeof detail.length === 'number') {
+                setPendingActions(detail.length);
             }
         };
 
         window.addEventListener('online', handleOnline);
+        window.addEventListener('sirila-action-queued', handleActionQueued);
 
         // Periodic check every 30 seconds
         const interval = setInterval(checkQueue, 30000);
@@ -269,9 +346,10 @@ export const useAppStore = () => {
 
         return () => {
             window.removeEventListener('online', handleOnline);
+            window.removeEventListener('sirila-action-queued', handleActionQueued);
             clearInterval(interval);
         };
-    }, []);
+    }, [isServerOffline]);
 
     const [isLoading, setIsLoading] = useState(false);
 
@@ -279,85 +357,9 @@ export const useAppStore = () => {
     useEffect(() => {
         const loadFromServer = async () => {
             setIsLoading(true);
-            try {
-                console.log("%c☁ Buscando datos en el servidor...", "color: blue; font-weight: bold;");
-                const result = await api.checkStatus();
-
-                if (result) {
-                    console.log("%c✓ Datos recibidos del servidor", "color: green; font-weight: bold;");
-                    if (result.schoolConfig) setSchoolConfig(result.schoolConfig);
-
-                    if (!result.isEmpty) {
-                        const s = result.students || [];
-                        const a = result.assignments || [];
-                        const e = result.events || [];
-                        const l = (result.behaviorLogs || []).map((log: any) => ({
-                            ...log,
-                            points: log.points !== undefined ? log.points : (log.type === 'POSITIVE' ? 1 : -1)
-                        }));
-                        const f = result.financeEvents || [];
-                        const t = result.staffTasks || [];
-                        const b = result.books || [];
-
-                        // Clean invalid attendance records
-                        const cleanedStudents = s.map((student: Student) => {
-                            const cleanedAttendance = cleanInvalidAttendance(student.attendance || {}) as Record<string, AttendanceStatus>;
-                            return {
-                                ...student,
-                                attendance: cleanedAttendance
-                            };
-                        });
-
-                        setStudents(cleanedStudents);
-                        setAssignments(a);
-                        setEvents(e);
-                        setBehaviorLogs(l);
-                        setFinanceEvents(f);
-                        setStaffTasks(t);
-                        setBooks(b);
-
-                        // CTE data from server
-                        if (result.cteGames) setCteGames(result.cteGames);
-                        if (result.cteGameResults) setCteGameResults(result.cteGameResults);
-                        if (result.ctePresentations) setCtePresentations(result.ctePresentations);
-                        if (result.staffAttendanceRecords) setStaffAttendanceRecords(result.staffAttendanceRecords);
-
-                        // If response was optimized (stripped avatars), fetch them now
-                        if (result.isOptimized) {
-                            console.log("%c🖼 Iniciando carga de avatars...", "color: purple;");
-                            api.getAvatars().then(avatarMap => {
-                                const count = Object.keys(avatarMap).length;
-                                console.log(`%c🖼 Avatars recibidos: ${count}`, "color: purple; font-weight: bold;");
-
-                                setStudents(prev => {
-                                    const updated = prev.map(student => {
-                                        if (avatarMap[student.id]) {
-                                            return { ...student, avatar: avatarMap[student.id] };
-                                        }
-                                        return student;
-                                    });
-
-                                    // CRITICAL: Update cache with full students (including avatars)
-                                    // Flush all other state variables from closure (they are from server load)
-                                    saveToCache('SIRILA_CACHE_STUDENTS', updated);
-                                    return updated;
-                                });
-                                console.log("%c✓ Avatars aplicados y cacheados", "color: purple; font-weight: bold;");
-                            }).catch(err => console.error("Failed to lazy load avatars:", err));
-                        }
-
-                        // CRITICAL: Flush to cache immediately
-                        flushCache(cleanedStudents, a, e, l, result.schoolConfig || schoolConfig, f, t, b);
-                    } else {
-                        console.warn("Servidor vacío. Intentando recuperación local...");
-                        recoverLocalData(true);
-                    }
-                }
-            } catch (e) {
-                console.log("%c📵 Servidor desconectado. Usando memoria local del dispositivo.", "color: orange; font-weight: bold;");
-            } finally {
-                setIsLoading(false);
-            }
+            const success = await reloadFromServer();
+            setIsServerOffline(!success);
+            setIsLoading(false);
 
             // Always try to process queue on start
             try {
