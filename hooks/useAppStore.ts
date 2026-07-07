@@ -792,16 +792,16 @@ export const useAppStore = () => {
     const handleUpdateStudentFee = (studentId: string, paid: boolean, extraData?: Partial<Student>) => {
         let updatedStudents: Student[] = [];
         setStudents(prev => {
-            let previousSiblingId = '';
+            let previousSiblingIds: string[] = [];
             
-            // First pass: locate target student and get old sibling info
+            // First pass: locate target student and get old sibling IDs list
             prev.forEach(s => {
                 if (s.id === studentId) {
-                    previousSiblingId = s.siblingId || '';
+                    previousSiblingIds = s.siblingIds || (s.siblingId ? [s.siblingId] : []);
                 }
             });
 
-            // Second pass: compute state changes
+            // Second pass: compute primary student changes
             const next = prev.map(s => {
                 if (s.id === studentId) {
                     const updated = { ...s, annualFeePaid: paid, ...extraData };
@@ -812,14 +812,18 @@ export const useAppStore = () => {
             });
 
             const primaryStudent = updatedStudents[0];
-            const hasSibling = primaryStudent && primaryStudent.tieneHermanos && primaryStudent.siblingId;
+            const currentSiblingIds = primaryStudent && primaryStudent.tieneHermanos
+                ? (primaryStudent.siblingIds || (primaryStudent.siblingId ? [primaryStudent.siblingId] : []))
+                : [];
 
             // Third pass: apply sibling modifications (bi-directional link/unlink, sync payment status)
             const finalStudents = next.map(s => {
                 if (s.id === studentId) {
                     return primaryStudent;
                 }
-                if (hasSibling && s.id === primaryStudent.siblingId) {
+                if (currentSiblingIds.includes(s.id)) {
+                    const existingSibList = s.siblingIds || (s.siblingId ? [s.siblingId] : []);
+                    const newSibList = Array.from(new Set([...existingSibList, primaryStudent.id]));
                     const siblingUpdated = {
                         ...s,
                         annualFeePaid: paid,
@@ -827,20 +831,26 @@ export const useAppStore = () => {
                         annualFeeAbono: primaryStudent.annualFeeAbono,
                         annualFeeTotal: primaryStudent.annualFeeTotal,
                         tieneHermanos: true,
-                        siblingId: primaryStudent.id,
+                        siblingId: newSibList[0] || '',
                         siblingName: primaryStudent.name,
-                        siblingGrade: primaryStudent.group || ''
+                        siblingGrade: primaryStudent.group || '',
+                        siblingIds: newSibList
                     };
                     updatedStudents.push(siblingUpdated);
                     return siblingUpdated;
                 }
-                if (!hasSibling && previousSiblingId && s.id === previousSiblingId) {
+                if (previousSiblingIds.includes(s.id) && !currentSiblingIds.includes(s.id)) {
+                    const existingSibList = s.siblingIds || (s.siblingId ? [s.siblingId] : []);
+                    const newSibList = existingSibList.filter(id => id !== studentId);
+                    const hasAnySib = newSibList.length > 0;
+                    
                     const siblingCleared = {
                         ...s,
-                        tieneHermanos: false,
-                        siblingId: '',
-                        siblingName: '',
-                        siblingGrade: ''
+                        tieneHermanos: hasAnySib,
+                        siblingId: newSibList[0] || '',
+                        siblingName: hasAnySib ? s.siblingName : '',
+                        siblingGrade: hasAnySib ? s.siblingGrade : '',
+                        siblingIds: newSibList
                     };
                     updatedStudents.push(siblingCleared);
                     return siblingCleared;
