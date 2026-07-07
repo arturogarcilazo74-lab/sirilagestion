@@ -7,7 +7,7 @@ import { useAppStore } from '../hooks/useAppStore';
 interface FinanceViewProps {
     students: Student[];
     financeEvents: FinanceEvent[];
-    onUpdateStudentFee: (studentId: string, paid: boolean) => void;
+    onUpdateStudentFee: (studentId: string, paid: boolean, extraData?: Partial<Student>) => void;
     onAddEvent: (event: Omit<FinanceEvent, 'id' | 'contributions'>) => void;
     onDeleteEvent: (eventId: string) => void;
     onUpdateContribution: (eventId: string, studentId: string, amount: number) => void;
@@ -32,6 +32,14 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
     const [newEventTitle, setNewEventTitle] = useState('');
     const [newEventCost, setNewEventCost] = useState('');
     const [newEventDate, setNewEventDate] = useState(new Date().toISOString().split('T')[0]);
+
+    // Annual Fee Edit Modal State
+    const [editingStudentFee, setEditingStudentFee] = useState<Student | null>(null);
+    const [feeStatus, setFeeStatus] = useState<'PAGADO' | 'PENDIENTE' | 'PARCIAL'>('PENDIENTE');
+    const [feeAbono, setFeeAbono] = useState<number>(0);
+    const [feeTotal, setFeeTotal] = useState<number>(350);
+    const [tieneHermanos, setTieneHermanos] = useState<boolean>(false);
+    const [siblingGrade, setSiblingGrade] = useState<string>('');
 
     // Annual Fee Stats
     const totalStudents = students.length;
@@ -218,16 +226,25 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                                             </td>
                                             <td className="p-4 text-right">
                                                 <button
-                                                    onClick={() => onUpdateStudentFee(student.id, !student.annualFeePaid)}
+                                                    onClick={() => {
+                                                        setEditingStudentFee(student);
+                                                        setFeeStatus(student.annualFeeStatus || (student.annualFeePaid ? 'PAGADO' : 'PENDIENTE'));
+                                                        setFeeAbono(student.annualFeeAbono || 0);
+                                                        setFeeTotal(typeof student.annualFeeTotal === 'number' ? student.annualFeeTotal : 350);
+                                                        setTieneHermanos(student.tieneHermanos || false);
+                                                        setSiblingGrade(student.siblingGrade || '');
+                                                    }}
                                                     disabled={readOnly}
                                                     className={`px-4 py-2 rounded-lg font-bold text-xs transition-all ${readOnly
                                                         ? 'opacity-50 cursor-not-allowed bg-slate-100 text-slate-400'
-                                                        : student.annualFeePaid
-                                                            ? 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                                                            : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-200'
+                                                        : (student.annualFeePaid || student.annualFeeStatus === 'PAGADO')
+                                                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+                                                            : student.annualFeeStatus === 'PARCIAL'
+                                                                ? 'bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100'
+                                                                : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-200'
                                                         }`}
                                                 >
-                                                    {student.annualFeePaid ? 'Marcar como Pendiente' : 'Registrar Pago'}
+                                                    Registrar / Editar Pago
                                                 </button>
                                             </td>
                                         </tr>
@@ -236,6 +253,141 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                             </table>
                         </div>
                     </div>
+
+                    {/* MODAL PARA GESTIONAR PAGO DE CUOTA ANUAL */}
+                    {editingStudentFee && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+                            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-slideUp border border-slate-100">
+                                <div className="bg-slate-900 p-6 text-white text-left">
+                                    <h3 className="text-xl font-bold">Gestionar Cuota Escolar</h3>
+                                    <p className="text-slate-400 text-sm mt-1">{editingStudentFee.name}</p>
+                                </div>
+                                <div className="p-6 space-y-4 text-left">
+                                    {/* Estado del Pago */}
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Estado del Pago</label>
+                                        <div className="grid grid-cols-3 gap-2">
+                                            {(['PENDIENTE', 'PARCIAL', 'PAGADO'] as const).map(status => (
+                                                <button
+                                                    key={status}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setFeeStatus(status);
+                                                        if (status === 'PAGADO') {
+                                                            setFeeAbono(feeTotal);
+                                                        }
+                                                    }}
+                                                    className={`py-2 px-3 rounded-lg font-bold text-xs border text-center transition-all ${
+                                                        feeStatus === status
+                                                            ? status === 'PAGADO'
+                                                                ? 'bg-emerald-50 border-emerald-500 text-emerald-700 shadow-sm'
+                                                                : status === 'PARCIAL'
+                                                                ? 'bg-amber-50 border-amber-500 text-amber-700 shadow-sm'
+                                                                : 'bg-red-50 border-red-500 text-red-700 shadow-sm'
+                                                            : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+                                                    }`}
+                                                >
+                                                    {status === 'PAGADO' ? 'Pagado' : status === 'PARCIAL' ? 'Abono / Parcial' : 'Pendiente'}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Cuota Total */}
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Costo de la Cuota ($)</label>
+                                        <input
+                                            type="number"
+                                            value={feeTotal}
+                                            onChange={e => setFeeTotal(parseFloat(e.target.value) || 0)}
+                                            className="w-full p-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:border-indigo-500 bg-white"
+                                        />
+                                    </div>
+
+                                    {/* Monto Abonado (solo si es parcial) */}
+                                    {feeStatus === 'PARCIAL' && (
+                                        <div className="animate-slideDown">
+                                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Monto del Abono ($)</label>
+                                            <input
+                                                type="number"
+                                                value={feeAbono}
+                                                onChange={e => setFeeAbono(parseFloat(e.target.value) || 0)}
+                                                className="w-full p-2.5 border border-slate-300 rounded-lg text-sm outline-none focus:border-indigo-500 bg-white"
+                                                placeholder="Ingresa el abono..."
+                                            />
+                                        </div>
+                                    )}
+
+                                    {/* Tiene hermanos checkbox */}
+                                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-3">
+                                        <label className="flex items-center gap-3 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={tieneHermanos}
+                                                onChange={e => {
+                                                    const checked = e.target.checked;
+                                                    setTieneHermanos(checked);
+                                                    if (checked) {
+                                                        setFeeTotal(0);
+                                                        setFeeStatus('PAGADO');
+                                                    } else {
+                                                        setFeeTotal(350);
+                                                        setFeeStatus('PENDIENTE');
+                                                    }
+                                                }}
+                                                className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
+                                            />
+                                            <span className="text-sm font-bold text-slate-700">Tiene hermanos en otro grado</span>
+                                        </label>
+
+                                        {tieneHermanos && (
+                                            <div className="animate-slideDown">
+                                                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Grado/Grupo del Hermano</label>
+                                                <input
+                                                    type="text"
+                                                    value={siblingGrade}
+                                                    onChange={e => setSiblingGrade(e.target.value)}
+                                                    placeholder="Ej. 1° B"
+                                                    className="w-full p-2 border border-slate-300 rounded-lg text-sm outline-none focus:border-indigo-500 bg-white"
+                                                />
+                                                <p className="text-[10px] text-sky-600 mt-1 font-semibold">Al tener hermanos, la cuota de este alumno se exenta automáticamente (se establece a $0).</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Footer del Modal */}
+                                <div className="bg-slate-50 p-4 border-t border-slate-200/60 flex gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setEditingStudentFee(null)}
+                                        className="flex-1 py-2.5 bg-slate-200 text-slate-700 font-bold rounded-lg hover:bg-slate-300 text-sm transition-colors"
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            if (editingStudentFee) {
+                                                const isPaid = feeStatus === 'PAGADO';
+                                                onUpdateStudentFee(editingStudentFee.id, isPaid, {
+                                                    annualFeeStatus: feeStatus,
+                                                    annualFeeAbono: feeStatus === 'PAGADO' ? feeTotal : (feeStatus === 'PENDIENTE' ? 0 : feeAbono),
+                                                    annualFeeTotal: feeTotal,
+                                                    tieneHermanos: tieneHermanos,
+                                                    siblingGrade: tieneHermanos ? siblingGrade : ''
+                                                });
+                                                setEditingStudentFee(null);
+                                            }
+                                        }}
+                                        className="flex-1 py-2.5 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 text-sm transition-colors shadow-md shadow-indigo-200"
+                                    >
+                                        Guardar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 

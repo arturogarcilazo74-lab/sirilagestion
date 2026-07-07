@@ -789,12 +789,12 @@ export const useAppStore = () => {
     };
 
     // Finance Logic
-    const handleUpdateStudentFee = (studentId: string, paid: boolean) => {
+    const handleUpdateStudentFee = (studentId: string, paid: boolean, extraData?: Partial<Student>) => {
         let updatedStudent: Student | null = null;
         setStudents(prev => {
             const next = prev.map(s => {
                 if (s.id === studentId) {
-                    updatedStudent = { ...s, annualFeePaid: paid };
+                    updatedStudent = { ...s, annualFeePaid: paid, ...extraData };
                     return updatedStudent;
                 }
                 return s;
