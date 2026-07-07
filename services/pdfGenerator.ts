@@ -38,21 +38,63 @@ export const getTeacherForStudent = (config: SchoolConfig, studentGroup?: string
     if (!studentGroup) return config.teacherName; // Fallback to current user if no group info
     if (!config.staff || config.staff.length === 0) return config.teacherName;
 
-    const sStr = studentGroup.toUpperCase();
-    const sGrade = sStr.match(/(\d+)/)?.[0];
-    const sLetter = sStr.match(/[A-Z]/)?.[0];
+    const normalizeGroup = (groupStr: string) => {
+        const s = groupStr.toUpperCase().trim();
+        let grade = '';
+        if (s.includes('1') || s.includes('PRIMER')) grade = '1';
+        else if (s.includes('2') || s.includes('SEGUND')) grade = '2';
+        else if (s.includes('3') || s.includes('TERCER')) grade = '3';
+        else if (s.includes('4') || s.includes('CUART')) grade = '4';
+        else if (s.includes('5') || s.includes('QUINT')) grade = '5';
+        else if (s.includes('6') || s.includes('SEXT')) grade = '6';
+        else {
+            const match = s.match(/(\d+)/);
+            if (match) grade = match[0];
+        }
+        const letterMatch = s.match(/[A-Z]/);
+        const letter = letterMatch ? letterMatch[0] : '';
+        return { grade, letter, original: s };
+    };
 
-    // If we can't parse a specific Grade+Letter, try exact match or return default
-    if (!sGrade || !sLetter) return config.teacherName;
+    const sNorm = normalizeGroup(studentGroup);
 
-    const found = config.staff.find(s => {
-        const staffStr = (s.group || '').toUpperCase();
-        // Skip directors/admin from this matching
-        if (staffStr.includes('DIREC') || staffStr.includes('ADMIN')) return false;
+    // 1. Try exact match on original group string
+    let found = config.staff.find(s => {
+        const staffGroupStr = (s.group || '').toUpperCase().trim();
+        const role = (s.role || '').toUpperCase();
+        if (role.includes('DIREC') || role.includes('ADMIN')) return false;
+        return staffGroupStr === sNorm.original;
+    });
+    if (found) return found.name;
 
-        const staffGrade = staffStr.match(/(\d+)/)?.[0];
-        const staffLetter = staffStr.match(/[A-Z]/)?.[0];
-        return staffGrade === sGrade && staffLetter === sLetter;
+    // 2. Try match on both grade and letter
+    if (sNorm.grade && sNorm.letter) {
+        found = config.staff.find(s => {
+            const staffNorm = normalizeGroup(s.group || '');
+            const role = (s.role || '').toUpperCase();
+            if (role.includes('DIREC') || role.includes('ADMIN')) return false;
+            return staffNorm.grade === sNorm.grade && staffNorm.letter === sNorm.letter;
+        });
+        if (found) return found.name;
+    }
+
+    // 3. Try match on grade alone (if only one teacher for that grade)
+    if (sNorm.grade) {
+        found = config.staff.find(s => {
+            const staffNorm = normalizeGroup(s.group || '');
+            const role = (s.role || '').toUpperCase();
+            if (role.includes('DIREC') || role.includes('ADMIN')) return false;
+            return staffNorm.grade === sNorm.grade;
+        });
+        if (found) return found.name;
+    }
+
+    // 4. Try substring matching
+    found = config.staff.find(s => {
+        const staffGroup = (s.group || '').toUpperCase();
+        const role = (s.role || '').toUpperCase();
+        if (role.includes('DIREC') || role.includes('ADMIN')) return false;
+        return staffGroup.includes(sNorm.original) || sNorm.original.includes(staffGroup);
     });
 
     return found ? found.name : config.teacherName;
@@ -139,15 +181,20 @@ const getBehaviorTypeLabel = (type: string): string => {
     }
 };
 
-const addFooter = (doc: jsPDF, config: SchoolConfig, student?: Student) => {
+const addFooter = (doc: jsPDF, config: SchoolConfig, studentOrGroup?: Student | string) => {
     const pageHeight = doc.internal.pageSize.height;
     const pageWidth = doc.internal.pageSize.width;
 
     // Resolve teacher name
-    // If student provided, look up their specific teacher. Else use current user (config.teacherName)
-    const teacherName = student
-        ? getTeacherForStudent(config, student.group || config.gradeGroup)
-        : config.teacherName;
+    let group = config.gradeGroup;
+    if (studentOrGroup) {
+        if (typeof studentOrGroup === 'string') {
+            group = studentOrGroup;
+        } else {
+            group = studentOrGroup.group || config.gradeGroup;
+        }
+    }
+    const teacherName = getTeacherForStudent(config, group);
 
     // Signatures
     const sigY = pageHeight - 30;
@@ -1716,7 +1763,8 @@ export const generateAttendanceListPDF = async (
         ? new Date(options.date + 'T00:00:00').toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
         : new Date().toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
-    const teacherName = getTeacherForStudent(printConfig, printConfig.gradeGroup);
+    const currentGroup = (students && students.length > 0 && students[0].group) || printConfig.gradeGroup;
+    const teacherName = getTeacherForStudent(printConfig, currentGroup);
 
     // Info box
     doc.setFillColor(245, 247, 250);
@@ -1725,7 +1773,7 @@ export const generateAttendanceListPDF = async (
     doc.setFont('helvetica', 'bold');
     doc.text('Grupo:', margin + 5, 56);
     doc.setFont('helvetica', 'normal');
-    doc.text(printConfig.gradeGroup, margin + 20, 56);
+    doc.text(currentGroup, margin + 20, 56);
 
     doc.setFont('helvetica', 'bold');
     doc.text('Docente:', margin + 60, 56);
@@ -1877,6 +1925,8 @@ export const generateDashboardReportPDF = async (
         }
 
         const sortedStudents = [...students].sort((a, b) => a.name.localeCompare(b.name));
+        const currentGroup = (students && students.length > 0 && students[0].group) || printConfig.gradeGroup;
+        const teacherName = getTeacherForStudent(printConfig, currentGroup);
 
         // Calculate Group Average and gather metrics
         let totalAvgSum = 0;
@@ -1925,8 +1975,8 @@ export const generateDashboardReportPDF = async (
 
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9);
-        doc.text(`Grado y Grupo: ${printConfig.gradeGroup || 'N/A'}`, margin + 6, currentY + 14);
-        doc.text(`Docente: ${printConfig.teacherName}`, margin + 6, currentY + 20);
+        doc.text(`Grado y Grupo: ${currentGroup || 'N/A'}`, margin + 6, currentY + 14);
+        doc.text(`Docente: ${teacherName}`, margin + 6, currentY + 20);
         doc.text(`Director(a): ${printConfig.directorName || 'No asignado'}`, margin + 6, currentY + 26);
 
         // Group statistics in the card
@@ -2119,10 +2169,10 @@ export const generateDashboardReportPDF = async (
             });
         }
 
-        addFooter(doc, printConfig);
+        addFooter(doc, printConfig, currentGroup);
 
         // Save PDF
-        doc.save(`Reporte_Rendimiento_y_Intervencion_${printConfig.gradeGroup || 'Grupo'}.pdf`);
+        doc.save(`Reporte_Rendimiento_y_Intervencion_${currentGroup || 'Grupo'}.pdf`);
     } catch (e) {
         console.error('Error generating dashboard general report PDF:', e);
     }
@@ -2197,7 +2247,23 @@ export const generateReportCardDeliveryListPDF = async (
         ? new Date(options.date + 'T00:00:00').toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
         : new Date().toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
-    const teacherName = getTeacherForStudent(printConfig, printConfig.gradeGroup);
+    let currentGroup = '';
+    const groupCounts: Record<string, number> = {};
+    if (students && students.length > 0) {
+        students.forEach(s => {
+            if (s.group) {
+                groupCounts[s.group] = (groupCounts[s.group] || 0) + 1;
+            }
+        });
+        const groups = Object.keys(groupCounts);
+        if (groups.length > 0) {
+            currentGroup = groups.reduce((a, b) => groupCounts[a] > groupCounts[b] ? a : b);
+        }
+    }
+    if (!currentGroup) {
+        currentGroup = printConfig.gradeGroup;
+    }
+    const teacherName = getTeacherForStudent(printConfig, currentGroup);
 
     // Info box
     doc.setFillColor(245, 247, 250);
@@ -2206,7 +2272,7 @@ export const generateReportCardDeliveryListPDF = async (
     doc.setFont('helvetica', 'bold');
     doc.text('Grupo:', margin + 5, 56);
     doc.setFont('helvetica', 'normal');
-    doc.text(printConfig.gradeGroup, margin + 20, 56);
+    doc.text(currentGroup, margin + 20, 56);
 
     doc.setFont('helvetica', 'bold');
     doc.text('Docente:', margin + 60, 56);

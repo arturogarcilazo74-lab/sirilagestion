@@ -153,6 +153,7 @@ Diseña una Ficha Descriptiva Individual de un Alumno de forma muy completa y pr
 
 DATOS DEL ALUMNO:
 - Nombre: ${data.studentName}
+- Grado y Grupo: ${data.gradeGroup || data.groupName || ''}
 - Promedio General: ${data.average}
 - Asistencia: ${data.attendanceRate}%
 - Puntos de Conducta: ${data.behaviorPoints}
@@ -231,7 +232,7 @@ ESTRUCTURA DE LA FICHA DESCRIPTIVA GRUPAL (Formato Markdown rico, profesional y 
    
 Usa un tono formal, analítico, empático y estructurado en Markdown limpio y legible.`;
   } else if (type === 'PLANEACION') {
-    prompt = `Planeación Didáctica 4to Primaria. Tema: ${data.topic}, Materia: ${data.subject}. NEM Comunitario. Inicio, Desarrollo, Cierre y Adecuación BAP. ${data.contextContent ? `Contexto: ${data.contextContent}` : ''}`;
+    prompt = `Planeación Didáctica de ${data.gradeGroup || data.groupName || '4to'} de Primaria. Tema: ${data.topic}, Materia: ${data.subject}. NEM Comunitario. Inicio, Desarrollo, Cierre y Adecuación BAP. ${data.contextContent ? `Contexto: ${data.contextContent}` : ''}`;
   } else if (type === 'ACTA_HECHOS') {
     prompt = `Acta de Hechos formal. Escuela: ${data.schoolName}, Involucrado: ${data.studentName}, Incidente: ${data.incidentDetails}, Fecha: ${data.dateTime || data.date}, Lugar: ${data.location}. Estructura formal para firmas.`;
   } else if (type === 'PERMISO_SALIDA') {
