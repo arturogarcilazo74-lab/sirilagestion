@@ -40,6 +40,8 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
     const [feeTotal, setFeeTotal] = useState<number>(350);
     const [tieneHermanos, setTieneHermanos] = useState<boolean>(false);
     const [siblingGrade, setSiblingGrade] = useState<string>('');
+    const [siblingSearchQuery, setSiblingSearchQuery] = useState('');
+    const [selectedSibling, setSelectedSibling] = useState<Student | null>(null);
 
     // Annual Fee Stats
     const totalStudents = students.length;
@@ -233,6 +235,9 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                                                         setFeeTotal(typeof student.annualFeeTotal === 'number' ? student.annualFeeTotal : 350);
                                                         setTieneHermanos(student.tieneHermanos || false);
                                                         setSiblingGrade(student.siblingGrade || '');
+                                                        setSiblingSearchQuery('');
+                                                        const sib = student.siblingId ? students.find(s => s.id === student.siblingId) : null;
+                                                        setSelectedSibling(sib || null);
                                                     }}
                                                     disabled={readOnly}
                                                     className={`px-4 py-2 rounded-lg font-bold text-xs transition-all ${readOnly
@@ -327,30 +332,81 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                                                 onChange={e => {
                                                     const checked = e.target.checked;
                                                     setTieneHermanos(checked);
-                                                    if (checked) {
-                                                        setFeeTotal(0);
-                                                        setFeeStatus('PAGADO');
-                                                    } else {
-                                                        setFeeTotal(350);
-                                                        setFeeStatus('PENDIENTE');
+                                                    if (!checked) {
+                                                        setSelectedSibling(null);
+                                                        setSiblingGrade('');
                                                     }
                                                 }}
                                                 className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
                                             />
-                                            <span className="text-sm font-bold text-slate-700">Tiene hermanos en otro grado</span>
+                                            <span className="text-sm font-bold text-slate-700">Tiene hermanos inscritos en la institución</span>
                                         </label>
 
                                         {tieneHermanos && (
-                                            <div className="animate-slideDown">
-                                                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Grado/Grupo del Hermano</label>
-                                                <input
-                                                    type="text"
-                                                    value={siblingGrade}
-                                                    onChange={e => setSiblingGrade(e.target.value)}
-                                                    placeholder="Ej. 1° B"
-                                                    className="w-full p-2 border border-slate-300 rounded-lg text-sm outline-none focus:border-indigo-500 bg-white"
-                                                />
-                                                <p className="text-[10px] text-sky-600 mt-1 font-semibold">Al tener hermanos, la cuota de este alumno se exenta automáticamente (se establece a $0).</p>
+                                            <div className="space-y-3 animate-slideDown">
+                                                {selectedSibling ? (
+                                                    <div className="flex items-center justify-between bg-indigo-50 p-3 rounded-lg border border-indigo-100">
+                                                        <div>
+                                                            <div className="text-xs font-bold text-indigo-500 uppercase">Hermano Vinculado</div>
+                                                            <div className="text-sm font-black text-slate-800 text-left">{selectedSibling.name}</div>
+                                                            <div className="text-xs text-slate-500 text-left">{selectedSibling.group || 'Sin Grupo'}</div>
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setSelectedSibling(null);
+                                                                setSiblingSearchQuery('');
+                                                            }}
+                                                            className="text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-2 py-1 rounded"
+                                                        >
+                                                            Desvincular
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <div className="relative">
+                                                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Buscar Hermano por Nombre</label>
+                                                        <input
+                                                            type="text"
+                                                            value={siblingSearchQuery}
+                                                            onChange={e => setSiblingSearchQuery(e.target.value)}
+                                                            placeholder="Escribe el nombre del hermano..."
+                                                            className="w-full p-2 border border-slate-300 rounded-lg text-sm outline-none focus:border-indigo-500 bg-white"
+                                                        />
+                                                        {siblingSearchQuery.trim() !== '' && (
+                                                            <div className="mt-1 bg-white border border-slate-200 rounded-lg max-h-40 overflow-y-auto shadow-lg z-10 absolute left-0 right-0">
+                                                                {students
+                                                                    .filter(s =>
+                                                                        s.id !== editingStudentFee?.id &&
+                                                                        s.name.toLowerCase().includes(siblingSearchQuery.toLowerCase())
+                                                                    )
+                                                                    .map(candidate => (
+                                                                        <button
+                                                                            key={candidate.id}
+                                                                            type="button"
+                                                                            onClick={() => {
+                                                                                setSelectedSibling(candidate);
+                                                                                setSiblingGrade(candidate.group || '');
+                                                                                setSiblingSearchQuery('');
+                                                                            }}
+                                                                            className="w-full text-left p-3 hover:bg-indigo-50/50 border-b border-slate-100 last:border-b-0 flex items-center justify-between"
+                                                                        >
+                                                                            <div>
+                                                                                <div className="font-bold text-slate-800 text-sm">{candidate.name}</div>
+                                                                                <div className="text-xs text-slate-500">{candidate.group}</div>
+                                                                            </div>
+                                                                            <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-bold">Seleccionar</span>
+                                                                        </button>
+                                                                    ))
+                                                                }
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                                {selectedSibling && (
+                                                    <p className="text-[10px] text-indigo-600 font-semibold mt-1">
+                                                        Al guardar, ambos alumnos quedarán vinculados. Cualquier pago registrado para uno se reflejará automáticamente en el otro.
+                                                    </p>
+                                                )}
                                             </div>
                                         )}
                                     </div>
@@ -360,7 +416,10 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                                 <div className="bg-slate-50 p-4 border-t border-slate-200/60 flex gap-3">
                                     <button
                                         type="button"
-                                        onClick={() => setEditingStudentFee(null)}
+                                        onClick={() => {
+                                            setEditingStudentFee(null);
+                                            setSelectedSibling(null);
+                                        }}
                                         className="flex-1 py-2.5 bg-slate-200 text-slate-700 font-bold rounded-lg hover:bg-slate-300 text-sm transition-colors"
                                     >
                                         Cancelar
@@ -370,14 +429,19 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                                         onClick={() => {
                                             if (editingStudentFee) {
                                                 const isPaid = feeStatus === 'PAGADO';
+                                                
                                                 onUpdateStudentFee(editingStudentFee.id, isPaid, {
                                                     annualFeeStatus: feeStatus,
                                                     annualFeeAbono: feeStatus === 'PAGADO' ? feeTotal : (feeStatus === 'PENDIENTE' ? 0 : feeAbono),
                                                     annualFeeTotal: feeTotal,
                                                     tieneHermanos: tieneHermanos,
-                                                    siblingGrade: tieneHermanos ? siblingGrade : ''
+                                                    siblingId: tieneHermanos && selectedSibling ? selectedSibling.id : '',
+                                                    siblingName: tieneHermanos && selectedSibling ? selectedSibling.name : '',
+                                                    siblingGrade: tieneHermanos && selectedSibling ? (selectedSibling.group || '') : ''
                                                 });
+
                                                 setEditingStudentFee(null);
+                                                setSelectedSibling(null);
                                             }
                                         }}
                                         className="flex-1 py-2.5 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 text-sm transition-colors shadow-md shadow-indigo-200"

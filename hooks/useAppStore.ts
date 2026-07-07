@@ -790,19 +790,75 @@ export const useAppStore = () => {
 
     // Finance Logic
     const handleUpdateStudentFee = (studentId: string, paid: boolean, extraData?: Partial<Student>) => {
-        let updatedStudent: Student | null = null;
+        let updatedStudents: Student[] = [];
         setStudents(prev => {
+            let previousSiblingId = '';
+            
+            // First pass: locate target student and get old sibling info
+            prev.forEach(s => {
+                if (s.id === studentId) {
+                    previousSiblingId = s.siblingId || '';
+                }
+            });
+
+            // Second pass: compute state changes
             const next = prev.map(s => {
                 if (s.id === studentId) {
-                    updatedStudent = { ...s, annualFeePaid: paid, ...extraData };
-                    return updatedStudent;
+                    const updated = { ...s, annualFeePaid: paid, ...extraData };
+                    updatedStudents.push(updated);
+                    return updated;
                 }
                 return s;
             });
-            saveToCache('SIRILA_CACHE_STUDENTS', next);
-            return next;
+
+            const primaryStudent = updatedStudents[0];
+            const hasSibling = primaryStudent && primaryStudent.tieneHermanos && primaryStudent.siblingId;
+
+            // Third pass: apply sibling modifications (bi-directional link/unlink, sync payment status)
+            const finalStudents = next.map(s => {
+                if (s.id === studentId) {
+                    return primaryStudent;
+                }
+                if (hasSibling && s.id === primaryStudent.siblingId) {
+                    const siblingUpdated = {
+                        ...s,
+                        annualFeePaid: paid,
+                        annualFeeStatus: primaryStudent.annualFeeStatus,
+                        annualFeeAbono: primaryStudent.annualFeeAbono,
+                        annualFeeTotal: primaryStudent.annualFeeTotal,
+                        tieneHermanos: true,
+                        siblingId: primaryStudent.id,
+                        siblingName: primaryStudent.name,
+                        siblingGrade: primaryStudent.group || ''
+                    };
+                    updatedStudents.push(siblingUpdated);
+                    return siblingUpdated;
+                }
+                if (!hasSibling && previousSiblingId && s.id === previousSiblingId) {
+                    const siblingCleared = {
+                        ...s,
+                        tieneHermanos: false,
+                        siblingId: '',
+                        siblingName: '',
+                        siblingGrade: ''
+                    };
+                    updatedStudents.push(siblingCleared);
+                    return siblingCleared;
+                }
+                return s;
+            });
+
+            saveToCache('SIRILA_CACHE_STUDENTS', finalStudents);
+            return finalStudents;
         });
-        if (updatedStudent) api.saveStudent(updatedStudent).catch(() => setPendingActions(api.getQueueLength()));
+
+        // Save all updated students to Aiven/MySQL/LocalStorage
+        setTimeout(() => {
+            const uniqueStudents = Array.from(new Map(updatedStudents.map(item => [item.id, item])).values());
+            uniqueStudents.forEach(student => {
+                api.saveStudent(student).catch(() => setPendingActions(api.getQueueLength()));
+            });
+        }, 0);
     };
 
     const handleAddFinanceEvent = (eventData: Omit<FinanceEvent, 'id' | 'contributions'>) => {

@@ -49,6 +49,8 @@ export interface Student {
   annualFeeTotal?: number; // Monto total de la cuota
   tieneHermanos?: boolean; // Si tiene hermanos inscritos
   siblingGrade?: string; // Grado del hermano inscrito
+  siblingId?: string; // ID del hermano vinculado
+  siblingName?: string; // Nombre del hermano vinculado
   eventFeePaid?: boolean; // Cooperación Eventos (Generico)
   examFeePaid?: boolean; // Exámenes (Generico)
 }
