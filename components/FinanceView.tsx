@@ -6,6 +6,7 @@ import { useAppStore } from '../hooks/useAppStore';
 
 interface FinanceViewProps {
     students: Student[];
+    allStudents?: Student[];
     financeEvents: FinanceEvent[];
     onUpdateStudentFee: (studentId: string, paid: boolean, extraData?: Partial<Student>) => void;
     onAddEvent: (event: Omit<FinanceEvent, 'id' | 'contributions'>) => void;
@@ -16,6 +17,7 @@ interface FinanceViewProps {
 
 export const FinanceView: React.FC<FinanceViewProps> = ({
     students,
+    allStudents = [],
     financeEvents,
     onUpdateStudentFee,
     onAddEvent,
@@ -374,7 +376,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                                                         />
                                                         {siblingSearchQuery.trim() !== '' && (
                                                             <div className="mt-1 bg-white border border-slate-200 rounded-lg max-h-40 overflow-y-auto shadow-lg z-10 absolute left-0 right-0">
-                                                                {students
+                                                                {allStudents
                                                                     .filter(s =>
                                                                         s.id !== editingStudentFee?.id &&
                                                                         s.name.toLowerCase().includes(siblingSearchQuery.toLowerCase())

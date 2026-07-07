@@ -2730,6 +2730,7 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                             <div className="animate-fadeIn">
                                 <FinanceView
                                     students={store.students}
+                                    allStudents={store.students}
                                     financeEvents={store.financeEvents}
                                     onUpdateStudentFee={store.handleUpdateStudentFee}
                                     onAddEvent={store.handleAddFinanceEvent}

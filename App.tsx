@@ -346,6 +346,7 @@ const App: React.FC = () => {
           {currentView === 'FINANCE' && (
             <FinanceView
               students={visibleStudents}
+              allStudents={store.students}
               financeEvents={visibleFinanceEvents}
               onUpdateStudentFee={store.handleUpdateStudentFee}
               onAddEvent={handleAddFinanceEventWrapper}
