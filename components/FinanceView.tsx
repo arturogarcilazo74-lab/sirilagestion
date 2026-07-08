@@ -58,6 +58,14 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
 
         // Mark siblings as processed so they aren't added to the totals again
         const linkedIds = s.siblingIds || (s.siblingId ? [s.siblingId] : []);
+        
+        // Robust bi-directional check: if any of the linked siblings has already been processed, skip this student
+        const hasProcessedSibling = linkedIds.some(id => processedUnits.has(id));
+        if (hasProcessedSibling) {
+            processedUnits.add(s.id);
+            return;
+        }
+
         linkedIds.forEach(id => processedUnits.add(id));
         processedUnits.add(s.id);
 

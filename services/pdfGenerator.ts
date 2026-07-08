@@ -2435,6 +2435,7 @@ export const generateFinanceReportPDF = (
             return a.name.localeCompare(b.name);
         });
 
+    const processedUnits = new Set<string>();
     let totalRecaudado = 0;
     let totalEsperado = 0;
 
@@ -2444,8 +2445,21 @@ export const generateFinanceReportPDF = (
         const total = s.annualFeeTotal !== undefined ? s.annualFeeTotal : 350;
         const tieneHermanos = s.tieneHermanos ? 'Sí' : 'No';
 
-        totalRecaudado += abono;
-        totalEsperado += total;
+        // Check if this student's family has already been counted in the totals
+        const linkedIds = s.siblingIds || (s.siblingId ? [s.siblingId] : []);
+        const hasProcessedSibling = linkedIds.some(id => processedUnits.has(id));
+
+        if (!processedUnits.has(s.id) && !hasProcessedSibling) {
+            totalRecaudado += abono;
+            totalEsperado += total;
+            
+            // Mark all linked siblings and the student as processed for totals
+            linkedIds.forEach(id => processedUnits.add(id));
+            processedUnits.add(s.id);
+        } else {
+            // Still mark s as processed in case it is encountered again
+            processedUnits.add(s.id);
+        }
 
         return [
             (idx + 1).toString(),
