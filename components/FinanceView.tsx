@@ -54,6 +54,14 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
     let unpaidCount = 0;
 
     students.forEach(s => {
+        if (s.annualFeePaid || s.annualFeeStatus === 'PAGADO') {
+            paidCount++;
+        } else if (s.annualFeeStatus === 'PARCIAL') {
+            partialCount++;
+        } else {
+            unpaidCount++;
+        }
+
         if (processedUnits.has(s.id)) return;
 
         // Mark siblings as processed so they aren't added to the totals again
@@ -71,14 +79,6 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
 
         collectedAnnualTotal += (s.annualFeeAbono || 0);
         estimatedAnnualTotal += (typeof s.annualFeeTotal === 'number' ? s.annualFeeTotal : 350);
-
-        if (s.annualFeePaid || s.annualFeeStatus === 'PAGADO') {
-            paidCount++;
-        } else if (s.annualFeeStatus === 'PARCIAL') {
-            partialCount++;
-        } else {
-            unpaidCount++;
-        }
     });
 
     const totalStudents = students.length;
