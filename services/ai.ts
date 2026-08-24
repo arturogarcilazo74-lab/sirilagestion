@@ -316,6 +316,30 @@ ESTRUCTURA DEL PLAN DE INTERVENCIÓN (Formato Markdown rico, profesional y forma
    - Espacios para firmas de: Docente de Grupo, Director(a) de la Escuela, y Maestro(a) de Apoyo USAER.
 
 Usa un tono formal, empático y estructurado en Markdown limpio y legible.`;
+  } else if (type === 'SEMAFORO_ESCOLAR') {
+    prompt = `Actúa como un Especialista Docente de la Nueva Escuela Mexicana (NEM) en México.
+Diseña un documento de "Semáforo de mi Escuela" basado en la mejora continua escolar.
+
+DATOS GENERALES:
+- Escuela: ${data.schoolName}
+- Fecha: ${data.date}
+${data.contextContent ? `- Contexto de la escuela / Notas adicionales: ${data.contextContent}` : ''}
+
+El documento debe interpretar el estado actual de la escuela utilizando un formato de semáforo con los siguientes colores y significados:
+- VERDE: Lo que funciona bien y debe consolidarse.
+- AMARILLO: Lo que presenta avances pero requiere atención.
+- ROJO: Lo que necesita atención prioritaria.
+
+ESTRUCTURA DEL DOCUMENTO (Formato Markdown rico, profesional y formal):
+1. TÍTULO Y DATOS GENERALES: Nombre de la escuela y fecha.
+2. INTRODUCCIÓN: Breve explicación del propósito del semáforo escolar enfocado en la mejora continua.
+3. SEMÁFORO ESCOLAR (con sus debidas explicaciones para cada color):
+   - 🟢 VERDE (Consolidación): Listar y explicar detalladamente las prácticas, programas o situaciones que funcionan bien y deben mantenerse.
+   - 🟡 AMARILLO (En Proceso): Listar y explicar lo que muestra avance pero necesita ajustes o más atención.
+   - 🔴 ROJO (Prioritario): Listar y explicar las problemáticas o áreas críticas que requieren intervención inmediata.
+4. CONCLUSIÓN Y PRÓXIMOS PASOS: Acciones generales a tomar basadas en este diagnóstico para lograr la mejora continua.
+
+Usa un tono formal, analítico, constructivo y estructurado en Markdown limpio y legible. Utiliza viñetas y negritas para resaltar puntos clave.`;
   }
 
   try {
