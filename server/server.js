@@ -5,6 +5,7 @@ import path from 'path';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { initDB, getPool } from './db.js';
+import { runCleanAndBackup } from '../tools/clean_and_backup.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -61,7 +62,6 @@ app.use(express.static(STATIC_ROOT));
 app.use('/assets', express.static(path.join(STATIC_ROOT, 'assets')));
 
 // Endpoint for checking if server is alive
-// Endpoint for checking if server is alive and Diagnostics
 app.get('/health', (req, res) => {
     res.json({
         status: 'OK',
@@ -72,6 +72,17 @@ app.get('/health', (req, res) => {
         mysqlConnection: useMySQL ? 'Active' : 'Failed',
         message: useMySQL ? 'System Healthy' : 'Warning: Using local JSON file instead of Cloud DB'
     });
+});
+
+app.post('/sirila-v1/admin/clean-backup-2026', async (req, res) => {
+    try {
+        if (!useMySQL) return res.status(400).json({ error: 'MySQL is not active' });
+        const result = await runCleanAndBackup();
+        res.json(result);
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: e.message });
+    }
 });
 
 // Diagnostic: Test POST endpoint
