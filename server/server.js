@@ -67,11 +67,98 @@ app.get('/health', (req, res) => {
         status: 'OK',
         uptime: process.uptime(),
         storage: useMySQL ? 'MySQL' : 'JSON (Fallback)',
-        dbHost: process.env.MYSQLHOST ? 'Configured in Env' : 'Not Configured',
-        dbName: process.env.MYSQLDATABASE || 'N/A',
+        dbHost: process.env.DB_HOST || process.env.MYSQLHOST ? 'Configured in Env' : 'Not Configured',
+        dbName: process.env.DB_NAME || process.env.MYSQLDATABASE || 'N/A',
         mysqlConnection: useMySQL ? 'Active' : 'Failed',
         message: useMySQL ? 'System Healthy' : 'Warning: Using local JSON file instead of Cloud DB'
     });
+});
+
+app.get('/sirila-v1/trigger-migration-2026', async (req, res) => {
+    try {
+        if (!useMySQL) {
+            return res.json({ success: false, message: 'MySQL no está activo' });
+        }
+        const pool = getPool();
+        const connection = await pool.getConnection();
+        
+        let promovidos = 0;
+        let egresados = 0;
+
+        try {
+            await connection.beginTransaction();
+
+            const [students] = await connection.query('SELECT id, status, data_json FROM students');
+            for (const s of students) {
+                if (s.status !== 'INSCRITO') continue;
+                let data = {};
+                try { data = typeof s.data_json === 'string' ? JSON.parse(s.data_json) : s.data_json; } catch(e) {}
+                
+                const currentGroup = (data.group || "").trim();
+                if (!currentGroup) continue;
+
+                let newGroup = currentGroup;
+                let newStatus = s.status;
+
+                if (currentGroup.startsWith("6")) {
+                    newStatus = 'BAJA';
+                    egresados++;
+                } else if (currentGroup.startsWith("5")) {
+                    newGroup = currentGroup.replace("5", "6");
+                    promovidos++;
+                } else if (currentGroup.startsWith("4")) {
+                    newGroup = currentGroup.replace("4", "5");
+                    promovidos++;
+                } else if (currentGroup.startsWith("3")) {
+                    newGroup = currentGroup.replace("3", "4");
+                    promovidos++;
+                } else if (currentGroup.startsWith("2")) {
+                    newGroup = currentGroup.replace("2", "3");
+                    promovidos++;
+                } else if (currentGroup.startsWith("1")) {
+                    newGroup = currentGroup.replace("1", "2");
+                    promovidos++;
+                }
+
+                if (newGroup !== currentGroup || newStatus !== s.status) {
+                    data.group = newGroup;
+                    await connection.query('UPDATE students SET status = ?, data_json = ? WHERE id = ?', [newStatus, JSON.stringify(data), s.id]);
+                }
+            }
+
+            const [configRows] = await connection.query("SELECT config_value FROM school_config WHERE config_key = 'main_config'");
+            if (configRows.length > 0) {
+                let config = JSON.parse(configRows[0].config_value);
+                config.schoolYear = "2026-2027";
+                
+                if (config.staff && Array.isArray(config.staff)) {
+                    config.staff.forEach(member => {
+                        const name = member.name.toLowerCase();
+                        if (name.includes("josé luis") || name.includes("jose luis peraza")) {
+                            member.group = "3 A";
+                        } else if (name.includes("ana luisa castro")) {
+                            member.group = "4 A";
+                        } else if (name.includes("fatima") || name.includes("fátima")) {
+                            member.group = "5 A";
+                        } else if (name.includes("miguel angel román") || name.includes("miguel angel roman")) {
+                            member.group = "6 A";
+                        }
+                    });
+                }
+                await connection.query("UPDATE school_config SET config_value = ? WHERE config_key = 'main_config'", [JSON.stringify(config)]);
+            }
+
+            await connection.commit();
+            res.json({ success: true, promovidos, egresados, message: 'Migración completada con éxito en la base de datos de Hostinger.' });
+        } catch (e) {
+            await connection.rollback();
+            res.status(500).json({ success: false, error: e.message });
+        } finally {
+            connection.release();
+        }
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
 });
 
 // Diagnostic: Test POST endpoint
