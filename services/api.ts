@@ -626,6 +626,12 @@ export const api = {
         return await res.json();
     },
 
+    getGroupHistory: async (groupName: string) => {
+        const res = await fetch(`${API_URL}/group-history/${encodeURIComponent(groupName)}`);
+        if (!res.ok) throw new Error('Failed to fetch group history');
+        return await res.json();
+    },
+
     submitAssignment: async (studentId: string, assignmentId: string, result: { score: number, type: string, areaScores?: Record<string, { correct: number, total: number }> }) => {
         // 1. Fetch current full state
         const state = await api.checkStatus();

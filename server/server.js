@@ -74,6 +74,21 @@ app.get('/health', (req, res) => {
     });
 });
 
+// Historical Group Analysis Endpoint
+app.get('/sirila-v1/group-history/:group', async (req, res) => {
+    try {
+        if (!useMySQL) return res.status(400).json({ error: 'MySQL is not active' });
+        const pool = getPool();
+        const [rows] = await pool.query('SELECT data_json FROM group_history_2025_2026 WHERE current_group = ?', [req.params.group]);
+        if (rows.length === 0) return res.json(null);
+        let data = typeof rows[0].data_json === 'string' ? JSON.parse(rows[0].data_json) : rows[0].data_json;
+        res.json(data);
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
 app.post('/sirila-v1/admin/clean-backup-2026', async (req, res) => {
     try {
         if (!useMySQL) return res.status(400).json({ error: 'MySQL is not active' });

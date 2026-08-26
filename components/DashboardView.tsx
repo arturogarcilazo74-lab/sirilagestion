@@ -7,6 +7,7 @@ import { getTrimesterAvg, getStudentGlobalAverage, calculateStudentMetrics } fro
 import { generateDashboardReportPDF } from '../services/pdfGenerator';
 import { Sparkles, TrendingUp, Users, AlertCircle, History, X, Phone, User, CheckCircle, Calendar as CalendarIcon, BookOpen, Clock, Download, ClipboardList, ThumbsUp, ThumbsDown, ChevronLeft, ChevronRight, Plus, Edit2, Trash2, Save, MoreHorizontal, ArrowRight, Send, Megaphone, AlertTriangle, CheckSquare, MessageCircle, Award } from 'lucide-react';
 import { sendWhatsAppMessage, getEventMessage } from '../whatsappUtils';
+import { PastCycleAnalysisModal } from './PastCycleAnalysisModal';
 
 interface DashboardProps {
   students: Student[];
@@ -92,6 +93,7 @@ export const DashboardView: React.FC<DashboardProps> = ({
   const [aiInsight, setAiInsight] = useState<string>("");
   const [loadingAi, setLoadingAi] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [showPastCycleAnalysis, setShowPastCycleAnalysis] = useState(false);
 
   useEffect(() => {
     if (selectedStudent) {
@@ -1674,6 +1676,13 @@ export const DashboardView: React.FC<DashboardProps> = ({
                   </div>
               </div>
           </div>
+      )}
+
+      {showPastCycleAnalysis && currentUser?.group && (
+        <PastCycleAnalysisModal 
+          groupName={currentUser.group} 
+          onClose={() => setShowPastCycleAnalysis(false)} 
+        />
       )}
     </div>
   );
