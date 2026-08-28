@@ -214,6 +214,7 @@ app.get('/sirila-v1/full-state', async (req, res) => {
                 id: row.id,
                 name: row.name,
                 curp: row.curp,
+                status: row.status, // FORCE column status
                 avatar: hasAvatar ? "PENDING_LOAD" : (avatar || ""), // Placeholder
                 hasRealAvatar: hasAvatar,
                 // Defaults
@@ -474,7 +475,7 @@ app.get('/sirila-v1/honor-roll', async (req, res) => {
             schoolConfig = data.schoolConfig;
         } else {
             const pool = getPool();
-            const [rows] = await pool.query('SELECT id, name, avatar, behavior_points, data_json FROM students');
+            const [rows] = await pool.query('SELECT id, name, avatar, behavior_points, status, data_json FROM students');
             const [aRows] = await pool.query('SELECT COUNT(*) as count FROM assignments');
             totalAssignmentsCount = aRows[0].count;
             
@@ -496,6 +497,7 @@ app.get('/sirila-v1/honor-roll', async (req, res) => {
                     id: r.id,
                     name: r.name,
                     avatar: r.avatar,
+                    status: r.status, // FORCE column status
                     behaviorPoints: r.behavior_points || 0
                 };
             });
