@@ -35,8 +35,13 @@ export async function runCleanAndBackup() {
         console.log("Creando respaldos de tablas...");
         const tablesToBackup = ['students', 'assignments', 'behavior_logs', 'events', 'finance_events', 'staff_attendance'];
         for (const table of tablesToBackup) {
-            await connection.query(`DROP TABLE IF EXISTS ${table}_2025_2026`);
-            await connection.query(`CREATE TABLE ${table}_2025_2026 AS SELECT * FROM ${table}`);
+            try {
+                await connection.query(`DROP TABLE IF EXISTS ${table}_2025_2026`);
+                await connection.query(`CREATE TABLE ${table}_2025_2026 LIKE ${table}`);
+                await connection.query(`INSERT INTO ${table}_2025_2026 SELECT * FROM ${table}`);
+            } catch (err) {
+                console.log(`Skipping backup for ${table}:`, err.message);
+            }
         }
 
         // 2. Generar el análisis histórico (se guardará en una nueva tabla)
@@ -50,7 +55,7 @@ export async function runCleanAndBackup() {
         await connection.query(`TRUNCATE TABLE group_history_2025_2026`);
 
         // Leer alumnos del ciclo pasado (desde la tabla de respaldo para evitar conflictos con la migración actual)
-        const [pastStudentsRows] = await connection.query('SELECT id, data_json FROM students_2025_2026 WHERE status = "INSCRITO"');
+        const [pastStudentsRows] = await connection.query("SELECT id, data_json FROM students_2025_2026 WHERE status = 'INSCRITO'");
         const [pastLogsRows] = await connection.query('SELECT student_id, type FROM behavior_logs_2025_2026');
 
         // Mapear logs por alumno
@@ -151,11 +156,16 @@ export async function runCleanAndBackup() {
 
         // 3. Limpiar Tablas (TRUNCATE)
         console.log("Vaciando tablas del ciclo anterior...");
-        await connection.query('TRUNCATE TABLE assignments');
-        await connection.query('TRUNCATE TABLE events');
-        await connection.query('TRUNCATE TABLE finance_events');
-        await connection.query('TRUNCATE TABLE behavior_logs');
-        await connection.query('TRUNCATE TABLE staff_attendance');
+        await connection.query('SET FOREIGN_KEY_CHECKS = 0');
+        const tablesToTruncate = ['student_assignments', 'finance_contributions', 'assignments', 'events', 'finance_events', 'behavior_logs', 'staff_attendance'];
+        for (const table of tablesToTruncate) {
+            try {
+                await connection.query(`TRUNCATE TABLE ${table}`);
+            } catch (err) {
+                console.log(`Skipping truncate for ${table}:`, err.message);
+            }
+        }
+        await connection.query('SET FOREIGN_KEY_CHECKS = 1');
 
         // 4. Insertar eventos oficiales 2026-2027
         console.log("Insertando calendario oficial 2026-2027...");
@@ -167,7 +177,7 @@ export async function runCleanAndBackup() {
 
         // 5. Limpiar historial en los alumnos (students)
         console.log("Limpiando JSON de alumnos...");
-        const [studentsRows] = await connection.query('SELECT id, status, data_json FROM students');
+        const [studentsRows] = await connection.query("SELECT id, status, data_json FROM students");
         let studentsUpdated = 0;
         for (const s of studentsRows) {
             if (s.status !== 'INSCRITO') continue;
@@ -178,11 +188,18 @@ export async function runCleanAndBackup() {
             data.attendance = {};
             data.completedAssignmentIds = [];
             data.assignmentResults = {};
+            data.assignmentAreaResults = {};
+            data.assignmentAttempts = {};
             data.behaviorPoints = 0;
             data.assignmentsCompleted = 0;
             data.totalAssignments = 0;
             data.participationCount = 0;
             data.annualFeePaid = false;
+            data.annualFeeStatus = 'PENDIENTE';
+            data.annualFeeAbono = 0;
+            data.annualFeeTotal = 0;
+            data.eventFeePaid = false;
+            data.examFeePaid = false;
 
             await connection.query('UPDATE students SET behavior_points = 0, annual_fee_paid = 0, data_json = ? WHERE id = ?', [JSON.stringify(data), s.id]);
             studentsUpdated++;
