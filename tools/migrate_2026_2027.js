@@ -1,14 +1,8 @@
-import { initDB } from '../server/db.js';
+import { getPool } from '../server/db.js';
 
-async function migrate() {
+export async function runMigrate() {
     console.log("Iniciando migración de ciclo escolar 2026-2027...");
-    let pool;
-    try {
-        pool = await initDB();
-    } catch(e) {
-        console.error("Error conectando a la BD:", e);
-        process.exit(1);
-    }
+    const pool = getPool();
 
     const connection = await pool.getConnection();
     try {
@@ -94,13 +88,12 @@ async function migrate() {
 
         await connection.commit();
         console.log("🚀 MIGRACIÓN COMPLETADA CON ÉXITO.");
+        return { success: true, promovidos, egresados };
     } catch (e) {
         await connection.rollback();
         console.error("Error durante la migración, se hizo rollback:", e);
+        throw e;
     } finally {
         connection.release();
-        process.exit(0);
     }
 }
-
-migrate();

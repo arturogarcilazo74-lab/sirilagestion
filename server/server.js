@@ -100,6 +100,18 @@ app.post('/sirila-v1/admin/clean-backup-2026', async (req, res) => {
     }
 });
 
+import { runMigrate } from '../tools/migrate_2026_2027.js';
+app.post('/sirila-v1/admin/migrate-2026', async (req, res) => {
+    try {
+        if (!useMySQL) return res.status(400).json({ error: 'MySQL is not active' });
+        const result = await runMigrate();
+        res.json(result);
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
 // Diagnostic: Test POST endpoint
 app.post('/sirila-v1/test-post', (req, res) => {
     console.log('[TEST POST] Received:', JSON.stringify(req.body).substring(0, 200));
