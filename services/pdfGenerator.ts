@@ -693,7 +693,7 @@ export const generateStudentCredentials = async (students: Student[], config: Sc
 // --- NEW DOCUMENT GENERATORS ---
 
 export const generateSchoolDocument = (
-    type: 'CONSTANCIA' | 'CITATORIO' | 'ACTA_HECHOS' | 'ACTA_ADMINISTRATIVA' | 'PERMISO_ECONOMICO',
+    type: 'CONSTANCIA' | 'CITATORIO' | 'ACTA_HECHOS' | 'ACTA_ADMINISTRATIVA' | 'PERMISO_ECONOMICO' | 'PEMC',
     data: any, // Generic data object depending on type
     config: SchoolConfig
 ) => {
@@ -708,6 +708,7 @@ export const generateSchoolDocument = (
         case 'ACTA_HECHOS': title = 'ACTA DE HECHOS'; break;
         case 'ACTA_ADMINISTRATIVA': title = 'ACTA ADMINISTRATIVA'; break;
         case 'PERMISO_ECONOMICO': title = 'SOLICITUD DE PERMISO ECONÓMICO'; break;
+        case 'PEMC': title = 'PROGRAMA ESCOLAR DE MEJORA CONTINUA'; break;
     }
 
     // Only call addHeader for document types that use the standard header
@@ -957,6 +958,39 @@ export const generateSchoolDocument = (
         y += (splitBody.length * 5) + 10;
 
         doc.text('Motivo: __________________________________________________________', margin, y);
+    }
+    else if (type === 'PEMC') {
+        const diagnostico = data.diagnostico || '';
+        const objetivos = data.objetivos || '';
+        const acciones = data.acciones || '';
+
+        doc.setFont('helvetica', 'bold');
+        doc.text('I. DIAGNÓSTICO INTEGRAL DE LA ESCUELA', margin, y);
+        y += 7;
+        doc.setFont('helvetica', 'normal');
+        const splitDiag = doc.splitTextToSize(diagnostico, contentWidth);
+        doc.text(splitDiag, margin, y);
+        y += (splitDiag.length * 5) + 10;
+
+        if (y > 230) { doc.addPage(); y = 20; }
+
+        doc.setFont('helvetica', 'bold');
+        doc.text('II. OBJETIVOS Y METAS', margin, y);
+        y += 7;
+        doc.setFont('helvetica', 'normal');
+        const splitObj = doc.splitTextToSize(objetivos, contentWidth);
+        doc.text(splitObj, margin, y);
+        y += (splitObj.length * 5) + 10;
+
+        if (y > 230) { doc.addPage(); y = 20; }
+
+        doc.setFont('helvetica', 'bold');
+        doc.text('III. ACCIONES Y SEGUIMIENTO', margin, y);
+        y += 7;
+        doc.setFont('helvetica', 'normal');
+        const splitAcc = doc.splitTextToSize(acciones, contentWidth);
+        doc.text(splitAcc, margin, y);
+        y += (splitAcc.length * 5) + 15;
     }
 
     // Signatures (For non-Constancia types, as Constancia has custom sig)

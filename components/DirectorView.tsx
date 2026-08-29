@@ -1266,7 +1266,7 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
 
                         {/* Doc Type Selection */}
                         <div className="flex flex-wrap gap-2 mb-6">
-                            {['CONSTANCIA', 'CITATORIO', 'ACTA_HECHOS', 'ACTA_ADMINISTRATIVA', 'PERMISO_ECONOMICO'].map(t => (
+                            {['CONSTANCIA', 'CITATORIO', 'ACTA_HECHOS', 'ACTA_ADMINISTRATIVA', 'PERMISO_ECONOMICO', 'PEMC'].map(t => (
                                 <button key={t} onClick={() => { setDocType(t); setDocFormData({}); }} className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-all ${docType === t ? 'bg-indigo-600 text-white border-indigo-600 shadow-md transform scale-105' : 'bg-white text-slate-500 border-slate-200 hover:border-indigo-300'}`}>
                                     {t.replace(/_/g, ' ')}
                                 </button>
@@ -1307,9 +1307,17 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                                     </div>
                                 </>
                             )}
+                            {docType === 'PEMC' && (
+                                <>
+                                    <p className="text-sm text-slate-500 italic mb-2">Programa Escolar de Mejora Continua</p>
+                                    <textarea placeholder="I. Diagnóstico de la escuela..." className="w-full p-2 border rounded h-24 text-sm" onChange={e => setDocFormData({ ...docFormData, diagnostico: e.target.value })} />
+                                    <textarea placeholder="II. Objetivos y Metas..." className="w-full p-2 border rounded h-24 text-sm mt-4" onChange={e => setDocFormData({ ...docFormData, objetivos: e.target.value })} />
+                                    <textarea placeholder="III. Acciones y Seguimiento..." className="w-full p-2 border rounded h-24 text-sm mt-4" onChange={e => setDocFormData({ ...docFormData, acciones: e.target.value })} />
+                                </>
+                            )}
                         </div>
 
-                        <button onClick={handleGenerateDoc} disabled={(!selectedStudentForDoc && docType !== 'PERMISO_ECONOMICO' && docType !== 'ACTA_HECHOS' && docType !== 'ACTA_ADMINISTRATIVA')} className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-200 transition-all active:scale-95 flex justify-center items-center gap-2">
+                        <button onClick={handleGenerateDoc} disabled={(!selectedStudentForDoc && docType !== 'PERMISO_ECONOMICO' && docType !== 'ACTA_HECHOS' && docType !== 'ACTA_ADMINISTRATIVA' && docType !== 'PEMC')} className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-200 transition-all active:scale-95 flex justify-center items-center gap-2">
                             <Printer size={18} /> Generar e Imprimir
                         </button>
                     </div>
