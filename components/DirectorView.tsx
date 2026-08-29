@@ -1528,8 +1528,26 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                                 onClick={() => setActiveTab('MANAGEMENT')}
                             />
                             {(() => {
-                                const paidCount = students.filter((s: Student) => s.annualFeePaid).length;
-                                const feesTotal = paidCount * feeCost;
+                                const processedUnits = new Set<string>();
+                                let feesTotal = 0;
+                                let paidCount = 0; // Contar unidades familiares que han pagado algo
+
+                                students.forEach((s: Student) => {
+                                    const linkedIds = s.siblingIds || (s.siblingId ? [s.siblingId] : []);
+                                    const hasProcessedSibling = linkedIds.some(id => processedUnits.has(id));
+
+                                    if (!processedUnits.has(s.id) && !hasProcessedSibling) {
+                                        const abono = s.annualFeeAbono !== undefined ? s.annualFeeAbono : (s.annualFeePaid ? feeCost : 0);
+                                        feesTotal += abono;
+                                        if (abono > 0) paidCount++;
+                                        
+                                        linkedIds.forEach(id => processedUnits.add(id));
+                                        processedUnits.add(s.id);
+                                    } else {
+                                        processedUnits.add(s.id);
+                                    }
+                                });
+
                                 const eventsTotal = (store.financeEvents || []).reduce((acc: any, e: any) => acc + (Object.values(e.contributions || {}).reduce((s: number, v: any) => s + Number(v), 0)), 0);
                                 const totalRevenue = feesTotal + eventsTotal;
 
