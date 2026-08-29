@@ -1048,7 +1048,13 @@ export const generateGroupList = (
             row.push(risk || 'Sin Riesgo');
         }
 
-        if (options.includeFee) row.push(s.annualFeePaid ? 'PAGADO' : 'PENDIENTE');
+        if (options.includeFee) {
+            if (s.annualFeeStatus === 'PARCIAL') {
+                row.push(`ABONO $${s.annualFeeAbono || 0}`);
+            } else {
+                row.push((s.annualFeePaid || s.annualFeeStatus === 'PAGADO') ? 'PAGADO' : 'PENDIENTE');
+            }
+        }
         if (options.includeEvents) row.push(s.eventFeePaid ? 'PAGADO' : 'PENDIENTE');
         if (options.includeExams) row.push(s.examFeePaid ? 'PAGADO' : 'PENDIENTE');
 
@@ -2440,7 +2446,8 @@ export const generateFinanceReportPDF = (
     let totalEsperado = 0;
 
     const body = targetStudents.map((s, idx) => {
-        const status = s.annualFeeStatus || (s.annualFeePaid ? 'PAGADO' : 'PENDIENTE');
+        let status: string = s.annualFeeStatus || (s.annualFeePaid ? 'PAGADO' : 'PENDIENTE');
+        if (status === 'PARCIAL') status = 'ABONO';
         const abono = s.annualFeeAbono !== undefined ? s.annualFeeAbono : (s.annualFeePaid ? 350 : 0);
         const total = s.annualFeeTotal !== undefined ? s.annualFeeTotal : 350;
         const tieneHermanos = s.tieneHermanos ? 'Sí' : 'No';
