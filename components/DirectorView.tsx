@@ -769,62 +769,32 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
 
         // 3. Distribution Logic
         const generateRotation = (weekOffset: number) => {
-            // Logic: 
-            // 1. Distribute Regulars evenly.
-            // 2. Distribute Specialists evenly ON TOP of Regulars.
-
             const assignments = spaces.map(space => ({ space, assigned: [] as any[] }));
 
-            // Helper to distribute a list
-            const distribute = (list: any[], offset: number) => {
-                if (list.length === 0) return;
+            // Helper to apply week offset shift
+            const shiftList = (list: any[], offset: number) => {
+                if (list.length === 0) return list;
                 const shift = offset % list.length;
-                const shiftedList = [...list.slice(shift), ...list.slice(0, shift)];
-
-                shiftedList.forEach((staff, index) => {
-                    // Modulo to wrap around spaces
-                    const spaceIndex = index % spaces.length;
-                    assignments[spaceIndex].assigned.push({
-                        name: staff.name,
-                        color: 'text-indigo-700'
-                    });
-                });
+                return [...list.slice(shift), ...list.slice(0, shift)];
             };
 
-            // Helper for specialists (ensure they don't land alone if possible)
-            const distributeSpecialists = (list: any[], offset: number) => {
-                if (list.length === 0) return;
-                const shift = offset % list.length;
-                const shiftedList = [...list.slice(shift), ...list.slice(0, shift)];
+            const shiftedRegulars = shiftList(regularList, weekOffset);
+            const shiftedSpecialists = shiftList(specialistsList, weekOffset);
 
-                shiftedList.forEach((staff, index) => {
-                    // We want to add them to spaces. 
-                    // Ideally spaces that already have a Regular.
-                    // Simple modulo does this naturally if buckets > 0.
-                    // But if regularList < spaces, some buckets are empty.
-                    // If bucket is empty, skip it? No, then specialst does nothing?
-                    // User said: "no queden solos".
+            // Merge all teachers into a single queue for perfectly even distribution
+            const allToAssign = [
+                ...shiftedRegulars.map(staff => ({ name: staff.name, color: 'text-indigo-700' })),
+                ...shiftedSpecialists.map(staff => ({ name: staff.name, color: 'text-pink-600' }))
+            ];
 
-                    // Strategy: Find the next space that has people.
-                    let spaceIndex = index % spaces.length;
-
-                    // Safety check: Don't put specialist alone?
-                    // If assignments[spaceIndex].assigned.length === 0 ... try next
-                    let attempts = 0;
-                    while (assignments[spaceIndex].assigned.length === 0 && attempts < spaces.length) {
-                        spaceIndex = (spaceIndex + 1) % spaces.length;
-                        attempts++;
-                    }
-
-                    assignments[spaceIndex].assigned.push({
-                        name: staff.name,
-                        color: 'text-pink-600' // Different color for specialists
-                    });
+            // Distribute sequentially across all spaces
+            allToAssign.forEach((staff, index) => {
+                const spaceIndex = index % spaces.length;
+                assignments[spaceIndex].assigned.push({
+                    name: staff.name,
+                    color: staff.color
                 });
-            };
-
-            distribute(regularList, weekOffset);
-            distributeSpecialists(specialistsList, weekOffset);
+            });
 
             return assignments;
         };
@@ -1477,17 +1447,7 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                             </span>
                         }
                     />
-                    <DirectorNavBtn
-                        active={activeTab === 'CTE_GAMES'}
-                        onClick={() => { setActiveTab('CTE_GAMES'); setIsMobileMenuOpen(false); }}
-                        icon={Gamepad2}
-                        label={
-                            <span className="flex items-center justify-between w-full">
-                                Juegos CTE
-                                <span className="text-[9px] bg-amber-400 text-amber-950 px-1 rounded font-bold ml-1">NUEVO</span>
-                            </span>
-                        }
-                    />
+
                     <DirectorNavBtn
                         active={activeTab === 'CTE_PRESENTATIONS'}
                         onClick={() => { setActiveTab('CTE_PRESENTATIONS'); setIsMobileMenuOpen(false); }}
