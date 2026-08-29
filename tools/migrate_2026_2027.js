@@ -8,6 +8,18 @@ export async function runMigrate() {
     try {
         await connection.beginTransaction();
 
+        // 0. Validar Idempotencia
+        const [checkConfigRows] = await connection.query("SELECT config_value FROM school_config WHERE config_key = 'main_config'");
+        if (checkConfigRows.length > 0) {
+            let config = JSON.parse(checkConfigRows[0].config_value);
+            if (config.schoolYear === "2026-2027") {
+                console.log("⚠️ La migración ya fue ejecutada (schoolYear ya es 2026-2027). Abortando para evitar saltos dobles.");
+                await connection.rollback();
+                connection.release();
+                return { success: true, message: "Already migrated" };
+            }
+        }
+
         // 1. Migrar Alumnos
         console.log("Migrando alumnos...");
         const [students] = await connection.query('SELECT id, status, data_json FROM students');

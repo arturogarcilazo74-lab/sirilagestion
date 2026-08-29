@@ -584,6 +584,23 @@ app.post('/sirila-v1/sync', async (req, res) => {
     console.log(`Payload Size: ${(payloadSize / 1024 / 1024).toFixed(2)} MB`);
 
     const pool = getPool();
+
+    // 0. GHOST EFFECT PREVENTION
+    try {
+        const [configRows] = await pool.query("SELECT config_value FROM school_config WHERE config_key = 'main_config'");
+        if (configRows.length > 0 && schoolConfig) {
+            let dbConfig = JSON.parse(configRows[0].config_value);
+            if (dbConfig.schoolYear === "2026-2027" && schoolConfig.schoolYear !== "2026-2027") {
+                console.warn("BLOCKED SYNC: Frontend sent stale data from previous school year.");
+                return res.status(409).json({ 
+                    error: "CONFLICTO DE DATOS: La base de datos ya está en el ciclo 2026-2027 pero tu navegador tiene información desactualizada. Por favor, recarga la página completamente para evitar borrar la migración." 
+                });
+            }
+        }
+    } catch (e) {
+        console.error("Error checking ghost effect", e);
+    }
+
     const connection = await pool.getConnection();
 
     try {

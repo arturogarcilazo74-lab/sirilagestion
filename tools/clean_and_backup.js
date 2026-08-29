@@ -31,6 +31,15 @@ export async function runCleanAndBackup() {
     try {
         await connection.beginTransaction();
 
+        // 0. Idempotencia: Verificar si ya se insertaron los eventos 2026
+        const [existingEvents] = await connection.query("SELECT id FROM events WHERE id = 'ev_26_inicio'");
+        if (existingEvents.length > 0) {
+            console.log("⚠️ El script clean_and_backup ya fue ejecutado (eventos 2026-2027 presentes). Abortando para no sobrescribir el respaldo original.");
+            await connection.rollback();
+            connection.release();
+            return { success: true, message: "Already cleaned and backed up" };
+        }
+
         // 1. Crear tablas de respaldo
         console.log("Creando respaldos de tablas...");
         const tablesToBackup = ['students', 'assignments', 'behavior_logs', 'events', 'finance_events', 'staff_attendance'];
