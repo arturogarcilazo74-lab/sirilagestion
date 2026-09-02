@@ -93,6 +93,31 @@ export const calculateStudentMetrics = (
   ).length;
   const attendanceRate = totalDays > 0 ? (presentDays / totalDays) * 100 : 100;
 
+  // Promedio de actividades interactivas / autocalificables
+  const results = student.assignmentResults || {};
+  const interactiveScores = Object.values(results).filter(v => typeof v === 'number' && v >= 0 && v <= 10) as number[];
+  const interactiveAvg = interactiveScores.length > 0
+    ? Number((interactiveScores.reduce((a, b) => a + b, 0) / interactiveScores.length).toFixed(1))
+    : 0;
+
+  // Puntaje ponderado para Cuadro de Honor (toma en cuenta académico, autocalificables y avance)
+  const progressScore = hwPercentage / 10;
+  let honorScore = 0;
+  if (academicAvg > 0) {
+    if (interactiveAvg > 0) {
+      honorScore = (academicAvg * 0.50) + (interactiveAvg * 0.30) + (progressScore * 0.20);
+    } else {
+      honorScore = (academicAvg * 0.70) + (progressScore * 0.30);
+    }
+  } else {
+    if (interactiveAvg > 0) {
+      honorScore = (interactiveAvg * 0.60) + (progressScore * 0.40);
+    } else {
+      honorScore = progressScore;
+    }
+  }
+  const finalHonorScore = Number(honorScore.toFixed(1));
+
   // Promedio final (siempre es el promedio académico basado estrictamente en las calificaciones)
   let finalAvgStr = '-';
   if (academicAvg > 0) {
@@ -102,6 +127,8 @@ export const calculateStudentMetrics = (
   return {
     trimAvgs,
     academicAvg,
+    interactiveAvg,
+    honorScore: finalHonorScore,
     hwPercentage,
     behaviorPoints,
     attendanceRate,

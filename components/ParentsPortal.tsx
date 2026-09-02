@@ -451,11 +451,32 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                 if (finalScore < 0) finalScore = 0;
 
                 try {
-                    await api.submitAssignment(student.id, activeHtmlGame.id, {
-                        score: finalScore,
-                        type: 'HTML_GAME',
-                        areaScores: areaScores // Pass area scores if provided
-                    });
+                    const newCompleted = [...new Set([...(student.completedAssignmentIds || []), activeHtmlGame.id])];
+                    const newResults = { ...(student.assignmentResults || {}), [activeHtmlGame.id]: finalScore };
+                    const newAttempts = { ...(student.assignmentAttempts || {}), [activeHtmlGame.id]: (student.assignmentAttempts?.[activeHtmlGame.id] || 0) + 1 };
+                    const newAreaResults = areaScores ? { ...(student.assignmentAreaResults || {}), [activeHtmlGame.id]: areaScores } : (student.assignmentAreaResults || {});
+
+                    const updatedStudent: Student = {
+                        ...student,
+                        completedAssignmentIds: newCompleted,
+                        assignmentResults: newResults,
+                        assignmentAttempts: newAttempts,
+                        assignmentAreaResults: newAreaResults,
+                        assignmentsCompleted: newCompleted.length
+                    };
+
+                    setStudent(updatedStudent);
+                    await api.saveStudent(updatedStudent);
+
+                    try {
+                        await api.submitAssignment(student.id, activeHtmlGame.id, {
+                            score: finalScore,
+                            type: 'HTML_GAME',
+                            areaScores: areaScores // Pass area scores if provided
+                        });
+                    } catch (submitErr) {
+                        console.warn("submitAssignment notice:", submitErr);
+                    }
 
                     alert(`¡Juego Completado!\nTu calificación es: ${finalScore}/10`);
                     setActiveHtmlGame(null); // Close game
@@ -687,8 +708,8 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
 
             alert(`¡Ficha Calificada!\n\nCalificación: ${score}/10\n\n${feedback}${!passed ? `\n\nNo has alcanzado el puntaje mínimo (${minPass}).` : ''}`);
 
-            // 3. Mark as complete (Only if passed or if no minScore requirement, but typically we want pass)
-            const newCompleted = passed ? [...new Set([...(student.completedAssignmentIds || []), activeWorksheet.id])] : (student.completedAssignmentIds || []);
+            // 3. Mark as complete (Always record that activity was done)
+            const newCompleted = [...new Set([...(student.completedAssignmentIds || []), activeWorksheet.id])];
             const newResults = { ...(student.assignmentResults || {}), [activeWorksheet.id]: score };
             const newAttempts = { ...(student.assignmentAttempts || {}), [activeWorksheet.id]: (student.assignmentAttempts?.[activeWorksheet.id] || 0) + 1 };
 
@@ -874,40 +895,36 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
         const newAttempts = { ...(student.assignmentAttempts || {}), [activeQuiz.id]: (student.assignmentAttempts?.[activeQuiz.id] || 0) + 1 };
         const newAreaResults = { ...(student.assignmentAreaResults || {}), [activeQuiz.id]: areaPercentageResults };
 
+        // Marcar siempre como completada/realizada al enviarse
+        const newCompleted = [...new Set([...(student.completedAssignmentIds || []), activeQuiz.id])];
+        const newResults = { ...(student.assignmentResults || {}), [activeQuiz.id]: score };
+
+        const updatedStudent = {
+            ...student,
+            completedAssignmentIds: newCompleted,
+            assignmentResults: newResults,
+            assignmentAreaResults: newAreaResults,
+            assignmentAttempts: newAttempts,
+            assignmentsCompleted: newCompleted.length
+        };
+
+        setStudent(updatedStudent);
+        await api.saveStudent(updatedStudent);
+
+        const attemptsLeft = (activeQuiz.maxAttempts || 1) - newAttempts[activeQuiz.id];
+
         if (passed) {
-            // Update Student
-            const newCompleted = [...new Set([...(student.completedAssignmentIds || []), activeQuiz.id])];
-            const newResults = { ...(student.assignmentResults || {}), [activeQuiz.id]: score };
-
-            const updatedStudent = {
-                ...student,
-                completedAssignmentIds: newCompleted,
-                assignmentResults: newResults,
-                assignmentAreaResults: newAreaResults,
-                assignmentAttempts: newAttempts,
-                assignmentsCompleted: newCompleted.length
-            };
-
-            setStudent(updatedStudent);
-            await api.saveStudent(updatedStudent);
-
             // Notify Teacher via Message
             try {
                 await api.sendParentMessage(student.id, `✅ Cuestionario completado: ${activeQuiz.title} (Calificación: ${score}/10)`, 'PARENT');
             } catch (err) { console.error("Failed to notify teacher", err); }
-        } else {
-            // If failed, still save result but don't mark as complete? 
-            // Better to save result so teacher sees it.
-            const newResults = { ...(student.assignmentResults || {}), [activeQuiz.id]: score };
-            const updatedStudent = { ...student, assignmentResults: newResults, assignmentAreaResults: newAreaResults, assignmentAttempts: newAttempts };
-            setStudent(updatedStudent);
-            await api.saveStudent(updatedStudent);
 
-            const attemptsLeft = (activeQuiz.maxAttempts || 1) - newAttempts[activeQuiz.id];
+            alert(`¡Cuestionario Completado!\n\nCalificación: ${score}/10 (Aprobado)${attemptsLeft > 0 ? `\n\nTe quedan ${attemptsLeft} intento(s) si deseas mejorar tu nota.` : ''}`);
+        } else {
             if (attemptsLeft > 0) {
-                alert(`No has alcanzado el puntaje mínimo (${minPass}/10). Te quedan ${attemptsLeft} intentos.`);
+                alert(`Cuestionario realizado. Calificación: ${score}/10 (Mínimo: ${minPass}/10).\n\nTe quedan ${attemptsLeft} intento(s) para mejorar tu nota.`);
             } else {
-                alert(`No has alcanzado el puntaje mínimo y has agotado tus intentos.`);
+                alert(`Cuestionario finalizado. Calificación: ${score}/10.\n\nHas alcanzado el límite de intentos permitidos.`);
                 setActiveQuiz(null);
             }
         }
@@ -1338,7 +1355,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                                         </div>
                                                         <div>
                                                             <p className="font-extrabold text-sm">Tu Lugar Actual</p>
-                                                            <p className="text-[11px] text-indigo-100/90 font-medium">Basado en promedio general</p>
+                                                            <p className="text-[11px] text-indigo-100/90 font-medium">Promedio, avance y autocalificables</p>
                                                         </div>
                                                     </div>
 
@@ -1346,9 +1363,10 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                                         <div className="flex flex-col items-end">
                                                             <div className="flex items-center gap-1 text-yellow-300">
                                                                 <Medal size={16} fill="currentColor" />
-                                                                <span className="text-2xl font-black">{honorRoll.find(h => h.id === student.id)?.average || metrics.finalAvg}</span>
+                                                                <span className="text-2xl font-black">{(honorRoll.find(h => h.id === student.id) as any)?.honorScore || honorRoll.find(h => h.id === student.id)?.average || (metrics as any).honorScore || metrics.finalAvg}</span>
                                                             </div>
-                                                            <p className="text-[9px] uppercase font-bold tracking-widest text-indigo-200">Promedio</p>
+                                                            <p className="text-[9px] uppercase font-bold tracking-widest text-indigo-200">Puntaje Honor</p>
+                                                            <span className="text-[9px] text-indigo-200/90 font-medium">Avance: {metrics.hwPercentage}%</span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1367,7 +1385,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                                                 />
                                                                 <div className="flex flex-col">
                                                                     <span className="text-[9px] font-bold truncate max-w-[70px]">{h.id === student.id ? 'Tú' : h.name.split(' ')[0]}</span>
-                                                                    {h.average && <span className="text-[8px] opacity-80 font-black">{Number(h.average).toFixed(1)}</span>}
+                                                                    {((h as any).honorScore || h.average) && <span className="text-[8px] opacity-90 font-black">{Number((h as any).honorScore || h.average).toFixed(1)}</span>}
                                                                 </div>
                                                             </div>
                                                         ))}

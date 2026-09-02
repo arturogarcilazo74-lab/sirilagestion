@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'; // AI Feature Enabled
 import { Student, Assignment, InteractiveQuestion, DraggableItem, InteractiveZone } from '../types';
 import { api } from '../services/api';
-import { CheckCircle, Circle, Plus, Trash2, Calendar, BarChart3, AlertCircle, X, Save, Trophy, TrendingUp, Sparkles, HelpCircle, Eye, EyeOff, Upload, FileText, Image as ImageIcon, Move, Play, BrainCircuit, Settings, Check, MessageCircle, Gamepad2, ChevronDown, ChevronUp, Users } from 'lucide-react';
+import { CheckCircle, Circle, Plus, Trash2, Calendar, BarChart3, AlertCircle, X, Save, Trophy, TrendingUp, Sparkles, HelpCircle, Eye, EyeOff, Upload, FileText, Image as ImageIcon, Move, Play, BrainCircuit, Settings, Check, MessageCircle, Gamepad2, ChevronDown, ChevronUp, Users, RotateCcw } from 'lucide-react';
 import { sendWhatsAppMessage, getTaskMessage } from '../whatsappUtils';
 
 import { generateInteractiveQuiz, generateInteractiveQuizFromContext, generateWorksheetSVG, generateCompleteWorksheet, autoDetectWorksheetZones, generateNEMPlanning, generateHtmlGame } from '../services/ai';
@@ -92,6 +92,47 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
   const [gradingStudentId, setGradingStudentId] = useState<string | null>(null);
   const [gradingScores, setGradingScores] = useState<Record<string, number>>({});
   const [expandedStudentId, setExpandedStudentId] = useState<string | null>(null);
+
+  // INTERACTIVE RESULTS DETAIL MODAL
+  const [selectedInteractiveResult, setSelectedInteractiveResult] = useState<{
+    student: Student;
+    assignment: Assignment;
+    score?: number;
+    attempts: number;
+    areaScores?: Record<string, number>;
+  } | null>(null);
+
+  const handleOpenInteractiveResult = (student: Student, assignment: Assignment) => {
+    const score = student.assignmentResults?.[assignment.id];
+    const attempts = student.assignmentAttempts?.[assignment.id] || 0;
+    const areaScores = student.assignmentAreaResults?.[assignment.id];
+    setSelectedInteractiveResult({
+      student,
+      assignment,
+      score,
+      attempts,
+      areaScores
+    });
+  };
+
+  const handleResetAttempts = async (student: Student, assignmentId: string) => {
+    if (!confirm(`¿Deseas reiniciar los intentos de "${student.name}" para esta actividad? El alumno podrá realizarla nuevamente desde el portal.`)) return;
+    try {
+      const updatedAttempts = { ...(student.assignmentAttempts || {}), [assignmentId]: 0 };
+      const updatedStudent = { ...student, assignmentAttempts: updatedAttempts };
+      await api.saveStudent(updatedStudent);
+      if (selectedInteractiveResult) {
+        setSelectedInteractiveResult({
+          ...selectedInteractiveResult,
+          attempts: 0
+        });
+      }
+      alert("Intentos reiniciados con éxito.");
+    } catch (e) {
+      console.error("Error resetting attempts", e);
+      alert("Error al reiniciar intentos.");
+    }
+  };
 
   const handleOpenGrading = async (assignment: Assignment, studentId: string) => {
     let fullAssignment = assignment;
@@ -1546,40 +1587,67 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                         {assignments.map(assignment => {
                           const isCompleted = student.completedAssignmentIds?.includes(assignment.id);
                           const score = student.assignmentResults?.[assignment.id];
+                          const attempts = student.assignmentAttempts?.[assignment.id] || 0;
+                          const isInteractive = assignment.type === 'INTERACTIVE' || !!assignment.interactiveData;
+
                           return (
-                            <td key={`${student.id}-${assignment.id}`} className="p-4 border-l border-slate-100 text-center">
+                            <td key={`${student.id}-${assignment.id}`} className="p-3 border-l border-slate-100 text-center">
                               <div className="flex flex-col items-center gap-1">
-                                <button
-                                  onClick={() => {
-                                    if (assignment.assignmentType === 'NEM_EVALUATION' && !isCompleted) {
-                                      // Open Grading Modal if it's a teacher evaluation and not yet completed
-                                      handleOpenGrading(assignment, student.id);
-                                    } else if (isCompleted && assignment.type === 'INTERACTIVE') {
-                                      // Allow manual score override for interactive activities
-                                      const newScore = prompt(`Actualizar calificación para "${assignment.title}" (0-10):`, score?.toString() || "10");
-                                      if (newScore !== null) {
-                                        const s = parseInt(newScore);
-                                        if (!isNaN(s) && s >= 0 && s <= 10) {
-                                          onToggleAssignment(student.id, assignment.id, s);
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={() => {
+                                      if (assignment.assignmentType === 'NEM_EVALUATION' && !isCompleted) {
+                                        // Open Grading Modal if it's a teacher evaluation and not yet completed
+                                        handleOpenGrading(assignment, student.id);
+                                      } else if (isInteractive && (isCompleted || attempts > 0)) {
+                                        // View interactive result modal
+                                        handleOpenInteractiveResult(student, assignment);
+                                      } else if (isCompleted && isInteractive) {
+                                        // Allow manual score override for interactive activities
+                                        const newScore = prompt(`Actualizar calificación para "${assignment.title}" (0-10):`, score?.toString() || "10");
+                                        if (newScore !== null) {
+                                          const s = parseInt(newScore);
+                                          if (!isNaN(s) && s >= 0 && s <= 10) {
+                                            onToggleAssignment(student.id, assignment.id, s);
+                                          }
                                         }
+                                      } else {
+                                        // Standard toggle behavior
+                                        onToggleAssignment(student.id, assignment.id);
                                       }
-                                    } else {
-                                      // Standard toggle behavior
-                                      onToggleAssignment(student.id, assignment.id);
-                                    }
-                                  }}
-                                  className={`transition-all duration-300 hover:scale-110 active:scale-95 p-2 rounded-full ${isCompleted ? 'text-emerald-500 bg-emerald-50' : 'text-slate-200 hover:text-slate-400 hover:bg-slate-100'
+                                    }}
+                                    className={`transition-all duration-300 hover:scale-110 active:scale-95 p-1.5 rounded-full ${
+                                      isCompleted ? 'text-emerald-500 bg-emerald-50' : (attempts > 0 ? 'text-amber-500 bg-amber-50' : 'text-slate-200 hover:text-slate-400 hover:bg-slate-100')
                                     }`}
-                                >
-                                  {isCompleted ? (
-                                    <CheckCircle className="w-6 h-6 fill-emerald-500 text-white" />
-                                  ) : (
-                                    <Circle className="w-6 h-6" strokeWidth={2.5} />
+                                    title={isInteractive ? (isCompleted ? 'Clic para ver detalles de la actividad completada' : (attempts > 0 ? 'En proceso / Ver intentos' : 'Actividad Interactiva')) : (isCompleted ? 'Completada' : 'Pendiente')}
+                                  >
+                                    {isCompleted ? (
+                                      <CheckCircle className="w-5 h-5 fill-emerald-500 text-white" />
+                                    ) : (
+                                      <Circle className="w-5 h-5" strokeWidth={2.5} />
+                                    )}
+                                  </button>
+
+                                  {isInteractive && (isCompleted || attempts > 0) && (
+                                    <button
+                                      onClick={() => handleOpenInteractiveResult(student, assignment)}
+                                      className="p-1 text-indigo-500 hover:bg-indigo-50 rounded text-xs font-bold transition-colors"
+                                      title="Ver desglose de resultados e intentos"
+                                    >
+                                      <Eye size={14} />
+                                    </button>
                                   )}
-                                </button>
-                                {isCompleted && score !== undefined && (
-                                  <span className={`text-[10px] font-bold px-1 rounded ${score >= 6 ? 'bg-indigo-50 text-indigo-600' : 'bg-red-50 text-red-600'}`}>
+                                </div>
+
+                                {score !== undefined && (
+                                  <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${score >= 6 ? 'bg-indigo-50 text-indigo-600 border border-indigo-100' : 'bg-red-50 text-red-600 border border-red-100'}`}>
                                     {score}/10
+                                  </span>
+                                )}
+
+                                {attempts > 0 && (
+                                  <span className="text-[9px] font-semibold text-slate-400">
+                                    {attempts} {assignment.maxAttempts ? `/${assignment.maxAttempts}` : ''} int.
                                   </span>
                                 )}
                               </div>
@@ -1639,13 +1707,18 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                           {assignments.map(assignment => {
                             const isCompleted = student.completedAssignmentIds?.includes(assignment.id);
                             const score = student.assignmentResults?.[assignment.id];
+                            const attempts = student.assignmentAttempts?.[assignment.id] || 0;
+                            const isInteractive = assignment.type === 'INTERACTIVE' || !!assignment.interactiveData;
+
                             return (
                               <div
                                 key={assignment.id}
-                                onClick={() => onToggleAssignment(student.id, assignment.id)}
-                                className={`flex items-center justify-between p-3 rounded-xl border transition-all active:scale-[0.98] ${isCompleted ? 'bg-emerald-50 border-emerald-100' : 'bg-white border-slate-100'}`}
+                                className={`flex items-center justify-between p-3 rounded-xl border transition-all ${isCompleted ? 'bg-emerald-50 border-emerald-100' : (attempts > 0 ? 'bg-amber-50 border-amber-100' : 'bg-white border-slate-100')}`}
                               >
-                                <div className="flex items-center gap-3">
+                                <div
+                                  onClick={() => onToggleAssignment(student.id, assignment.id)}
+                                  className="flex items-center gap-3 cursor-pointer flex-1"
+                                >
                                   {isCompleted ? (
                                     <CheckCircle size={20} className="text-emerald-500 fill-emerald-50" />
                                   ) : (
@@ -1656,11 +1729,26 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                                     <p className="text-[9px] text-slate-400">Vence: {new Date(assignment.dueDate).toLocaleDateString()}</p>
                                   </div>
                                 </div>
-                                {isCompleted && score !== undefined && (
-                                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${score >= 6 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-                                    {score}/10
-                                  </span>
-                                )}
+                                <div className="flex items-center gap-2">
+                                  {score !== undefined && (
+                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${score >= 6 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                                      {score}/10
+                                    </span>
+                                  )}
+                                  {attempts > 0 && (
+                                    <span className="text-[9px] font-semibold text-slate-400">
+                                      {attempts} int.
+                                    </span>
+                                  )}
+                                  {isInteractive && (
+                                    <button
+                                      onClick={() => handleOpenInteractiveResult(student, assignment)}
+                                      className="p-1 text-indigo-600 hover:bg-indigo-100 rounded text-xs"
+                                    >
+                                      <Eye size={14} />
+                                    </button>
+                                  )}
+                                </div>
                               </div>
                             );
                           })}
@@ -1731,6 +1819,125 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
           </div>
         )
       }
+
+      {/* INTERACTIVE RESULTS DETAIL MODAL */}
+      {selectedInteractiveResult && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto space-y-6">
+            {/* Header */}
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <img
+                  src={selectedInteractiveResult.student.avatar === "PENDING_LOAD" ? `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedInteractiveResult.student.name)}&background=random` : (selectedInteractiveResult.student.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedInteractiveResult.student.name)}&background=random`)}
+                  alt=""
+                  className="w-12 h-12 rounded-full object-cover border-2 border-indigo-100"
+                />
+                <div>
+                  <h3 className="text-lg font-black text-slate-800 leading-snug">{selectedInteractiveResult.student.name}</h3>
+                  <p className="text-xs text-slate-400 font-medium">{selectedInteractiveResult.student.group || 'Grupo'} · {selectedInteractiveResult.assignment.title}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedInteractiveResult(null)}
+                className="p-2 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Status and Summary Cards */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                <p className="text-[10px] uppercase font-bold tracking-wider text-slate-400 mb-1">Calificación Obtenida</p>
+                <div className="flex items-baseline gap-1">
+                  <span className={`text-3xl font-black ${(selectedInteractiveResult.score ?? 0) >= 6 ? 'text-indigo-600' : 'text-red-500'}`}>
+                    {selectedInteractiveResult.score !== undefined ? selectedInteractiveResult.score : '-'}
+                  </span>
+                  <span className="text-xs text-slate-400 font-bold">/ 10</span>
+                </div>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full inline-block mt-2 ${
+                  (selectedInteractiveResult.score ?? 0) >= 6 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+                }`}>
+                  {(selectedInteractiveResult.score ?? 0) >= 6 ? 'Aprobada' : 'Requiere Refuerzo'}
+                </span>
+              </div>
+
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                <p className="text-[10px] uppercase font-bold tracking-wider text-slate-400 mb-1">Intentos Realizados</p>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-3xl font-black text-slate-800">
+                    {selectedInteractiveResult.attempts}
+                  </span>
+                  <span className="text-xs text-slate-400 font-bold">
+                    / {selectedInteractiveResult.assignment.maxAttempts || '∞'}
+                  </span>
+                </div>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 inline-block mt-2">
+                  {selectedInteractiveResult.assignment.maxAttempts && selectedInteractiveResult.attempts >= selectedInteractiveResult.assignment.maxAttempts
+                    ? 'Intentos agotados'
+                    : 'Intentos disponibles'}
+                </span>
+              </div>
+            </div>
+
+            {/* Area Scores Breakdown (If NEM Quiz / Multi-area) */}
+            {selectedInteractiveResult.areaScores && Object.keys(selectedInteractiveResult.areaScores).length > 0 && (
+              <div className="space-y-3 bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100">
+                <h4 className="text-xs font-bold text-indigo-950 uppercase tracking-wider flex items-center gap-1.5">
+                  <Sparkles size={14} className="text-indigo-600" />
+                  Desglose por Campos Formativos (NEM)
+                </h4>
+                <div className="space-y-2">
+                  {Object.entries(selectedInteractiveResult.areaScores).map(([area, pct]) => (
+                    <div key={area} className="space-y-1">
+                      <div className="flex justify-between text-xs font-semibold text-slate-700">
+                        <span className="capitalize">{area}</span>
+                        <span className="font-bold">{pct}%</span>
+                      </div>
+                      <div className="w-full bg-slate-200/60 rounded-full h-2 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${pct >= 60 ? 'bg-indigo-600' : 'bg-red-500'}`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex flex-col sm:flex-row gap-2 pt-2">
+              <button
+                onClick={() => handleResetAttempts(selectedInteractiveResult.student, selectedInteractiveResult.assignment.id)}
+                className="flex-1 py-2.5 px-4 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-xl text-xs font-bold border border-amber-200 flex items-center justify-center gap-2 transition-all active:scale-95"
+              >
+                <RotateCcw size={14} />
+                Reiniciar Intentos
+              </button>
+              <button
+                onClick={() => {
+                  const newScore = prompt(`Asignar nueva calificación manual (0-10) para "${selectedInteractiveResult.student.name}":`, selectedInteractiveResult.score?.toString() || "10");
+                  if (newScore !== null) {
+                    const s = parseInt(newScore);
+                    if (!isNaN(s) && s >= 0 && s <= 10) {
+                      onToggleAssignment(selectedInteractiveResult.student.id, selectedInteractiveResult.assignment.id, s);
+                      setSelectedInteractiveResult({
+                        ...selectedInteractiveResult,
+                        score: s
+                      });
+                    }
+                  }
+                }}
+                className="flex-1 py-2.5 px-4 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-xs font-bold border border-indigo-200 flex items-center justify-center gap-2 transition-all active:scale-95"
+              >
+                <Save size={14} />
+                Ajustar Calificación
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div >
   );
 };

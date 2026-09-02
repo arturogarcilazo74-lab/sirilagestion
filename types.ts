@@ -159,7 +159,8 @@ export interface SchoolEvent {
   id: string;
   title: string;
   date: string; // YYYY-MM-DD
-  type: 'EXAM' | 'MEETING' | 'HOLIDAY' | 'ACTIVITY';
+  endDate?: string;
+  type: 'EXAM' | 'MEETING' | 'HOLIDAY' | 'ACTIVITY' | 'CTE' | 'SUSPENSION' | 'EVALUACION' | 'VACACIONES' | 'INSCRIPCIONES' | 'CONCIENTIZACION' | 'CONMEMORATIVO' | 'INICIO_FIN' | string;
   description?: string;
   targetGroup?: string; // 'GLOBAL' (Director) or specific group id/name
   assignedTo?: string[] | 'ALL'; // List of Student IDs or 'ALL'

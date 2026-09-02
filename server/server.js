@@ -160,6 +160,21 @@ async function initStorage() {
         } catch (rErr) {
             console.warn('Status reconciliation note:', rErr.message);
         }
+
+        // Auto-sync Official 2026-2027 Calendar Events
+        try {
+            for (const ev of OFFICIAL_EVENTS_2026_2027) {
+                await pool.query(`
+                    INSERT INTO events (id, title, date, type, description, data_json)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    ON DUPLICATE KEY UPDATE
+                    title=VALUES(title), date=VALUES(date), type=VALUES(type), description=VALUES(description), data_json=VALUES(data_json)
+                `, [ev.id, ev.title, ev.date, ev.type, ev.description, JSON.stringify(ev)]);
+            }
+            console.log('📅 Calendario Oficial 2026-2027 sincronizado en base de datos.');
+        } catch (evErr) {
+            console.warn('Events sync note:', evErr.message);
+        }
     } catch (error) {
         console.warn('⚠️  MySQL not available:', error.message);
         console.log('📁 FALLBACK: Using JSON file storage (database.json)');
@@ -418,57 +433,127 @@ app.get('/sirila-v1/students/avatars', async (req, res) => {
     }
 });
 
-// School Calendar helpers copied from services/schoolCalendarUtils.ts for backend node environment compatibility
+// Eventos Oficiales SEP/SEPyC Sinaloa 2026-2027 (185 Días)
+const OFFICIAL_EVENTS_2026_2027 = [
+    { id: 'sep26_inicio', title: 'Inicio de Clases Ciclo 2026-2027', date: '2026-08-31', type: 'INICIO_FIN', description: 'Primer día de clases oficial del ciclo escolar 2026-2027' },
+    { id: 'sep27_fin', title: 'Fin de Clases Ciclo 2026-2027', date: '2027-07-07', type: 'INICIO_FIN', description: 'Último día de clases del ciclo escolar 2026-2027' },
+    { id: 'sep26_cte_int_1', title: 'CTE Fase Intensiva (Día 1)', date: '2026-08-24', type: 'CTE', description: 'Consejo Técnico Escolar Fase Intensiva' },
+    { id: 'sep26_cte_int_2', title: 'CTE Fase Intensiva (Día 2)', date: '2026-08-25', type: 'CTE', description: 'Consejo Técnico Escolar Fase Intensiva' },
+    { id: 'sep26_cte_int_3', title: 'CTE Fase Intensiva (Día 3)', date: '2026-08-26', type: 'CTE', description: 'Consejo Técnico Escolar Fase Intensiva' },
+    { id: 'sep26_cte_int_4', title: 'CTE Fase Intensiva (Día 4)', date: '2026-08-27', type: 'CTE', description: 'Consejo Técnico Escolar Fase Intensiva' },
+    { id: 'sep26_cte_int_5', title: 'CTE Fase Intensiva (Día 5)', date: '2026-08-28', type: 'CTE', description: 'Consejo Técnico Escolar Fase Intensiva' },
+    { id: 'sep26_concientizacion', title: 'Jornada contra el Abuso Sexual Infantil', date: '2026-09-07', type: 'CONCIENTIZACION', description: 'Jornada de concientización sobre la gravedad del abuso sexual y el maltrato infantil' },
+    { id: 'sep26_inscripciones', title: 'Periodo de Inscripciones y Reinscripciones', date: '2026-09-01', type: 'INSCRIPCIONES', description: 'Periodo oficial de inscripciones y reinscripciones escolares' },
+    { id: 'sep26_cte1', title: 'CTE 1ª Sesión Ordinaria', date: '2026-09-25', type: 'CTE', description: 'Consejo Técnico Escolar - 1ª Sesión Ordinaria' },
+    { id: 'sep26_cte2', title: 'CTE 2ª Sesión Ordinaria', date: '2026-10-30', type: 'CTE', description: 'Consejo Técnico Escolar - 2ª Sesión Ordinaria' },
+    { id: 'sep26_cte3', title: 'CTE 3ª Sesión Ordinaria', date: '2026-11-27', type: 'CTE', description: 'Consejo Técnico Escolar - 3ª Sesión Ordinaria' },
+    { id: 'sep27_cte4', title: 'CTE 4ª Sesión Ordinaria', date: '2027-01-29', type: 'CTE', description: 'Consejo Técnico Escolar - 4ª Sesión Ordinaria' },
+    { id: 'sep27_cte5', title: 'CTE 5ª Sesión Ordinaria', date: '2027-02-26', type: 'CTE', description: 'Consejo Técnico Escolar - 5ª Sesión Ordinaria' },
+    { id: 'sep27_cte6', title: 'CTE 6ª Sesión Ordinaria', date: '2027-04-30', type: 'CTE', description: 'Consejo Técnico Escolar - 6ª Sesión Ordinaria' },
+    { id: 'sep27_cte7', title: 'CTE 7ª Sesión Ordinaria', date: '2027-05-28', type: 'CTE', description: 'Consejo Técnico Escolar - 7ª Sesión Ordinaria' },
+    { id: 'sep27_cte8', title: 'CTE 8ª Sesión Ordinaria', date: '2027-06-25', type: 'CTE', description: 'Consejo Técnico Escolar - 8ª Sesión Ordinaria' },
+    { id: 'sep26_indep', title: 'Suspensión: Independencia de México', date: '2026-09-16', type: 'SUSPENSION', description: 'Suspensión oficial de labores docentes' },
+    { id: 'sep26_muertos', title: 'Suspensión: Día de Muertos', date: '2026-11-02', type: 'SUSPENSION', description: 'Suspensión oficial de labores docentes' },
+    { id: 'sep26_revolucion', title: 'Suspensión: Revolución Mexicana', date: '2026-11-16', type: 'SUSPENSION', description: 'Conmemoración del 20 de noviembre' },
+    { id: 'sep26_navidad', title: 'Suspensión: Navidad', date: '2026-12-25', type: 'SUSPENSION', description: 'Suspensión oficial de labores docentes' },
+    { id: 'sep27_anio_nuevo', title: 'Suspensión: Año Nuevo', date: '2027-01-01', type: 'SUSPENSION', description: 'Suspensión oficial de labores docentes' },
+    { id: 'sep27_reyes', title: 'Suspensión: Día de Reyes', date: '2027-01-06', type: 'SUSPENSION', description: 'Suspensión oficial de labores docentes' },
+    { id: 'sep27_constitucion', title: 'Suspensión: Constitución Mexicana', date: '2027-02-01', type: 'SUSPENSION', description: 'Conmemoración del 5 de febrero' },
+    { id: 'sep27_juarez', title: 'Suspensión: Natalicio Benito Juárez', date: '2027-03-15', type: 'SUSPENSION', description: 'Conmemoración del 21 de marzo' },
+    { id: 'sep27_puebla', title: 'Suspensión: Batalla de Puebla', date: '2027-05-05', type: 'SUSPENSION', description: 'Suspensión oficial de labores docentes' },
+    { id: 'sep26_eval1', title: 'Entrega de Boletas - Trimestre 1', date: '2026-11-23', type: 'EVALUACION', description: 'Registro y comunicación de resultados de evaluación' },
+    { id: 'sep27_eval2', title: 'Entrega de Boletas - Trimestre 2', date: '2027-03-16', type: 'EVALUACION', description: 'Registro y comunicación de resultados de evaluación' },
+    { id: 'sep27_eval3', title: 'Entrega de Boletas - Trimestre 3', date: '2027-07-05', type: 'EVALUACION', description: 'Registro y comunicación de resultados de evaluación final' },
+    { id: 'sep27_preinscripciones', title: 'Periodo de Preinscripciones 2027-2028', date: '2027-02-02', type: 'INSCRIPCIONES', description: 'Preinscripción a Preescolar, 1° Primaria y 1° Secundaria' },
+    { id: 'sep26_vac_inv', title: 'Vacaciones de Invierno', date: '2026-12-21', type: 'VACACIONES', description: 'Periodo vacacional de invierno' },
+    { id: 'sep27_regreso_inv', title: 'Regreso a Clases (Invierno)', date: '2027-01-11', type: 'INICIO_FIN', description: 'Reanudación de actividades escolares' },
+    { id: 'sep27_vac_sem', title: 'Vacaciones de Semana Santa', date: '2027-03-22', type: 'VACACIONES', description: 'Periodo vacacional de Semana Santa' },
+    { id: 'sep27_regreso_sem', title: 'Regreso a Clases (Semana Santa)', date: '2027-04-05', type: 'INICIO_FIN', description: 'Reanudación de actividades escolares' },
+    { id: 'sep26_grito', title: 'Grito de Independencia', date: '2026-09-15', type: 'CONMEMORATIVO', description: 'Día cívico conmemorativo de reflexión' },
+    { id: 'sep26_raza', title: 'Día de la Raza', date: '2026-10-12', type: 'CONMEMORATIVO', description: 'Día cívico conmemorativo de reflexión' },
+    { id: 'sep26_rev_civico', title: 'Aniversario de la Revolución Mexicana', date: '2026-11-20', type: 'CONMEMORATIVO', description: 'Día cívico conmemorativo de reflexión' },
+    { id: 'sep27_const_civico', title: 'Aniversario de la Constitución de 1917', date: '2027-02-05', type: 'CONMEMORATIVO', description: 'Día cívico conmemorativo de reflexión' },
+    { id: 'sep27_bandera', title: 'Día de la Bandera', date: '2027-02-24', type: 'CONMEMORATIVO', description: 'Día cívico conmemorativo de reflexión' },
+    { id: 'sep27_mujer', title: 'Día Internacional de la Mujer', date: '2027-03-08', type: 'CONMEMORATIVO', description: 'Día conmemorativo y de reflexión' },
+    { id: 'sep27_petroleo', title: 'Expropiación Petrolera', date: '2027-03-18', type: 'CONMEMORATIVO', description: 'Día cívico conmemorativo de reflexión' },
+    { id: 'sep27_juarez_civico', title: 'Natalicio de Benito Juárez', date: '2027-03-21', type: 'CONMEMORATIVO', description: 'Día cívico conmemorativo de reflexión' },
+    { id: 'sep27_nino', title: 'Día del Niño', date: '2027-04-30', type: 'CONMEMORATIVO', description: 'Celebración escolar del Día del Niño' },
+    { id: 'sep27_trabajo', title: 'Día del Trabajo', date: '2027-05-01', type: 'CONMEMORATIVO', description: 'Día de descanso internacional' },
+    { id: 'sep27_maestro', title: 'Día del Maestro', date: '2027-05-15', type: 'CONMEMORATIVO', description: 'Celebración del personal docente' },
+    { id: 'sep27_receso', title: 'Receso de Clases', date: '2027-07-08', type: 'VACACIONES', description: 'Receso oficial de clases de fin de ciclo' }
+];
+
+// School Calendar helpers 2026-2027
 const SCHOOL_PERIODS = [
     {
         id: 'P1',
-        name: 'Primer Periodo',
-        startDate: '2025-09-01',
-        endDate: '2025-11-28'
+        name: 'Primer Periodo (Trimestre 1)',
+        startDate: '2026-08-31',
+        endDate: '2026-11-27'
     },
     {
         id: 'P2',
-        name: 'Segundo Periodo',
-        startDate: '2026-01-12',
-        endDate: '2026-03-27'
+        name: 'Segundo Periodo (Trimestre 2)',
+        startDate: '2026-11-30',
+        endDate: '2027-03-19'
     },
     {
         id: 'P3',
-        name: 'Tercer Periodo',
-        startDate: '2026-04-13',
-        endDate: '2026-07-15'
+        name: 'Tercer Periodo (Trimestre 3)',
+        startDate: '2027-04-05',
+        endDate: '2027-07-07'
     }
 ];
 
 const SUSPENSION_DAYS = {
-    '2025-09-16': 'Aniversario de la Independencia de México',
-    '2025-09-26': 'Primera sesión CTE',
-    '2025-10-31': 'Segunda sesión CTE',
-    '2025-11-14': 'Descarga administrativa',
-    '2025-11-17': 'Puente 20 de noviembre',
-    '2025-11-28': 'Tercera sesión CTE',
-    '2026-01-30': 'Cuarta sesión CTE',
-    '2026-02-02': 'Aniversario de la Constitución',
-    '2026-02-27': 'Quinta sesión CTE',
-    '2026-03-13': 'Descarga administrativa',
-    '2026-03-16': 'Natalicio de Benito Juárez',
-    '2026-03-27': 'Sexta sesión CTE',
-    '2026-03-30': 'Vacaciones Semana Santa',
-    '2026-03-31': 'Vacaciones Semana Santa',
-    '2026-04-01': 'Vacaciones Semana Santa',
-    '2026-04-02': 'Vacaciones Semana Santa',
-    '2026-04-03': 'Vacaciones Semana Santa',
-    '2026-04-06': 'Vacaciones Semana Santa',
-    '2026-04-07': 'Vacaciones Semana Santa',
-    '2026-04-08': 'Vacaciones Semana Santa',
-    '2026-04-09': 'Vacaciones Semana Santa',
-    '2026-04-10': 'Vacaciones Semana Santa',
-    '2026-05-01': 'Día del Trabajo',
-    '2026-05-05': 'Batalla de Puebla',
-    '2026-05-15': 'Día del Maestro',
-    '2026-05-29': 'Séptima sesión CTE',
-    '2026-06-26': 'Octava sesión CTE',
-    '2026-07-03': 'Descarga administrativa'
+    // Primer Periodo
+    '2026-09-16': 'Aniversario de la Independencia de México (Suspensión Oficial)',
+    '2026-09-25': 'Consejo Técnico Escolar - 1ª Sesión Ordinaria',
+    '2026-10-30': 'Consejo Técnico Escolar - 2ª Sesión Ordinaria',
+    '2026-11-02': 'Día de Muertos (Suspensión Oficial)',
+    '2026-11-16': 'Conmemoración del 20 de noviembre (Suspensión Oficial)',
+    '2026-11-27': 'Consejo Técnico Escolar - 3ª Sesión Ordinaria',
+
+    // Vacaciones de Invierno
+    '2026-12-21': 'Vacaciones de Invierno',
+    '2026-12-22': 'Vacaciones de Invierno',
+    '2026-12-23': 'Vacaciones de Invierno',
+    '2026-12-24': 'Vacaciones de Invierno',
+    '2026-12-25': 'Navidad (Suspensión Oficial)',
+    '2026-12-28': 'Vacaciones de Invierno',
+    '2026-12-29': 'Vacaciones de Invierno',
+    '2026-12-30': 'Vacaciones de Invierno',
+    '2026-12-31': 'Vacaciones de Invierno',
+    '2027-01-01': 'Año Nuevo (Suspensión Oficial)',
+    '2027-01-04': 'Vacaciones de Invierno',
+    '2027-01-05': 'Vacaciones de Invierno',
+    '2027-01-06': 'Día de Reyes (Suspensión Oficial)',
+    '2027-01-07': 'Taller Intensivo para Docentes',
+    '2027-01-08': 'Taller Intensivo para Docentes',
+
+    // Segundo Periodo
+    '2027-01-29': 'Consejo Técnico Escolar - 4ª Sesión Ordinaria',
+    '2027-02-01': 'Conmemoración del 5 de febrero (Suspensión Oficial)',
+    '2027-02-26': 'Consejo Técnico Escolar - 5ª Sesión Ordinaria',
+    '2027-03-15': 'Conmemoración del 21 de marzo (Suspensión Oficial)',
+
+    // Vacaciones de Semana Santa
+    '2027-03-22': 'Vacaciones de Semana Santa',
+    '2027-03-23': 'Vacaciones de Semana Santa',
+    '2027-03-24': 'Vacaciones de Semana Santa',
+    '2027-03-25': 'Vacaciones de Semana Santa',
+    '2027-03-26': 'Vacaciones de Semana Santa',
+    '2027-03-29': 'Vacaciones de Semana Santa',
+    '2027-03-30': 'Vacaciones de Semana Santa',
+    '2027-03-31': 'Vacaciones de Semana Santa',
+    '2027-04-01': 'Vacaciones de Semana Santa',
+    '2027-04-02': 'Vacaciones de Semana Santa',
+
+    // Tercer Periodo
+    '2027-04-30': 'Consejo Técnico Escolar - 6ª Sesión Ordinaria',
+    '2027-05-05': 'Batalla de Puebla (Suspensión Oficial)',
+    '2027-05-28': 'Consejo Técnico Escolar - 7ª Sesión Ordinaria',
+    '2027-06-25': 'Consejo Técnico Escolar - 8ª Sesión Ordinaria'
 };
 
 function getSchoolPeriod(dateString) {
@@ -498,24 +583,28 @@ function isSchoolDay(dateString) {
     return true;
 }
 
-// NEW: Endpoint to fetch Honor Roll (Top performers by behavior points)
+// Endpoint to fetch Honor Roll (Ponderando promedio académico, porcentaje de avance y actividades autocalificables)
 app.get('/sirila-v1/honor-roll', async (req, res) => {
     try {
         let students = [];
-        let totalAssignmentsCount = 0;
+        let assignments = [];
         let schoolConfig = null;
 
         if (!useMySQL) {
             const data = readJSON();
             students = data.students || [];
-            totalAssignmentsCount = (data.assignments || []).length;
+            assignments = data.assignments || [];
             schoolConfig = data.schoolConfig;
         } else {
             const pool = getPool();
             const [rows] = await pool.query('SELECT id, name, avatar, behavior_points, status, data_json FROM students');
-            const [aRows] = await pool.query('SELECT COUNT(*) as count FROM assignments');
-            totalAssignmentsCount = aRows[0].count;
-            
+            const [aRows] = await pool.query('SELECT id, title, type, target_group, data_json FROM assignments');
+            assignments = aRows.map(r => {
+                let base = {};
+                try { base = typeof r.data_json === 'string' ? JSON.parse(r.data_json) : (r.data_json || {}); } catch(e){}
+                return { ...base, id: r.id, title: r.title, type: r.type, targetGroup: r.target_group };
+            });
+
             const [configRows] = await pool.query('SELECT * FROM school_config WHERE config_key = ?', ['main_config']);
             if (configRows.length > 0) {
                 try {
@@ -534,7 +623,7 @@ app.get('/sirila-v1/honor-roll', async (req, res) => {
                     id: r.id,
                     name: r.name,
                     avatar: r.avatar,
-                    status: r.status, // FORCE column status
+                    status: r.status,
                     behaviorPoints: r.behavior_points || 0
                 };
             });
@@ -545,14 +634,12 @@ app.get('/sirila-v1/honor-roll', async (req, res) => {
             students = students.filter(s => s.group && s.group.trim().toLowerCase() === targetGroup);
         }
 
-        const calculateAvg = (s) => {
-            // Función para calcular promedio de un trimestre - SIEMPRE usa los 4 campos NEM
+        const calculateNEMAvg = (s) => {
             const getTrimesterAvg = (g) => {
                 if (!g) return 0;
                 if (typeof g === 'number') return g;
                 if (typeof g === 'string') return parseFloat(g) || 0;
                 if (typeof g === 'object') {
-                    // Siempre usar los 4 campos NEM y dividir entre 4
                     const suma = Number(g.lenguajes || 0) + Number(g.saberes || 0) + Number(g.etica || 0) + Number(g.humano || 0);
                     return suma / 4;
                 }
@@ -561,15 +648,55 @@ app.get('/sirila-v1/honor-roll', async (req, res) => {
 
             const trimAvgs = (s.grades || []).map(getTrimesterAvg);
             const activeTrims = trimAvgs.filter(a => a > 0);
-            const academicAvg = activeTrims.length > 0 ? activeTrims.reduce((a, b) => a + b, 0) / activeTrims.length : 0;
-
-            return academicAvg;
+            return activeTrims.length > 0 ? activeTrims.reduce((a, b) => a + b, 0) / activeTrims.length : 0;
         };
 
         const honorRoll = students
             .filter(s => s.status !== 'BAJA')
             .map(s => {
-                const avg = calculateAvg(s);
+                const academicAvg = calculateNEMAvg(s);
+
+                // Tareas y avance del alumno
+                const studentGroup = (s.group || '').trim().toLowerCase();
+                const relevantAssignments = assignments.filter(a => {
+                    if (!a.targetGroup) return true;
+                    const tg = a.targetGroup.trim().toLowerCase();
+                    return tg === 'global' || tg === 'todos' || tg === studentGroup;
+                });
+
+                const totalAssignments = relevantAssignments.length;
+                const completedIds = Array.isArray(s.completedAssignmentIds) ? s.completedAssignmentIds : [];
+                const completedCount = completedIds.length;
+                const progressPercentage = totalAssignments > 0
+                    ? Math.min(100, Math.round((completedCount / totalAssignments) * 100))
+                    : (completedCount > 0 ? 100 : 0);
+
+                // Calificaciones de actividades autocalificables
+                const results = (s.assignmentResults && typeof s.assignmentResults === 'object') ? s.assignmentResults : {};
+                const interactiveScores = Object.values(results).filter(v => typeof v === 'number' && v >= 0 && v <= 10);
+                const interactiveAvg = interactiveScores.length > 0
+                    ? Number((interactiveScores.reduce((a, b) => a + b, 0) / interactiveScores.length).toFixed(1))
+                    : 0;
+
+                // Cálculo ponderado del puntaje de honor (escala 0-10)
+                const progressScore = progressPercentage / 10;
+                let honorScore = 0;
+                if (academicAvg > 0) {
+                    if (interactiveAvg > 0) {
+                        honorScore = (academicAvg * 0.50) + (interactiveAvg * 0.30) + (progressScore * 0.20);
+                    } else {
+                        honorScore = (academicAvg * 0.70) + (progressScore * 0.30);
+                    }
+                } else {
+                    // Al inicio del ciclo sin calificaciones trimestrales aún capturadas
+                    if (interactiveAvg > 0) {
+                        honorScore = (interactiveAvg * 0.60) + (progressScore * 0.40);
+                    } else {
+                        honorScore = progressScore;
+                    }
+                }
+                honorScore = Number(honorScore.toFixed(1));
+
                 let avatar = s.avatar;
                 if ((!avatar || avatar === "PENDING_LOAD") && s.data_json) {
                     try {
@@ -577,16 +704,23 @@ app.get('/sirila-v1/honor-roll', async (req, res) => {
                         avatar = parsed.avatar;
                     } catch (e) { }
                 }
+
                 return {
                     id: s.id,
                     name: s.name,
                     avatar: (avatar && avatar.length > 100) ? avatar : "",
                     behaviorPoints: s.behaviorPoints || 0,
-                    average: Number(avg.toFixed(1))
+                    average: honorScore > 0 ? honorScore : (academicAvg > 0 ? Number(academicAvg.toFixed(1)) : 0),
+                    honorScore: honorScore,
+                    academicAvg: Number(academicAvg.toFixed(1)),
+                    interactiveAvg: interactiveAvg,
+                    progressPercentage: progressPercentage
                 };
             })
             .sort((a, b) => {
+                if (b.honorScore !== a.honorScore) return b.honorScore - a.honorScore;
                 if (b.average !== a.average) return b.average - a.average;
+                if (b.behaviorPoints !== a.behaviorPoints) return b.behaviorPoints - a.behaviorPoints;
                 return a.name.localeCompare(b.name);
             })
             .slice(0, 10);

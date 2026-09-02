@@ -8,6 +8,7 @@ import { generateDashboardReportPDF } from '../services/pdfGenerator';
 import { Sparkles, TrendingUp, Users, AlertCircle, History, X, Phone, User, CheckCircle, Calendar as CalendarIcon, BookOpen, Clock, Download, ClipboardList, ThumbsUp, ThumbsDown, ChevronLeft, ChevronRight, Plus, Edit2, Trash2, Save, MoreHorizontal, ArrowRight, Send, Megaphone, AlertTriangle, CheckSquare, MessageCircle, Award } from 'lucide-react';
 import { sendWhatsAppMessage, getEventMessage } from '../whatsappUtils';
 import { PastCycleAnalysisModal } from './PastCycleAnalysisModal';
+import { OFFICIAL_CALENDAR_EVENTS_2026_2027 } from '../services/schoolCalendarUtils';
 
 interface DashboardProps {
   students: Student[];
@@ -24,18 +25,34 @@ interface DashboardProps {
   store?: any;
 }
 
-const EVENT_COLORS = {
+const EVENT_COLORS: Record<string, string> = {
   EXAM: 'bg-red-100 text-red-700 border-red-200',
   MEETING: 'bg-blue-100 text-blue-700 border-blue-200',
   HOLIDAY: 'bg-purple-100 text-purple-700 border-purple-200',
-  ACTIVITY: 'bg-green-100 text-green-700 border-green-200'
+  ACTIVITY: 'bg-green-100 text-green-700 border-green-200',
+  CTE: 'bg-pink-100 text-pink-800 border-pink-200',
+  SUSPENSION: 'bg-slate-900 text-white border-slate-700',
+  EVALUACION: 'bg-amber-100 text-amber-800 border-amber-300',
+  VACACIONES: 'bg-slate-200 text-slate-700 border-slate-300',
+  INSCRIPCIONES: 'bg-cyan-100 text-cyan-800 border-cyan-300',
+  CONCIENTIZACION: 'bg-pink-100 text-pink-800 border-pink-300',
+  CONMEMORATIVO: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+  INICIO_FIN: 'bg-emerald-100 text-emerald-800 border-emerald-300'
 };
 
-const EVENT_DOT_COLORS = {
+const EVENT_DOT_COLORS: Record<string, string> = {
   EXAM: 'bg-red-500',
   MEETING: 'bg-blue-500',
   HOLIDAY: 'bg-purple-500',
-  ACTIVITY: 'bg-green-500'
+  ACTIVITY: 'bg-green-500',
+  CTE: 'bg-pink-500',
+  SUSPENSION: 'bg-slate-900',
+  EVALUACION: 'bg-amber-500',
+  VACACIONES: 'bg-slate-400',
+  INSCRIPCIONES: 'bg-cyan-500',
+  CONCIENTIZACION: 'bg-pink-500',
+  CONMEMORATIVO: 'bg-indigo-500',
+  INICIO_FIN: 'bg-emerald-500'
 };
 
 const MONTH_NAMES = [
@@ -80,8 +97,18 @@ export const DashboardView: React.FC<DashboardProps> = ({
     ? activeStudentsWithGrades.reduce((sum, s) => sum + s.globalAvg, 0) / activeStudentsWithGrades.length
     : 0;
 
-  // Filter lists
-  const honorRollStudents = studentsWithMetrics.filter(s => s.globalAvg >= 9.0).sort((a, b) => b.globalAvg - a.globalAvg);
+  // Filter lists (Cuadro de honor ponderado: académico, avance y autocalificables)
+  const honorRollStudents = [...studentsWithMetrics]
+    .filter(s => {
+      const score = (s.metrics as any).honorScore ?? s.globalAvg;
+      return score >= 8.0 || s.globalAvg >= 9.0;
+    })
+    .sort((a, b) => {
+      const scoreB = (b.metrics as any).honorScore ?? b.globalAvg;
+      const scoreA = (a.metrics as any).honorScore ?? a.globalAvg;
+      return scoreB - scoreA;
+    });
+
   const interventionStudents = studentsWithMetrics.filter(s => {
     const avg = s.globalAvg;
     const behavior = s.metrics.behaviorPoints;
@@ -416,6 +443,25 @@ export const DashboardView: React.FC<DashboardProps> = ({
     setIsEventModalOpen(false);
   };
 
+  // Merge with official 2026-2027 calendar events
+  const allCalendarEvents = React.useMemo(() => {
+    const dbEvents = events || [];
+    const officialEvents = OFFICIAL_CALENDAR_EVENTS_2026_2027.map(ev => ({
+      id: ev.id,
+      title: ev.title,
+      date: ev.date,
+      type: ev.type as any,
+      description: ev.description
+    }));
+    const merged = [...dbEvents];
+    for (const oEv of officialEvents) {
+      if (!merged.some(e => e.id === oEv.id || (e.date === oEv.date && e.title === oEv.title))) {
+        merged.push(oEv);
+      }
+    }
+    return merged;
+  }, [events]);
+
   const renderCalendar = () => {
     const daysInMonth = getDaysInMonth(currentDate);
     const firstDay = getFirstDayOfMonth(currentDate);
@@ -429,23 +475,23 @@ export const DashboardView: React.FC<DashboardProps> = ({
     // Days of current month
     for (let day = 1; day <= daysInMonth; day++) {
       const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      const dayEvents = events.filter(e => e.date === dateStr);
+      const dayEvents = allCalendarEvents.filter(e => e.date === dateStr);
       const isToday = getLocalDateString() === dateStr;
 
       days.push(
         <div
           key={day}
           onClick={() => handleDayClick(dateStr)}
-          className={`h - 10 flex flex - col items - center justify - center relative rounded - lg text - sm font - medium transition - colors cursor - pointer group
+          className={`h-10 flex flex-col items-center justify-center relative rounded-lg text-sm font-medium transition-colors cursor-pointer group
                 ${isToday ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-700 hover:bg-indigo-50 hover:text-indigo-600'}
 `}
-          title={`Click para agregar evento el ${day} `}
+          title={`Click para agregar evento el ${day}`}
         >
           <span>{day}</span>
           {dayEvents.length > 0 && (
             <div className="flex gap-0.5 mt-0.5">
               {dayEvents.map((evt, idx) => (
-                <div key={idx} className={`w - 1.5 h - 1.5 rounded - full ${EVENT_DOT_COLORS[evt.type]} border border - white`}></div>
+                <div key={idx} className={`w-1.5 h-1.5 rounded-full ${EVENT_DOT_COLORS[evt.type] || 'bg-indigo-500'} border border-white`} title={evt.title}></div>
               ))}
             </div>
           )}
@@ -687,13 +733,13 @@ export const DashboardView: React.FC<DashboardProps> = ({
           </div>
 
           <div className="flex-1 space-y-3">
-            {events.length === 0 ? (
+            {allCalendarEvents.length === 0 ? (
               <div className="text-center py-10 text-slate-400 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">
                 <CalendarIcon size={32} className="mx-auto mb-2 opacity-50" />
                 <p>No hay eventos próximos.</p>
               </div>
             ) : (
-              [...events]
+              [...allCalendarEvents]
                 .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
                 .slice(0, 5)
                 .map(evt => {
@@ -1106,24 +1152,35 @@ export const DashboardView: React.FC<DashboardProps> = ({
             <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
               {honorRollStudents.length === 0 ? (
                 <div className="text-center py-12 text-slate-400 text-xs">
-                  Aún no hay alumnos con promedio &ge; 9.0
+                  Aún no hay alumnos con puntaje destacado
                 </div>
               ) : (
-                honorRollStudents.map(({ student, globalAvg }) => (
-                  <div key={student.id} className="bg-white border border-slate-100 p-2.5 rounded-lg flex items-center justify-between shadow-sm hover:shadow-md transition-shadow">
-                    <div className="flex items-center gap-2 truncate">
-                      <img
-                        src={student.avatar === "PENDING_LOAD" ? `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random` : (student.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random`)}
-                        alt={student.name}
-                        className="w-7 h-7 rounded-full object-cover border border-slate-100 shrink-0"
-                      />
-                      <span className="font-semibold text-slate-700 text-xs truncate">{student.name}</span>
+                honorRollStudents.map(({ student, metrics, globalAvg }) => {
+                  const honorScore = (metrics as any).honorScore || globalAvg;
+                  return (
+                    <div key={student.id} className="bg-white border border-slate-100 p-2.5 rounded-lg flex items-center justify-between shadow-sm hover:shadow-md transition-shadow">
+                      <div className="flex items-center gap-2 truncate">
+                        <img
+                          src={student.avatar === "PENDING_LOAD" ? `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random` : (student.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random`)}
+                          alt={student.name}
+                          className="w-8 h-8 rounded-full object-cover border border-slate-100 shrink-0"
+                        />
+                        <div className="truncate">
+                          <h5 className="font-bold text-slate-800 text-xs truncate">{student.name}</h5>
+                          <div className="flex items-center gap-1.5 text-[9px] text-slate-400">
+                            <span>Avance: {metrics.hwPercentage}%</span>
+                            {(metrics as any).interactiveAvg > 0 && <span>· Interactivas: {(metrics as any).interactiveAvg}/10</span>}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end">
+                        <span className="text-xs font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                          {Number(honorScore).toFixed(1)}
+                        </span>
+                      </div>
                     </div>
-                    <span className="bg-emerald-50 text-emerald-700 font-bold text-xs px-2 py-0.5 rounded-full shrink-0">
-                      {globalAvg.toFixed(1)}
-                    </span>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>

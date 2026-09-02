@@ -18,6 +18,7 @@ import { CTEPresentationView } from './CTEPresentationView';
 import { SchoolConfig, Student, StaffMember } from '../types';
 import { generateSchoolDocument, generateGroupList, generateReportCard, generateBehaviorReport, generateDashboardReportPDF } from '../services/pdfGenerator';
 import { api } from '../services/api'; // Import API for saving events
+import { OFFICIAL_CALENDAR_EVENTS_2026_2027 } from '../services/schoolCalendarUtils';
 
 interface DirectorViewProps {
     store: any; // Using 'any' for speed to accept the full store object, ideally typed
@@ -446,9 +447,23 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
             return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
         };
 
-        // Events for this month
+        // Events for this month: merge store events with official 2026-2027 calendar
+        const officialEvents = OFFICIAL_CALENDAR_EVENTS_2026_2027.map(ev => ({
+            id: ev.id,
+            title: ev.title,
+            date: ev.date,
+            type: ev.type as any,
+            description: ev.description
+        }));
+        const baseEventsList = [...(events || [])];
+        for (const oEv of officialEvents) {
+            if (!baseEventsList.some(e => e.id === oEv.id || (e.date === oEv.date && e.title === oEv.title))) {
+                baseEventsList.push(oEv);
+            }
+        }
+
         const currentMonthEvents = [
-            ...(events || []),
+            ...baseEventsList,
             ...(store.financeEvents || []).map((fe: any) => ({
                 id: fe.id,
                 title: fe.title,
@@ -469,7 +484,6 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
             }
 
             // Days
-            // Days
             for (let day = 1; day <= daysInMonth; day++) {
                 const currentDayDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
 
@@ -488,7 +502,11 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                 // Apply color based on event type if present
                 if (!isToday && hasEvents) {
                     const evtType = dayEvents[0].type || 'ACTIVITY';
-                    if (evtType === 'HOLIDAY') dayBgClass = 'bg-red-50 hover:bg-red-100 border-red-200';
+                    if (evtType === 'HOLIDAY' || evtType === 'SUSPENSION') dayBgClass = 'bg-red-50 hover:bg-red-100 border-red-200';
+                    else if (evtType === 'CTE') dayBgClass = 'bg-pink-50 hover:bg-pink-100 border-pink-200';
+                    else if (evtType === 'EVALUACION') dayBgClass = 'bg-amber-50 hover:bg-amber-100 border-amber-200';
+                    else if (evtType === 'INSCRIPCIONES') dayBgClass = 'bg-cyan-50 hover:bg-cyan-100 border-cyan-200';
+                    else if (evtType === 'VACACIONES') dayBgClass = 'bg-slate-100 hover:bg-slate-200 border-slate-300';
                     else if (evtType === 'FINANCE') dayBgClass = 'bg-emerald-50 hover:bg-emerald-100 border-emerald-200';
                     else if (evtType === 'MEETING') dayBgClass = 'bg-purple-50 hover:bg-purple-100 border-purple-200';
                     else dayBgClass = 'bg-blue-50 hover:bg-blue-100 border-blue-200';
@@ -507,10 +525,14 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                         <div className="space-y-1 pointer-events-none">
                             {dayEvents.map((e: any) => (
                                 <div key={e.id} className={`text-[9px] font-bold px-1.5 py-0.5 rounded border truncate cursor-help
-                                     ${e.type === 'HOLIDAY' ? 'bg-red-100 text-red-700 border-red-200' :
+                                     ${e.type === 'HOLIDAY' || e.type === 'SUSPENSION' ? 'bg-red-100 text-red-700 border-red-200' :
+                                        e.type === 'CTE' ? 'bg-pink-100 text-pink-800 border-pink-200' :
+                                        e.type === 'EVALUACION' ? 'bg-amber-100 text-amber-800 border-amber-200' :
+                                        e.type === 'INSCRIPCIONES' ? 'bg-cyan-100 text-cyan-800 border-cyan-200' :
+                                        e.type === 'VACACIONES' ? 'bg-slate-200 text-slate-700 border-slate-300' :
                                         e.type === 'FINANCE' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
-                                            e.type === 'MEETING' ? 'bg-purple-100 text-purple-700 border-purple-200' :
-                                                'bg-indigo-100 text-indigo-700 border-indigo-200'
+                                        e.type === 'MEETING' ? 'bg-purple-100 text-purple-700 border-purple-200' :
+                                        'bg-indigo-100 text-indigo-700 border-indigo-200'
                                     }`} title={e.title}>
                                     {e.title}
                                 </div>

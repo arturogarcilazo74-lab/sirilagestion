@@ -1,27 +1,31 @@
 import { getPool } from '../server/db.js';
 
-// Calendario Escolar Oficial 2026-2027 (fechas estimadas basadas en calendarios típicos de la SEP, ya que el oficial exacto para 2026 aún no se publica a esta fecha, pero usaremos fechas de referencia comunes).
+// Calendario Escolar Oficial 2026-2027 - SEP / SEPyC Sinaloa (185 Días)
 const NEW_EVENTS = [
-    { id: 'ev_26_inicio', title: 'Inicio de Clases Ciclo 2026-2027', date: '2026-08-24', type: 'ACADEMICO', description: 'Inicio oficial del ciclo escolar 2026-2027' },
-    { id: 'ev_26_indep', title: 'Aniversario de la Independencia', date: '2026-09-16', type: 'FESTIVO', description: 'Suspensión de labores docentes' },
-    { id: 'ev_26_cte1', title: 'Consejo Técnico Escolar', date: '2026-09-25', type: 'ADMINISTRATIVO', description: 'Primera sesión ordinaria de CTE' },
-    { id: 'ev_26_cte2', title: 'Consejo Técnico Escolar', date: '2026-10-30', type: 'ADMINISTRATIVO', description: 'Segunda sesión ordinaria de CTE' },
-    { id: 'ev_26_revol', title: 'Aniversario de la Revolución', date: '2026-11-16', type: 'FESTIVO', description: 'Suspensión de labores docentes' },
-    { id: 'ev_26_cte3', title: 'Consejo Técnico Escolar', date: '2026-11-27', type: 'ADMINISTRATIVO', description: 'Tercera sesión ordinaria de CTE' },
-    { id: 'ev_26_vac_inv', title: 'Vacaciones de Invierno', date: '2026-12-18', type: 'FESTIVO', description: 'Inicio de vacaciones de invierno' },
-    { id: 'ev_27_regreso', title: 'Regreso a Clases', date: '2027-01-08', type: 'ACADEMICO', description: 'Reanudación de clases' },
-    { id: 'ev_27_cte4', title: 'Consejo Técnico Escolar', date: '2027-01-29', type: 'ADMINISTRATIVO', description: 'Cuarta sesión ordinaria de CTE' },
-    { id: 'ev_27_const', title: 'Aniversario de la Constitución', date: '2027-02-01', type: 'FESTIVO', description: 'Suspensión de labores' },
-    { id: 'ev_27_cte5', title: 'Consejo Técnico Escolar', date: '2027-02-26', type: 'ADMINISTRATIVO', description: 'Quinta sesión ordinaria de CTE' },
-    { id: 'ev_27_natal', title: 'Natalicio de Benito Juárez', date: '2027-03-15', type: 'FESTIVO', description: 'Suspensión de labores' },
-    { id: 'ev_27_cte6', title: 'Consejo Técnico Escolar', date: '2027-03-26', type: 'ADMINISTRATIVO', description: 'Sexta sesión ordinaria de CTE' },
-    { id: 'ev_27_vac_sem', title: 'Vacaciones de Semana Santa', date: '2027-03-29', type: 'FESTIVO', description: 'Inicio de vacaciones de primavera' },
-    { id: 'ev_27_trabajo', title: 'Día del Trabajo', date: '2027-05-01', type: 'FESTIVO', description: 'Suspensión de labores' },
-    { id: 'ev_27_batalla', title: 'Batalla de Puebla', date: '2027-05-05', type: 'FESTIVO', description: 'Suspensión de labores' },
-    { id: 'ev_27_maestro', title: 'Día del Maestro', date: '2027-05-15', type: 'FESTIVO', description: 'Suspensión de labores' },
-    { id: 'ev_27_cte7', title: 'Consejo Técnico Escolar', date: '2027-05-28', type: 'ADMINISTRATIVO', description: 'Séptima sesión ordinaria de CTE' },
-    { id: 'ev_27_cte8', title: 'Consejo Técnico Escolar', date: '2027-06-25', type: 'ADMINISTRATIVO', description: 'Octava sesión ordinaria de CTE' },
-    { id: 'ev_27_fin', title: 'Fin del Ciclo Escolar', date: '2027-07-15', type: 'ACADEMICO', description: 'Fin oficial del ciclo 2026-2027' }
+    { id: 'sep26_inicio', title: 'Inicio de Clases Ciclo 2026-2027', date: '2026-08-31', type: 'ACADEMICO', description: 'Inicio oficial del ciclo escolar 2026-2027' },
+    { id: 'sep26_concientizacion', title: 'Jornada contra el Abuso Sexual Infantil', date: '2026-09-07', type: 'ADMINISTRATIVO', description: 'Jornada de concientización' },
+    { id: 'sep26_indep', title: 'Aniversario de la Independencia', date: '2026-09-16', type: 'FESTIVO', description: 'Suspensión oficial de labores docentes' },
+    { id: 'sep26_cte1', title: 'Consejo Técnico Escolar', date: '2026-09-25', type: 'ADMINISTRATIVO', description: 'Primera sesión ordinaria de CTE' },
+    { id: 'sep26_cte2', title: 'Consejo Técnico Escolar', date: '2026-10-30', type: 'ADMINISTRATIVO', description: 'Segunda sesión ordinaria de CTE' },
+    { id: 'sep26_muertos', title: 'Día de Muertos', date: '2026-11-02', type: 'FESTIVO', description: 'Suspensión oficial de labores docentes' },
+    { id: 'sep26_revol', title: 'Aniversario de la Revolución', date: '2026-11-16', type: 'FESTIVO', description: 'Conmemoración del 20 de noviembre' },
+    { id: 'sep26_cte3', title: 'Consejo Técnico Escolar', date: '2026-11-27', type: 'ADMINISTRATIVO', description: 'Tercera sesión ordinaria de CTE' },
+    { id: 'sep26_vac_inv', title: 'Vacaciones de Invierno', date: '2026-12-21', type: 'FESTIVO', description: 'Inicio de vacaciones de invierno' },
+    { id: 'sep27_navidad', title: 'Navidad', date: '2026-12-25', type: 'FESTIVO', description: 'Suspensión oficial' },
+    { id: 'sep27_anio_nuevo', title: 'Año Nuevo', date: '2027-01-01', type: 'FESTIVO', description: 'Suspensión oficial' },
+    { id: 'sep27_reyes', title: 'Día de Reyes', date: '2027-01-06', type: 'FESTIVO', description: 'Suspensión oficial' },
+    { id: 'sep27_regreso', title: 'Regreso a Clases', date: '2027-01-11', type: 'ACADEMICO', description: 'Reanudación de clases' },
+    { id: 'sep27_cte4', title: 'Consejo Técnico Escolar', date: '2027-01-29', type: 'ADMINISTRATIVO', description: 'Cuarta sesión ordinaria de CTE' },
+    { id: 'sep27_const', title: 'Aniversario de la Constitución', date: '2027-02-01', type: 'FESTIVO', description: 'Conmemoración del 5 de febrero' },
+    { id: 'sep27_cte5', title: 'Consejo Técnico Escolar', date: '2027-02-26', type: 'ADMINISTRATIVO', description: 'Quinta sesión ordinaria de CTE' },
+    { id: 'sep27_natal', title: 'Natalicio de Benito Juárez', date: '2027-03-15', type: 'FESTIVO', description: 'Conmemoración del 21 de marzo' },
+    { id: 'sep27_vac_sem', title: 'Vacaciones de Semana Santa', date: '2027-03-22', type: 'FESTIVO', description: 'Inicio de vacaciones de Semana Santa' },
+    { id: 'sep27_regreso_sem', title: 'Regreso a Clases (Semana Santa)', date: '2027-04-05', type: 'ACADEMICO', description: 'Reanudación de clases' },
+    { id: 'sep27_cte6', title: 'Consejo Técnico Escolar', date: '2027-04-30', type: 'ADMINISTRATIVO', description: 'Sexta sesión ordinaria de CTE' },
+    { id: 'sep27_batalla', title: 'Batalla de Puebla', date: '2027-05-05', type: 'FESTIVO', description: 'Suspensión oficial de labores' },
+    { id: 'sep27_cte7', title: 'Consejo Técnico Escolar', date: '2027-05-28', type: 'ADMINISTRATIVO', description: 'Séptima sesión ordinaria de CTE' },
+    { id: 'sep27_cte8', title: 'Consejo Técnico Escolar', date: '2027-06-25', type: 'ADMINISTRATIVO', description: 'Octava sesión ordinaria de CTE' },
+    { id: 'sep27_fin', title: 'Fin del Ciclo Escolar', date: '2027-07-07', type: 'ACADEMICO', description: 'Fin oficial del ciclo 2026-2027' }
 ];
 
 export async function runCleanAndBackup() {
