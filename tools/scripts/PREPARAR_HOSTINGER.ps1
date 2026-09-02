@@ -13,7 +13,9 @@ New-Item -ItemType Directory -Path "$tempDir/server" | Out-Null
 
 # Copiar archivos del servidor y frontend compilado
 Copy-Item -Path "server/*" -Destination "$tempDir/server" -Recurse -Exclude ".env", "node_modules", "database.json"
-Copy-Item -Path "server/.env.production" -Destination "$tempDir/server/.env"
+if (Test-Path "server/.env.production") {
+    Copy-Item -Path "server/.env.production" -Destination "$tempDir/server/.env"
+}
 Copy-Item -Path "dist-app" -Destination $tempDir -Recurse
 
 # Copiar server.js raiz (entry point para Hostinger) y package.json de produccion

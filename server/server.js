@@ -27,7 +27,8 @@ app.use(express.json({ limit: '50mb' }));
 
 // Parse text/plain as JSON (bypasses Hostinger WAF that blocks large application/json POSTs)
 app.use((req, res, next) => {
-    if (req.headers['content-type'] === 'text/plain' && req.body === undefined) {
+    const contentType = req.headers['content-type'] || '';
+    if (contentType.startsWith('text/plain') && req.body === undefined) {
         let body = '';
         req.on('data', chunk => { body += chunk.toString(); });
         req.on('end', () => {
@@ -112,6 +113,18 @@ app.post('/sirila-v1/admin/migrate-2026', async (req, res) => {
     }
 });
 
+import { repairBajas } from '../tools/repair_bajas_2026.js';
+app.post('/sirila-v1/admin/repair-bajas', async (req, res) => {
+    try {
+        if (!useMySQL) return res.status(400).json({ error: 'MySQL is not active' });
+        const result = await repairBajas();
+        res.json(result);
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
 // Diagnostic: Test POST endpoint
 app.post('/sirila-v1/test-post', (req, res) => {
     console.log('[TEST POST] Received:', JSON.stringify(req.body).substring(0, 200));
@@ -130,6 +143,23 @@ async function initStorage() {
         useMySQL = true;
         console.log('✅ MySQL connected successfully!');
         console.log('📊 Using MySQL for data storage');
+
+        // Auto-reconcile student status if desynced between column and data_json
+        try {
+            const [syncResult] = await pool.query(`
+                UPDATE students 
+                SET status = JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.status'))
+                WHERE data_json IS NOT NULL 
+                  AND JSON_VALID(data_json)
+                  AND JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.status')) IN ('INSCRITO', 'BAJA', 'TRASLADO')
+                  AND status != JSON_UNQUOTE(JSON_EXTRACT(data_json, '$.status'))
+            `);
+            if (syncResult && syncResult.changedRows > 0) {
+                console.log(`🔄 Reconciled ${syncResult.changedRows} student status discrepancies between column and data_json.`);
+            }
+        } catch (rErr) {
+            console.warn('Status reconciliation note:', rErr.message);
+        }
     } catch (error) {
         console.warn('⚠️  MySQL not available:', error.message);
         console.log('📁 FALLBACK: Using JSON file storage (database.json)');
@@ -209,12 +239,19 @@ app.get('/sirila-v1/full-state', async (req, res) => {
             const avatar = row.avatar || base.avatar;
             const hasAvatar = !!avatar && avatar.length > 100;
 
+            // Ensure status takes the latest valid status, reconciling if data_json has INSCRITO while column was left BAJA
+            let studentStatus = row.status;
+            if ((!studentStatus || (studentStatus === 'BAJA' && base.status === 'INSCRITO')) && base.status) {
+                studentStatus = base.status;
+            }
+            if (!studentStatus) studentStatus = 'INSCRITO';
+
             return {
                 ...base,
                 id: row.id,
                 name: row.name,
                 curp: row.curp,
-                status: row.status, // FORCE column status
+                status: studentStatus,
                 avatar: hasAvatar ? "PENDING_LOAD" : (avatar || ""), // Placeholder
                 hasRealAvatar: hasAvatar,
                 // Defaults
@@ -746,6 +783,18 @@ app.post('/sirila-v1/sync', async (req, res) => {
 // STUDENTS
 app.post('/sirila-v1/students', async (req, res) => {
     const s = req.body;
+    if (!useMySQL) {
+        const data = readJSON();
+        const idx = (data.students || []).findIndex(st => st.id === s.id);
+        if (idx >= 0) {
+            data.students[idx] = s;
+        } else {
+            if (!data.students) data.students = [];
+            data.students.push(s);
+        }
+        writeJSON(data);
+        return res.json({ success: true });
+    }
     const pool = getPool();
     try {
         // Upsert (Insert or Update)
@@ -757,6 +806,8 @@ app.post('/sirila-v1/students', async (req, res) => {
       curp=VALUES(curp),
       sex=VALUES(sex),
       birth_date=VALUES(birth_date),
+      enrollment_date=VALUES(enrollment_date),
+      status=VALUES(status),
       guardian_name=VALUES(guardian_name),
       guardian_phone=VALUES(guardian_phone),
       avatar=IF(VALUES(avatar) = 'PENDING_LOAD', avatar, VALUES(avatar)),
@@ -780,6 +831,12 @@ app.post('/sirila-v1/students', async (req, res) => {
 });
 
 app.delete('/sirila-v1/students/:id', async (req, res) => {
+    if (!useMySQL) {
+        const data = readJSON();
+        data.students = (data.students || []).filter(st => st.id !== req.params.id);
+        writeJSON(data);
+        return res.json({ success: true });
+    }
     try {
         const pool = getPool();
         await pool.query('DELETE FROM students WHERE id = ?', [req.params.id]);

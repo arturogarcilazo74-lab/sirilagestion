@@ -35,7 +35,8 @@ export async function repairBajas() {
                     // Restaurar el grupo original si NO era de 6to
                     console.log(`Restaurando ${s.name} a grupo original: ${originalGroup}`);
                     data.group = originalGroup;
-                    await connection.query("UPDATE students SET data_json = ? WHERE id = ?", [JSON.stringify(data), s.id]);
+                    data.status = 'INSCRITO';
+                    await connection.query("UPDATE students SET status = 'INSCRITO', data_json = ? WHERE id = ?", [JSON.stringify(data), s.id]);
                     restoredCount++;
                 } else {
                     if (!originalGroup) {
@@ -45,11 +46,16 @@ export async function repairBajas() {
                     }
                     leftAsEgresadoCount++;
                 }
+            } else if (data.status === 'INSCRITO') {
+                // El usuario ya lo había marcado como INSCRITO en la UI pero la columna quedó en BAJA
+                console.log(`Reconciliando estatus INSCRITO para ${s.name} (ID: ${s.id})`);
+                await connection.query("UPDATE students SET status = 'INSCRITO' WHERE id = ?", [s.id]);
+                restoredCount++;
             }
         }
 
         await connection.commit();
-        console.log(`✅ Reparación completada. Restaurados a sus grupos: ${restoredCount}. Conservados como Egresados: ${leftAsEgresadoCount}.`);
+        console.log(`✅ Reparación completada. Restaurados a sus grupos / Inscritos: ${restoredCount}. Conservados como Egresados: ${leftAsEgresadoCount}.`);
         return { success: true, restoredCount, leftAsEgresadoCount };
 
     } catch (e) {
