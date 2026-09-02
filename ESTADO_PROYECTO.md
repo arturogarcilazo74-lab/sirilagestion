@@ -9,8 +9,9 @@ Este documento sirve como referencia rápida sobre el estado actual del sistema,
 - **Estilos**: Tailwind CSS con iconos de `lucide-react`.
 - **Manejo de Estado / Persistencia**: Zustand (`useAppStore.ts`) con sincronización offline usando `idb` (IndexedDB).
 - **Generación de PDFs**: `jspdf` y `jspdf-autotable` (ver `services/pdfGenerator.ts`).
-- **Backend / API**: Servidor Express en Node.js (`server/server.js`) con conexión a una base de datos **MySQL** en Aiven.
+- **Backend / API**: Servidor Express en Node.js (`server/server.js`) con conexión a base de datos **MySQL** en Hostinger.
 - **PWA**: La aplicación está configurada para funcionar como una PWA offline-first mediante Workbox (`vite.config.ts`).
+- **Despliegue Continuo**: Integrado con GitHub (`main`). Al hacer `git push origin main`, Hostinger actualiza automáticamente la aplicación en producción.
 
 ---
 
@@ -18,49 +19,90 @@ Este documento sirve como referencia rápida sobre el estado actual del sistema,
 Si necesitas hacer modificaciones, aquí es donde debes buscar:
 
 - **Panel Administrativo (Dirección)**: `components/DirectorView.tsx`
-  - Contiene las pestañas de resumen ejecutivo, estadísticas de matrícula, personal activo, finanzas generales, rotación de guardias y generación de documentos/listas.
+  - Contiene las pestañas de resumen ejecutivo, estadísticas de matrícula, personal activo, finanzas generales, rotación de guardias, agenda/calendario institucional y generador de documentos oficiales.
+- **Panel de Control (Dashboard)**: `components/DashboardView.tsx`
+  - Métricas generales, avisos oficiales, calendario dinámico del ciclo y Cuadro de Honor multidimensional.
+- **Gestión de Asistencia**: `components/AttendanceView.tsx`
+  - Pase de lista por QR o manual. Valida días hábiles del ciclo contra `services/schoolCalendarUtils.ts`.
+- **Gestión de Actividades y Tareas**: `components/ActivitiesView.tsx`
+  - Seguimiento de tareas ordinarias y actividades interactivas (cuestionarios, fichas interactivas, juegos HTML). Visualización de calificaciones, control de intentos realizados y modal de desglose por campos formativos NEM.
+- **Portal de Familias y Alumnos**: `components/ParentsPortal.tsx`
+  - Vista para estudiantes y tutores: visualización y resolución de actividades interactivas con autocalificación, seguimiento de asistencia, avisos escolares y posición en el Cuadro de Honor.
+- **Calendario Escolar Oficial**: `services/schoolCalendarUtils.ts`
+  - Define los periodos escolares (`SCHOOL_PERIODS`), días inhábiles (`SUSPENSION_DAYS`) y eventos oficiales de la SEP/SEPyC Sinaloa.
+- **Cálculo de Promedios y Métricas**: `services/gradeUtils.ts`
+  - Función canónica `calculateStudentMetrics`: calcula promedios NEM, porcentaje de avance, calificaciones autocalificables y puntaje ponderado de honor roll.
 - **Gestión Financiera**: `components/FinanceView.tsx`
   - Manejo del estatus de la Cuota Anual (`PAGADO`, `PARCIAL` o `PENDIENTE`) y aportaciones para eventos especiales.
 - **Gestión de Alumnos**: `components/StudentsView.tsx`
-  - Consulta de expedientes, registro de promedios, incidencias de conducta e indicadores de riesgo.
+  - Expedientes de alumnos, estatus (`INSCRITO`, `BAJA`, `TRASLADO`), conducta e indicadores de riesgo.
 - **Generación de Documentos y Reportes**: `services/pdfGenerator.ts`
-  - Lógica central para crear Constancias, Citatorios, Actas, Permisos Económicos, PEMC, Reportes Financieros y Listas Grupales.
-- **Sincronización e Interfaz de Base de Datos**: 
-  - `server/server.js`: Rutas de la API (ej. `/sirila-v1/sync`).
+  - Constancias, Citatorios, Actas, Permisos Económicos, PEMC, Reportes Financieros, Boletas y Listas Grupales.
+- **Backend / API**: 
+  - `server/server.js`: Rutas de la API, sincronización con MySQL, persistencia de alumnos, eventos oficiales y Cuadro de Honor.
   - `services/api.ts`: Cliente de comunicación del frontend al backend.
 - **Menú y Navegación**: `components/Sidebar.tsx` y `components/MobileLayout.tsx`.
 
 ---
 
-## 3. Últimas Modificaciones Críticas (Agosto 2026)
-Durante las últimas actualizaciones, se implementaron las siguientes mejoras importantes que debes tener en cuenta:
+## 3. Últimas Modificaciones Críticas (Septiembre 2026)
 
-1. **Migración de Ciclo Seguro (2026-2027)**: 
-   - Se crearon scripts (`tools/migrate_2026_2027.js`) para migrar la base de datos de ciclo de manera segura, con verificaciones de *idempotencia* para evitar dobles migraciones.
-2. **Rotación de Guardias Equitativa**:
-   - Se reescribió la lógica en `DirectorView.tsx` para combinar maestros regulares y de especialidad (Inglés/Educación Física) en una sola lista rotativa justa que asegura cobertura total sin desbalanceos.
-3. **Finanzas - Abonos y Recaudación Total**:
-   - **Listas y Reportes (`pdfGenerator.ts`)**: Se corrigió el error donde los pagos parciales se marcaban como "PENDIENTE"; ahora se muestran como **"ABONO $X"**.
-   - **Resumen Ejecutivo (`DirectorView.tsx`)**: El cálculo de la recaudación total suma correctamente los abonos parciales y evita duplicar a familias con más de un hermano.
-4. **Generador del PEMC**:
-   - Se añadió la opción de generar el **Programa Escolar de Mejora Continua (PEMC)** dentro del portal directivo.
-5. **Limpieza de Interfaz**:
-   - Se eliminó de la barra lateral la sección de "Juegos CTE".
+### 1. Corrección Definitiva del Estatus de Alumnos (Reversión a BAJA)
+- **Diagnóstico:** Al cambiar el estatus de un alumno a `INSCRITO`, al recargar la página o volver a entrar al sistema, el alumno volvía a aparecer como `BAJA`.
+- **Causa:** En `server/server.js`, la sentencia `ON DUPLICATE KEY UPDATE` del endpoint `POST /sirila-v1/students` actualizaba `name`, `group_name`, `curp`, `data_json`, pero omitía actualizar las columnas `status` y `enrollment_date`. Además, existían discrepancias heredadas en la base de datos entre la columna `status` y el atributo interno `data_json.status`.
+- **Solución implementada:**
+  - Se agregó `status=VALUES(status)` y `enrollment_date=VALUES(enrollment_date)` en `ON DUPLICATE KEY UPDATE` en `server/server.js`.
+  - Se agregó reconciliación automática de discrepancias de estatus en `initStorage()` al inicializar el servidor.
+  - Se ejecutó el script `tools/repair_bajas_2026.js` restaurando de forma permanente a todos los alumnos activos en estatus `INSCRITO`.
+
+### 2. Calendario Escolar Oficial 2026-2027 y Desbloqueo de Asistencia
+- **Diagnóstico:** No se podía registrar la asistencia en el sistema; aparecía el mensaje *"Fecha seleccionada no es un día hábil según el calendario escolar"*.
+- **Causa:** `schoolCalendarUtils.ts` y `server.js` estaban configurados con el ciclo 2025-2026 (concluido en julio 2026). Cualquier fecha de septiembre 2026 devolvía `isSchoolDay = false`.
+- **Solución implementada:**
+  - Se configuró el **Calendario Escolar Oficial 2026-2027 de SEP / SEPyC Sinaloa (185 Días)** con base en el documento oficial `public/CALENDARIO-ESCOLAR-BASICA-26-27.pdf`:
+    - **Inicio de clases:** 31 de Agosto de 2026.
+    - **Fin de clases:** 7 de Julio de 2027.
+    - **Periodos:** Trimestre 1 (31 Ago - 27 Nov 2026), Trimestre 2 (30 Nov 2026 - 19 Mar 2027), Trimestre 3 (5 Abr - 7 Jul 2027).
+    - **Suspensiones y CTE:** 16 Sep, 25 Sep (CTE 1), 30 Oct (CTE 2), 2 Nov, 16 Nov, 27 Nov (CTE 3), Vacaciones de Invierno (21 Dic 2026 - 8 Ene 2027, regreso 11 Ene), 29 Ene (CTE 4), 1 Feb, 26 Feb (CTE 5), 15 Mar, Vacaciones Semana Santa (22 Mar - 2 Abr 2027, regreso 5 Abr), 30 Abr (CTE 6), 5 May, 28 May (CTE 7), 25 Jun (CTE 8).
+    - **Eventos Oficiales:** Jornada contra el abuso sexual infantil (7 Sep 2026), Entrega de boletas (Nov 2026, Mar 2027, Jul 2027), Periodo de Preinscripciones (2-15 Feb 2027) y Periodos de Inscripciones.
+  - **Asistencia habilitada:** Todas las fechas escolares hábiles del ciclo 2026-2027 ahora son validadas positivamente en `AttendanceView.tsx`.
+  - **Visualización:** En `DirectorView.tsx` y `DashboardView.tsx`, los eventos oficiales se muestran categorizados y resaltados por color (CTE en rosa, suspensiones en oscuro, evaluaciones en ámbar, vacaciones en gris, inscripciones en cian).
+
+### 3. Tareas Interactivas: Marcado Automático y Persistencia de Calificaciones
+- **Diagnóstico:** En el portal de padres, las tareas simples de clase las marcaba el maestro, pero las actividades interactivas realizadas por los alumnos no se estaban marcando automáticamente como hechas, y las autocalificables con límite de intentos no mostraban los resultados al docente.
+- **Causa:** En `ParentsPortal.tsx`, si el alumno no alcanzaba la nota mínima aprobatoria (`minScoreToPass`), la actividad no se añadía a `completedAssignmentIds`. En juegos HTML, faltaba actualizar el estado local React del estudiante tras enviarse a la API.
+- **Solución implementada:**
+  - En `QUIZ`, `WORKSHEET` y `HTML_GAME`, cada entrega se registra inmediatamente como realizada en `completedAssignmentIds`, se almacena la nota en `assignmentResults` y se incrementa el contador de intentos en `assignmentAttempts`.
+  - La tarea se mueve automáticamente a la sección **Completadas** en el portal de padres, mostrando la calificación (`Nota: X/10`) y permitiendo reintentos si restan intentos (`intentos < maxAttempts`).
+  - En `ActivitiesView.tsx` (vista docente):
+    - Cada celda muestra la calificación obtenida y el contador de intentos (`Intentos: X/Max`).
+    - Se agregó el botón con icono de ojo `👁️` que abre el **Modal de Resultados de Actividad Interactiva**, permitiendo al maestro revisar el estado, el desglose por campos formativos NEM, reiniciar intentos si desea darle una nueva oportunidad al alumno, o ajustar la nota manualmente.
+
+### 4. Cuadro de Honor Multidimensional Ponderado
+- **Diagnóstico:** El Cuadro de Honor solo tomaba en cuenta las calificaciones de boletas académicas trimestrales. Al comenzar el ciclo escolar en septiembre (sin boletas trimestrales capturadas aún), el cuadro de honor permanecía vacío o en cero.
+- **Solución implementada:**
+  - Se rediseñó el algoritmo en `/sirila-v1/honor-roll` (`server.js`) y `gradeUtils.ts` para ponderar:
+    1. **Porcentaje de Avance del Alumno:** Cumplimiento de tareas asignadas.
+    2. **Calificaciones de Actividades Autocalificables:** Promedio de notas en cuestionarios, fichas y juegos interactivos (0-10).
+    3. **Promedio Académico Trimestral:** Calificaciones NEM capturadas.
+    4. **Puntos de Conducta:** Criterio positivo de desempate.
+  - Al inicio del ciclo, el puntaje de honor se calcula:
+    $$\text{Puntaje} = (\text{Promedio Autocalificables} \times 0.60) + \left(\frac{\text{Avance \%}}{10} \times 0.40\right)$$
+  - Al capturarse evaluaciones trimestrales, se integran fluidamente con 50% de ponderación académica.
+  - Se visualiza con insignias de avance y notas autocalificables en el Portal de Padres (`ParentsPortal.tsx`) y en el Panel de Control (`DashboardView.tsx`).
 
 ---
 
-## 4. Guía Rápida para Nuevas Modificaciones
+## 4. Guía para Nuevas Modificaciones y Despliegue
 
-- **Al Modificar la UI**: Recuerda que la aplicación está hecha con Tailwind. Si modificas componentes visuales en `components/`, debes recompilar para producción corriendo `npm run build` antes de subir los cambios al repositorio, ya que el servidor lee los estáticos de la carpeta `dist-app/`.
-- **Al Agregar Nuevos Datos al Estado**: Si añades un nuevo tipo de dato al alumno o al staff, debes asegurarte de registrarlo tanto en la interfaz de Typescript (`types.ts`) como en el almacenamiento de Zustand (`useAppStore.ts`).
-- **Evitar Efecto Fantasma (Ghosting)**: El backend incluye un control de versiones de estado (`lastUpdate`) y una validación estricta de reinicio de ciclo en `server/server.js` (`/sirila-v1/sync`). Si modificas la forma en que los datos se guardan, asegúrate de no alterar el `storeVersion` a menos que sea estrictamente necesario.
-- **Despliegue**: Para desplegar un cambio en el hosting en línea, basta con correr los siguientes comandos:
+- **Base de Datos**: La base de datos de producción opera en MySQL en Hostinger. Las credenciales se gestionan a través de variables de entorno en el servidor (`server/.env`).
+- **Despliegue Automático**:
+  El repositorio cuenta con integración continua configurada hacia Hostinger. Cualquier cambio que se confirme y envíe a la rama principal (`main`) se despliega de inmediato:
   ```bash
-  npm run build
   git add .
-  git commit -m "Descripción de los cambios"
-  git push
+  git commit -m "Descripción clara de las mejoras"
+  git push origin main
   ```
 
 ---
-*Documento generado de manera automatizada para preservar el contexto de desarrollo.*
+*Documento actualizado al 2 de Septiembre de 2026.*
