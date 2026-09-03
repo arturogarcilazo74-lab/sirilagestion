@@ -733,14 +733,15 @@ export const DashboardView: React.FC<DashboardProps> = ({
           </div>
 
           <div className="flex-1 space-y-3">
-            {allCalendarEvents.length === 0 ? (
+            {allCalendarEvents.filter(evt => evt.date >= getLocalDateString()).length === 0 ? (
               <div className="text-center py-10 text-slate-400 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">
                 <CalendarIcon size={32} className="mx-auto mb-2 opacity-50" />
                 <p>No hay eventos próximos.</p>
               </div>
             ) : (
               [...allCalendarEvents]
-                .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                .filter(evt => evt.date >= getLocalDateString())
+                .sort((a, b) => a.date.localeCompare(b.date))
                 .slice(0, 5)
                 .map(evt => {
                   // Parse date manually to avoid timezone shift (UTC vs Local)

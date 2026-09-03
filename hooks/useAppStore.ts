@@ -514,11 +514,14 @@ export const useAppStore = () => {
     };
 
     const handleEditStudent = (id: string, updatedData: Partial<Student>) => {
+        const currentStudent = students.find(s => s.id === id);
+        if (!currentStudent) return;
+        const updatedStudent = { ...currentStudent, ...updatedData } as Student;
+        api.saveStudent(updatedStudent).catch(() => setPendingActions(api.getQueueLength()));
+
         setStudents(prev => {
-            const next = prev.map(s => s.id === id ? { ...s, ...updatedData } as Student : s);
+            const next = prev.map(s => s.id === id ? updatedStudent : s);
             saveToCache('SIRILA_CACHE_STUDENTS', next); // Immediate save
-            const updatedStudent = next.find(s => s.id === id);
-            if (updatedStudent) api.saveStudent(updatedStudent).catch(() => setPendingActions(api.getQueueLength()));
             return next;
         });
     };
@@ -534,33 +537,28 @@ export const useAppStore = () => {
 
     const handleAttendanceUpdate = (studentId: string, status: AttendanceStatus, date?: string) => {
         const targetDate = date || new Date().toISOString().split('T')[0];
-        let updatedStudent: Student | null = null;
+        const currentStudent = students.find(s => s.id === studentId);
+        if (!currentStudent) return;
+
+        const newAttendance = { ...currentStudent.attendance };
+        if (status === AttendanceStatus.NONE) {
+            delete newAttendance[targetDate];
+        } else {
+            newAttendance[targetDate] = status;
+        }
+
+        const updatedStudent = {
+            ...currentStudent,
+            attendance: newAttendance
+        };
+
+        api.saveStudent(updatedStudent).catch(() => setPendingActions(api.getQueueLength()));
 
         setStudents(prev => {
-            const next = prev.map(s => {
-                if (s.id === studentId) {
-                    const newAttendance = { ...s.attendance };
-                    if (status === AttendanceStatus.NONE) {
-                        delete newAttendance[targetDate];
-                    } else {
-                        newAttendance[targetDate] = status;
-                    }
-
-                    updatedStudent = {
-                        ...s,
-                        attendance: newAttendance
-                    };
-                    return updatedStudent;
-                }
-                return s;
-            });
+            const next = prev.map(s => s.id === studentId ? updatedStudent : s);
             saveToCache('SIRILA_CACHE_STUDENTS', next);
             return next;
         });
-
-        if (updatedStudent) {
-            api.saveStudent(updatedStudent).catch(() => setPendingActions(api.getQueueLength()));
-        }
     };
 
     const handleBehaviorLog = (studentId: string, type: 'POSITIVE' | 'NEGATIVE' | 'USAER_OBSERVATION' | 'USAER_MEETING' | 'USAER_ACCOMMODATION' | 'USAER_SUGGESTION', description: string) => {
@@ -584,23 +582,20 @@ export const useAppStore = () => {
 
         // Only update points on student if it's strictly positive/negative behavior, not USAER notes
         if (points !== 0) {
-            let updatedStudent: Student | null = null;
-            setStudents(prev => {
-                const next = prev.map(s => {
-                    if (s.id === studentId) {
-                        updatedStudent = {
-                            ...s,
-                            behaviorPoints: s.behaviorPoints + points
-                        };
-                        return updatedStudent;
-                    }
-                    return s;
+            const currentStudent = students.find(s => s.id === studentId);
+            if (currentStudent) {
+                const updatedStudent = {
+                    ...currentStudent,
+                    behaviorPoints: currentStudent.behaviorPoints + points
+                };
+                api.saveStudent(updatedStudent).catch(() => setPendingActions(api.getQueueLength()));
+                
+                setStudents(prev => {
+                    const next = prev.map(s => s.id === studentId ? updatedStudent : s);
+                    saveToCache('SIRILA_CACHE_STUDENTS', next);
+                    return next;
                 });
-                saveToCache('SIRILA_CACHE_STUDENTS', next);
-                return next;
-            });
-
-            if (updatedStudent) api.saveStudent(updatedStudent).catch(() => setPendingActions(api.getQueueLength()));
+            }
         }
     };
 
@@ -628,43 +623,41 @@ export const useAppStore = () => {
 
     // Activity/Assignment Logic
     const handleToggleAssignment = (studentId: string, assignmentId: string, score?: number) => {
-        let updatedStudent: Student | null = null;
+        const currentStudent = students.find(s => s.id === studentId);
+        if (!currentStudent) return;
+
+        const isCompleted = currentStudent.completedAssignmentIds?.includes(assignmentId);
+        let newCompletedIds = [];
+        let newResults = { ...(currentStudent.assignmentResults || {}) };
+        let newAttempts = { ...(currentStudent.assignmentAttempts || {}) };
+
+        if (isCompleted && score === undefined) {
+            newCompletedIds = (currentStudent.completedAssignmentIds || []).filter(id => id !== assignmentId);
+            delete newResults[assignmentId];
+            delete newAttempts[assignmentId];
+        } else {
+            newCompletedIds = [...new Set([...(currentStudent.completedAssignmentIds || []), assignmentId])];
+            if (score !== undefined) {
+                newResults[assignmentId] = score;
+            }
+        }
+
+        const updatedStudent = {
+            ...currentStudent,
+            completedAssignmentIds: newCompletedIds,
+            assignmentResults: newResults,
+            assignmentAttempts: newAttempts,
+            assignmentsCompleted: newCompletedIds.length,
+            totalAssignments: currentStudent.totalAssignments || assignments.length
+        };
+
+        api.saveStudent(updatedStudent).catch(() => setPendingActions(api.getQueueLength()));
+
         setStudents(prev => {
-            const next = prev.map(student => {
-                if (student.id === studentId) {
-                    const isCompleted = student.completedAssignmentIds?.includes(assignmentId);
-                    let newCompletedIds = [];
-                    let newResults = { ...(student.assignmentResults || {}) };
-                    let newAttempts = { ...(student.assignmentAttempts || {}) };
-
-                    if (isCompleted && score === undefined) {
-                        newCompletedIds = (student.completedAssignmentIds || []).filter(id => id !== assignmentId);
-                        delete newResults[assignmentId];
-                        delete newAttempts[assignmentId];
-                    } else {
-                        newCompletedIds = [...new Set([...(student.completedAssignmentIds || []), assignmentId])];
-                        if (score !== undefined) {
-                            newResults[assignmentId] = score;
-                        }
-                    }
-
-                    updatedStudent = {
-                        ...student,
-                        completedAssignmentIds: newCompletedIds,
-                        assignmentResults: newResults,
-                        assignmentAttempts: newAttempts,
-                        assignmentsCompleted: newCompletedIds.length,
-                        totalAssignments: student.totalAssignments || assignments.length
-                    };
-                    return updatedStudent;
-                }
-                return student;
-            });
+            const next = prev.map(student => student.id === studentId ? updatedStudent : student);
             saveToCache('SIRILA_CACHE_STUDENTS', next);
             return next;
         });
-
-        if (updatedStudent) api.saveStudent(updatedStudent).catch(() => setPendingActions(api.getQueueLength()));
     };
 
     const handleAddAssignment = async (assignmentData: Partial<Assignment>) => {
@@ -729,29 +722,49 @@ export const useAppStore = () => {
         setAssignments(newAssignmentList);
         saveToCache('SIRILA_CACHE_ASSIGNMENTS', newAssignmentList);
 
-        // Update student totals (Optimistic)
-        setStudents(prev => {
-            const next = prev.map(s => {
-                if ((s.totalAssignments || 0) > 0) {
-                    const assignment = previousAssignments.find(a => a.id === id);
-                    const target = (assignment?.targetGroup || '').toUpperCase().trim();
-                    const studentG = (s.group || '').toUpperCase().trim();
-                    const isRelevant = !target || target === 'GLOBAL' || target === 'TODOS' || target === studentG;
-                    if (isRelevant) return { ...s, totalAssignments: Math.max(0, (s.totalAssignments || 0) - 1) };
-                }
-                return s;
-            });
-            saveToCache('SIRILA_CACHE_STUDENTS', next);
-            return next;
+        // Compute updated students synchronously
+        const updatedStudents = students.map(student => {
+            const newCompleted = (student.completedAssignmentIds || []).filter(aId => aId !== id);
+            const newResults = { ...student.assignmentResults };
+            const newAttempts = { ...student.assignmentAttempts };
+            const newAreaResults = { ...student.assignmentAreaResults };
+
+            delete newResults[id];
+            delete newAttempts[id];
+            delete newAreaResults[id];
+
+            const assignment = previousAssignments.find(a => a.id === id);
+            const target = (assignment?.targetGroup || '').toUpperCase().trim();
+            const studentG = (student.group || '').toUpperCase().trim();
+            const isRelevant = !target || target === 'GLOBAL' || target === 'TODOS' || target === studentG;
+            
+            const newTotalAssignments = isRelevant ? Math.max(0, (student.totalAssignments || 0) - 1) : student.totalAssignments;
+
+            return {
+                ...student,
+                totalAssignments: newTotalAssignments,
+                completedAssignmentIds: newCompleted,
+                assignmentResults: newResults,
+                assignmentAttempts: newAttempts,
+                assignmentAreaResults: newAreaResults
+            } as Student;
         });
+
+        setStudents(updatedStudents);
+        saveToCache('SIRILA_CACHE_STUDENTS', updatedStudents);
 
         try {
             await api.deleteAssignment(id);
-            // Sync student changes to server
-            students.forEach(student => api.saveStudent(student).catch(() => setPendingActions(api.getQueueLength())));
+            // Sync student changes to server with the updated data
+            updatedStudents.forEach(student => api.saveStudent(student).catch(() => setPendingActions(api.getQueueLength())));
         } catch (error: any) {
             console.error("Failed to delete assignment:", error);
             setPendingActions(api.getQueueLength());
+            // Rollback
+            setAssignments(previousAssignments);
+            saveToCache('SIRILA_CACHE_ASSIGNMENTS', previousAssignments);
+            setStudents(previousStudents);
+            saveToCache('SIRILA_CACHE_STUDENTS', previousStudents);
         }
     };
 
@@ -792,85 +805,69 @@ export const useAppStore = () => {
 
     // Finance Logic
     const handleUpdateStudentFee = (studentId: string, paid: boolean, extraData?: Partial<Student>) => {
+        const studentToUpdate = students.find(s => s.id === studentId);
+        if (!studentToUpdate) return;
+        
         let updatedStudents: Student[] = [];
-        setStudents(prev => {
-            let previousSiblingIds: string[] = [];
+        let previousSiblingIds = studentToUpdate.siblingIds || (studentToUpdate.siblingId ? [studentToUpdate.siblingId] : []);
+        
+        const primaryStudent = { ...studentToUpdate, annualFeePaid: paid, ...extraData } as Student;
+        updatedStudents.push(primaryStudent);
+        
+        const currentSiblingIds = primaryStudent.tieneHermanos
+            ? (primaryStudent.siblingIds || (primaryStudent.siblingId ? [primaryStudent.siblingId] : []))
+            : [];
             
-            // First pass: locate target student and get old sibling IDs list
-            prev.forEach(s => {
-                if (s.id === studentId) {
-                    previousSiblingIds = s.siblingIds || (s.siblingId ? [s.siblingId] : []);
-                }
-            });
-
-            // Second pass: compute primary student changes
-            const next = prev.map(s => {
-                if (s.id === studentId) {
-                    const updated = { ...s, annualFeePaid: paid, ...extraData };
-                    updatedStudents.push(updated);
-                    return updated;
-                }
-                return s;
-            });
-
-            const primaryStudent = updatedStudents[0];
-            const currentSiblingIds = primaryStudent && primaryStudent.tieneHermanos
-                ? (primaryStudent.siblingIds || (primaryStudent.siblingId ? [primaryStudent.siblingId] : []))
-                : [];
-
-            // Third pass: apply sibling modifications (bi-directional link/unlink, sync payment status)
-            const finalStudents = next.map(s => {
-                if (s.id === studentId) {
-                    return primaryStudent;
-                }
-                if (currentSiblingIds.includes(s.id)) {
-                    const existingSibList = s.siblingIds || (s.siblingId ? [s.siblingId] : []);
-                    const newSibList = Array.from(new Set([...existingSibList, primaryStudent.id]));
-                    const siblingUpdated = {
-                        ...s,
-                        annualFeePaid: paid,
-                        annualFeeStatus: primaryStudent.annualFeeStatus,
-                        annualFeeAbono: primaryStudent.annualFeeAbono,
-                        annualFeeTotal: primaryStudent.annualFeeTotal,
-                        tieneHermanos: true,
-                        siblingId: newSibList[0] || '',
-                        siblingName: primaryStudent.name,
-                        siblingGrade: primaryStudent.group || '',
-                        siblingIds: newSibList
-                    };
-                    updatedStudents.push(siblingUpdated);
-                    return siblingUpdated;
-                }
-                if (previousSiblingIds.includes(s.id) && !currentSiblingIds.includes(s.id)) {
-                    const existingSibList = s.siblingIds || (s.siblingId ? [s.siblingId] : []);
-                    const newSibList = existingSibList.filter(id => id !== studentId);
-                    const hasAnySib = newSibList.length > 0;
-                    
-                    const siblingCleared = {
-                        ...s,
-                        tieneHermanos: hasAnySib,
-                        siblingId: newSibList[0] || '',
-                        siblingName: hasAnySib ? s.siblingName : '',
-                        siblingGrade: hasAnySib ? s.siblingGrade : '',
-                        siblingIds: newSibList
-                    };
-                    updatedStudents.push(siblingCleared);
-                    return siblingCleared;
-                }
-                return s;
-            });
-
-            saveToCache('SIRILA_CACHE_STUDENTS', finalStudents);
-            return finalStudents;
+        students.forEach(s => {
+            if (s.id === studentId) return;
+            
+            if (currentSiblingIds.includes(s.id)) {
+                const existingSibList = s.siblingIds || (s.siblingId ? [s.siblingId] : []);
+                const newSibList = Array.from(new Set([...existingSibList, primaryStudent.id]));
+                const siblingUpdated = {
+                    ...s,
+                    annualFeePaid: paid,
+                    annualFeeStatus: primaryStudent.annualFeeStatus,
+                    annualFeeAbono: primaryStudent.annualFeeAbono,
+                    annualFeeTotal: primaryStudent.annualFeeTotal,
+                    tieneHermanos: true,
+                    siblingId: newSibList[0] || '',
+                    siblingName: primaryStudent.name,
+                    siblingGrade: primaryStudent.group || '',
+                    siblingIds: newSibList
+                };
+                updatedStudents.push(siblingUpdated);
+            } else if (previousSiblingIds.includes(s.id) && !currentSiblingIds.includes(s.id)) {
+                const existingSibList = s.siblingIds || (s.siblingId ? [s.siblingId] : []);
+                const newSibList = existingSibList.filter(id => id !== studentId);
+                const hasAnySib = newSibList.length > 0;
+                
+                const siblingCleared = {
+                    ...s,
+                    tieneHermanos: hasAnySib,
+                    siblingId: newSibList[0] || '',
+                    siblingName: hasAnySib ? s.siblingName : '',
+                    siblingGrade: hasAnySib ? s.siblingGrade : '',
+                    siblingIds: newSibList
+                };
+                updatedStudents.push(siblingCleared);
+            }
+        });
+        
+        const uniqueStudents = Array.from(new Map(updatedStudents.map(item => [item.id, item])).values());
+        
+        uniqueStudents.forEach(student => {
+            api.saveStudent(student).catch(() => setPendingActions(api.getQueueLength()));
         });
 
-        // Save all updated students to Aiven/MySQL/LocalStorage
-        setTimeout(() => {
-            const uniqueStudents = Array.from(new Map(updatedStudents.map(item => [item.id, item])).values());
-            uniqueStudents.forEach(student => {
-                api.saveStudent(student).catch(() => setPendingActions(api.getQueueLength()));
+        setStudents(prev => {
+            const next = prev.map(s => {
+                const updated = uniqueStudents.find(u => u.id === s.id);
+                return updated ? updated : s;
             });
-        }, 0);
+            saveToCache('SIRILA_CACHE_STUDENTS', next);
+            return next;
+        });
     };
 
     const handleAddFinanceEvent = (eventData: Omit<FinanceEvent, 'id' | 'contributions'>) => {

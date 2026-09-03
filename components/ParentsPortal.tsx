@@ -3,6 +3,7 @@ import { api } from '../services/api';
 import { calculateStudentMetrics, getTrimesterAvg } from '../services/gradeUtils';
 import { Student, SchoolEvent, Notification, Assignment, DraggableItem, InteractiveZone, BehaviorLog } from '../types';
 import { Bell, Calendar as CalendarIcon, LogOut, MessageCircle, User, CheckCircle, Smartphone, Send, Play, Trophy, HelpCircle, X, Check, AlertCircle, BookOpen, Circle, Move, Trash2, LayoutDashboard, Medal, Star, Award, Users, ChevronRight } from 'lucide-react';
+import { sendWhatsAppMessage } from '../whatsappUtils';
 
 const CelebrationCanvas: React.FC = () => {
     const canvasRef = React.useRef<HTMLCanvasElement>(null);
@@ -466,7 +467,6 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                     };
 
                     setStudent(updatedStudent);
-                    await api.saveStudent(updatedStudent);
 
                     try {
                         await api.submitAssignment(student.id, activeHtmlGame.id, {
@@ -479,6 +479,20 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                     }
 
                     alert(`¡Juego Completado!\nTu calificación es: ${finalScore}/10`);
+                    
+                    // WhatsApp Notification
+                    try {
+                        const configStr = localStorage.getItem('SIRILA_CACHE_CONFIG');
+                        let teacherPhone = '';
+                        if (configStr) {
+                            const config = JSON.parse(configStr);
+                            const staffMatch = config.staff?.find((s: any) => s.group === student.group);
+                            if (staffMatch?.phone) teacherPhone = staffMatch.phone;
+                        }
+                        const waMsg = `¡Hola! Soy el tutor de ${student.name}. Te informo que ha completado el juego interactivo "${activeHtmlGame.title}" con calificación de ${finalScore}/10.`;
+                        sendWhatsAppMessage(teacherPhone, waMsg);
+                    } catch(e) {}
+
                     setActiveHtmlGame(null); // Close game
 
                     // Refresh data
@@ -721,12 +735,33 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                 assignmentsCompleted: newCompleted.length
             };
             setStudent(updatedStudent);
-            await api.saveStudent(updatedStudent);
+            
+            try {
+                await api.submitAssignment(student.id, activeWorksheet.id, {
+                    score: score,
+                    type: 'WORKSHEET'
+                });
+            } catch (err) {
+                console.warn("Failed to submit assignment securely", err);
+            }
 
-            // Notify Teacher via Message
+            // Notify Teacher via internal Message
             try {
                 await api.sendParentMessage(student.id, `✅ Ficha completada: ${activeWorksheet.title} (Calificación: ${score}/10) ${!passed ? '[NO APROBADO]' : ''}`, 'PARENT');
             } catch (err) { console.error("Failed to notify teacher", err); }
+
+            // WhatsApp Notification
+            try {
+                const configStr = localStorage.getItem('SIRILA_CACHE_CONFIG');
+                let teacherPhone = '';
+                if (configStr) {
+                    const config = JSON.parse(configStr);
+                    const staffMatch = config.staff?.find((s: any) => s.group === student.group);
+                    if (staffMatch?.phone) teacherPhone = staffMatch.phone;
+                }
+                const waMsg = `¡Hola! Soy el tutor de ${student.name}. Te informo que ha completado la ficha interactiva "${activeWorksheet.title}" con calificación de ${score}/10.`;
+                sendWhatsAppMessage(teacherPhone, waMsg);
+            } catch(e) {}
 
             // 4. Download evidence
             const link = document.createElement('a');
@@ -741,7 +776,13 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
             const newCompleted = [...new Set([...(student.completedAssignmentIds || []), activeWorksheet.id])];
             const updatedStudent = { ...student, completedAssignmentIds: newCompleted, assignmentsCompleted: newCompleted.length };
             setStudent(updatedStudent);
-            await api.saveStudent(updatedStudent);
+            
+            try {
+                await api.submitAssignment(student.id, activeWorksheet.id, {
+                    score: 0,
+                    type: 'WORKSHEET_ERROR'
+                });
+            } catch(e) {}
         } finally {
             setIsGrading(false);
             setActiveWorksheet(null);
@@ -909,15 +950,35 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
         };
 
         setStudent(updatedStudent);
-        await api.saveStudent(updatedStudent);
+        
+        try {
+            await api.submitAssignment(student.id, activeQuiz.id, {
+                score: score,
+                type: 'QUIZ'
+            });
+        } catch(e) {}
 
         const attemptsLeft = (activeQuiz.maxAttempts || 1) - newAttempts[activeQuiz.id];
 
+        // Notify Teacher via internal message
+        try {
+            await api.sendParentMessage(student.id, `📝 Quiz completado: ${activeQuiz.title} (Intento ${newAttempts[activeQuiz.id]}). Calificación: ${score}/10.`, 'PARENT');
+        } catch (err) { }
+        
+        // WhatsApp Notification
+        try {
+            const configStr = localStorage.getItem('SIRILA_CACHE_CONFIG');
+            let teacherPhone = '';
+            if (configStr) {
+                const config = JSON.parse(configStr);
+                const staffMatch = config.staff?.find((s: any) => s.group === student.group);
+                if (staffMatch?.phone) teacherPhone = staffMatch.phone;
+            }
+            const waMsg = `¡Hola! Soy el tutor de ${student.name}. Te informo que ha completado el quiz "${activeQuiz.title}" con calificación de ${score}/10.`;
+            sendWhatsAppMessage(teacherPhone, waMsg);
+        } catch(e) {}
+
         if (passed) {
-            // Notify Teacher via Message
-            try {
-                await api.sendParentMessage(student.id, `✅ Cuestionario completado: ${activeQuiz.title} (Calificación: ${score}/10)`, 'PARENT');
-            } catch (err) { console.error("Failed to notify teacher", err); }
 
             alert(`¡Cuestionario Completado!\n\nCalificación: ${score}/10 (Aprobado)${attemptsLeft > 0 ? `\n\nTe quedan ${attemptsLeft} intento(s) si deseas mejorar tu nota.` : ''}`);
         } else {
