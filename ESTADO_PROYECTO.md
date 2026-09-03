@@ -91,6 +91,17 @@ Si necesitas hacer modificaciones, aquí es donde debes buscar:
   - Al capturarse evaluaciones trimestrales, se integran fluidamente con 50% de ponderación académica.
   - Se visualiza con insignias de avance y notas autocalificables en el Portal de Padres (`ParentsPortal.tsx`) y en el Panel de Control (`DashboardView.tsx`).
 
+### 5. Corrección de Condición de Carrera en Actividades y Notificaciones WhatsApp
+- **Diagnóstico:** Las actividades y juegos HTML realizados por los estudiantes, así como sus asistencias, presentaban intermitencia en el guardado. A veces una asistencia marcada por el docente se borraba si el alumno terminaba una actividad simultáneamente. Además, se solicitó notificación automática al docente.
+- **Causa:** En `ParentsPortal.tsx`, la aplicación reemplazaba de forma completa e indiscriminada todo el objeto del alumno (`api.saveStudent()`) con su estado local obsoleto, generando una condición de carrera sobre-escribiendo datos más recientes de la base de datos.
+- **Solución implementada:**
+  - Se eliminaron las llamadas destructivas a `saveStudent` tras resolver un juego, y se migró al uso exclusivo de la llamada segura y transaccional `api.submitAssignment()`.
+  - Se integró el envío automático de notificaciones de WhatsApp (vía la herramienta nativa web o de escritorio) al docente cuando un estudiante completa una actividad interactiva, extrayendo el número de contacto directamente del caché de configuración institucional.
+
+### 6. Filtro Dinámico en la Agenda Escolar
+- **Diagnóstico:** El panel de control mostraba eventos pasados en la sección de Agenda Escolar, restando visibilidad a las próximas actividades relevantes.
+- **Solución implementada:** Se actualizó `DashboardView.tsx` para filtrar dinámicamente los eventos, ocultando todos aquellos cuya fecha sea anterior al día actual, y mostrando exclusivamente eventos de hoy y del futuro ordenados cronológicamente.
+
 ---
 
 ## 4. Guía para Nuevas Modificaciones y Despliegue
@@ -105,4 +116,4 @@ Si necesitas hacer modificaciones, aquí es donde debes buscar:
   ```
 
 ---
-*Documento actualizado al 2 de Septiembre de 2026.*
+*Documento actualizado al 3 de Septiembre de 2026.*
