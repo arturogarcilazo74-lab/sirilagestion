@@ -305,19 +305,17 @@ export const useAppStore = () => {
         const checkQueue = async () => {
             const count = api.getQueueLength();
             setPendingActions(count);
+            
             if (count > 0) {
                 const remaining = await api.processQueue();
                 setPendingActions(remaining || 0);
-                // If we successfully processed the queue, refresh the state from the server
                 if (remaining === 0) {
                     await reloadFromServer();
                 }
-            } else if (isServerOffline) {
-                // If server was offline, poll to see if it came back up
+            } else {
+                // Unconditionally poll to keep dashboard in sync
                 const success = await reloadFromServer();
-                if (success) {
-                    setIsServerOffline(false);
-                }
+                setIsServerOffline(!success);
             }
         };
 
