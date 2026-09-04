@@ -931,6 +931,12 @@ app.post('/sirila-v1/students', async (req, res) => {
     }
     const pool = getPool();
     try {
+        // Remove PENDING_LOAD from data_json so it doesn't overwrite real avatar in DB
+        const studentForJson = { ...s };
+        if (studentForJson.avatar === 'PENDING_LOAD') {
+            delete studentForJson.avatar;
+        }
+
         // Upsert (Insert or Update)
         await pool.query(`
       INSERT INTO students (id, curp, name, sex, birth_date, enrollment_date, status, guardian_name, guardian_phone, avatar, repeater, bap, usaer, behavior_points, annual_fee_paid, data_json)
@@ -953,9 +959,9 @@ app.post('/sirila-v1/students', async (req, res) => {
       data_json=VALUES(data_json)
     `, [
             s.id, s.curp || '', s.name, s.sex === 'MUJER' ? 'MUJER' : 'HOMBRE', s.birthDate || null, s.enrollmentDate || null,
-            s.status || 'INSCRITO', s.guardianName, s.guardianPhone, s.avatar,
+            s.status || 'INSCRITO', s.guardianName || null, s.guardianPhone || null, s.avatar || null,
             !!s.repeater, s.bap || 'NINGUNA', !!s.usaer, s.behaviorPoints || 0, !!s.annualFeePaid,
-            JSON.stringify(s)
+            JSON.stringify(studentForJson)
         ]);
         res.json({ success: true });
     } catch (error) {

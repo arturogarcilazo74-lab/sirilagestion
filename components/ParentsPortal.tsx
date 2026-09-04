@@ -273,6 +273,9 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
     const [behaviorLogs, setBehaviorLogs] = useState<BehaviorLog[]>([]);
     const [activeDetail, setActiveDetail] = useState<'GRADES' | 'ATTENDANCE' | 'BEHAVIOR' | null>(null);
     const [honorRoll, setHonorRoll] = useState<any[]>([]);
+    
+    // UI State for pending WhatsApp notifications (bypasses popup blocker)
+    const [pendingWhatsApp, setPendingWhatsApp] = useState<{ phone: string, msg: string, scoreStr: string, title: string, passed: boolean, feedback?: string } | null>(null);
 
     const loadAssignments = useCallback(async (groupId?: string) => {
         if (!groupId) {
@@ -478,20 +481,26 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                         console.warn("submitAssignment notice:", submitErr);
                     }
 
-                    alert(`¡Juego Completado!\nTu calificación es: ${finalScore}/10`);
-                    
-                    // WhatsApp Notification
+                    // Prepare WhatsApp Notification data
+                    let teacherPhone = '';
                     try {
                         const configStr = localStorage.getItem('SIRILA_CACHE_CONFIG');
-                        let teacherPhone = '';
                         if (configStr) {
                             const config = JSON.parse(configStr);
                             const staffMatch = config.staff?.find((s: any) => s.group === student.group);
                             if (staffMatch?.phone) teacherPhone = staffMatch.phone;
                         }
-                        const waMsg = `¡Hola! Soy el tutor de ${student.name}. Te informo que ha completado el juego interactivo "${activeHtmlGame.title}" con calificación de ${finalScore}/10.`;
-                        sendWhatsAppMessage(teacherPhone, waMsg);
                     } catch(e) {}
+
+                    const waMsg = `¡Hola! Soy el tutor de ${student.name}. Te informo que ha completado el juego interactivo "${activeHtmlGame.title}" con calificación de ${finalScore}/10.`;
+                    
+                    setPendingWhatsApp({
+                        phone: teacherPhone,
+                        msg: waMsg,
+                        scoreStr: `${finalScore}/10`,
+                        title: activeHtmlGame.title,
+                        passed: true
+                    });
 
                     setActiveHtmlGame(null); // Close game
 
@@ -750,18 +759,32 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                 await api.sendParentMessage(student.id, `✅ Ficha completada: ${activeWorksheet.title} (Calificación: ${score}/10) ${!passed ? '[NO APROBADO]' : ''}`, 'PARENT');
             } catch (err) { console.error("Failed to notify teacher", err); }
 
-            // WhatsApp Notification
+            // Prepare WhatsApp Notification
+            let teacherPhone = '';
             try {
                 const configStr = localStorage.getItem('SIRILA_CACHE_CONFIG');
-                let teacherPhone = '';
                 if (configStr) {
                     const config = JSON.parse(configStr);
                     const staffMatch = config.staff?.find((s: any) => s.group === student.group);
                     if (staffMatch?.phone) teacherPhone = staffMatch.phone;
                 }
-                const waMsg = `¡Hola! Soy el tutor de ${student.name}. Te informo que ha completado la ficha interactiva "${activeWorksheet.title}" con calificación de ${score}/10.`;
-                sendWhatsAppMessage(teacherPhone, waMsg);
             } catch(e) {}
+
+            const waMsg = `¡Hola! Soy el tutor de ${student.name}. Te informo que ha completado la ficha interactiva "${activeWorksheet.title}" con calificación de ${score}/10.`;
+            
+            setPendingWhatsApp({
+                phone: teacherPhone,
+                msg: waMsg,
+                scoreStr: `${score}/10`,
+                title: activeWorksheet.title,
+                passed: passed,
+                feedback: feedback
+            });
+
+            setActiveWorksheet(null);
+            if (student?.group) {
+                loadAssignments(student.group);
+            }
 
             // 4. Download evidence
             const link = document.createElement('a');
@@ -965,29 +988,37 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
             await api.sendParentMessage(student.id, `📝 Quiz completado: ${activeQuiz.title} (Intento ${newAttempts[activeQuiz.id]}). Calificación: ${score}/10.`, 'PARENT');
         } catch (err) { }
         
-        // WhatsApp Notification
+        // Prepare WhatsApp Notification
+        let teacherPhone = '';
         try {
             const configStr = localStorage.getItem('SIRILA_CACHE_CONFIG');
-            let teacherPhone = '';
             if (configStr) {
                 const config = JSON.parse(configStr);
                 const staffMatch = config.staff?.find((s: any) => s.group === student.group);
                 if (staffMatch?.phone) teacherPhone = staffMatch.phone;
             }
-            const waMsg = `¡Hola! Soy el tutor de ${student.name}. Te informo que ha completado el quiz "${activeQuiz.title}" con calificación de ${score}/10.`;
-            sendWhatsAppMessage(teacherPhone, waMsg);
         } catch(e) {}
+        const waMsg = `¡Hola! Soy el tutor de ${student.name}. Te informo que ha completado el quiz "${activeQuiz.title}" con calificación de ${score}/10.`;
 
-        if (passed) {
+        let feedbackMsg = passed 
+            ? (attemptsLeft > 0 ? `\n\nTe quedan ${attemptsLeft} intento(s) si deseas mejorar tu nota.` : '') 
+            : (attemptsLeft > 0 ? `\n\nTe quedan ${attemptsLeft} intento(s) para mejorar tu nota.` : `\n\nHas alcanzado el límite de intentos permitidos.`);
 
-            alert(`¡Cuestionario Completado!\n\nCalificación: ${score}/10 (Aprobado)${attemptsLeft > 0 ? `\n\nTe quedan ${attemptsLeft} intento(s) si deseas mejorar tu nota.` : ''}`);
-        } else {
-            if (attemptsLeft > 0) {
-                alert(`Cuestionario realizado. Calificación: ${score}/10 (Mínimo: ${minPass}/10).\n\nTe quedan ${attemptsLeft} intento(s) para mejorar tu nota.`);
-            } else {
-                alert(`Cuestionario finalizado. Calificación: ${score}/10.\n\nHas alcanzado el límite de intentos permitidos.`);
-                setActiveQuiz(null);
-            }
+        if (!passed && attemptsLeft <= 0) {
+            setActiveQuiz(null);
+        }
+
+        setPendingWhatsApp({
+            phone: teacherPhone,
+            msg: waMsg,
+            scoreStr: `${score}/10`,
+            title: activeQuiz.title,
+            passed: passed,
+            feedback: feedbackMsg
+        });
+
+        if (passed || attemptsLeft <= 0) {
+            setActiveQuiz(null);
         }
         if (student?.group) {
             loadAssignments(student.group); // Refresh assignments after completion
@@ -2821,6 +2852,59 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                         allowFullScreen
                     />
+                </div>
+            )}
+
+            {/* PENDING WHATSAPP NOTIFICATION MODAL */}
+            {pendingWhatsApp && (
+                <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+                    <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col animate-slideUp">
+                        <div className={`p-6 text-white flex justify-between items-center ${pendingWhatsApp.passed ? 'bg-gradient-to-r from-emerald-500 to-emerald-600' : 'bg-gradient-to-r from-indigo-500 to-indigo-600'}`}>
+                            <h3 className="font-bold flex items-center gap-2 text-lg">
+                                <CheckCircle size={24} /> ¡Actividad Calificada!
+                            </h3>
+                            <button onClick={() => setPendingWhatsApp(null)} className="p-1.5 hover:bg-white/20 rounded-full transition-colors"><X size={20} /></button>
+                        </div>
+                        <div className="p-6">
+                            <div className="text-center mb-6">
+                                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-slate-50 border-4 border-white shadow-lg mb-3">
+                                    <span className="text-2xl font-black text-slate-800">{pendingWhatsApp.scoreStr}</span>
+                                </div>
+                                <h4 className="font-bold text-slate-800 text-lg">{pendingWhatsApp.title}</h4>
+                                {pendingWhatsApp.feedback && (
+                                    <p className="text-sm text-slate-500 mt-2 whitespace-pre-line">{pendingWhatsApp.feedback}</p>
+                                )}
+                            </div>
+                            
+                            <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 mb-6">
+                                <p className="text-sm text-emerald-800 font-medium text-center">
+                                    Notifica a tu maestro por WhatsApp para que registre tu avance rápidamente.
+                                </p>
+                            </div>
+
+                            <div className="space-y-3">
+                                <button
+                                    onClick={() => {
+                                        if (pendingWhatsApp.phone) {
+                                            sendWhatsAppMessage(pendingWhatsApp.phone, pendingWhatsApp.msg);
+                                        } else {
+                                            alert("El número de WhatsApp del maestro no está configurado.");
+                                        }
+                                        setPendingWhatsApp(null);
+                                    }}
+                                    className="w-full bg-[#25D366] hover:bg-[#1DA851] text-white py-3.5 rounded-xl font-bold text-sm transition-all shadow-md flex items-center justify-center gap-2"
+                                >
+                                    Enviar Notificación por WhatsApp
+                                </button>
+                                <button
+                                    onClick={() => setPendingWhatsApp(null)}
+                                    className="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 py-3.5 rounded-xl font-bold text-sm transition-colors"
+                                >
+                                    Cerrar y Continuar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
