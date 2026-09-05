@@ -485,26 +485,13 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
 
                     setStudent(updatedStudent);
 
-                    try {
-                        await api.submitAssignment(student.id, activeHtmlGame.id, {
-                            score: finalScore,
-                            type: 'HTML_GAME',
-                            areaScores: areaScores, // Pass area scores if provided
-                            isLate: isLate
-                        }, student);
-                        api.processQueue().catch(console.error);
-                    } catch (submitErr) {
-                        console.warn("submitAssignment notice:", submitErr);
-                        alert("Error al entregar: " + (submitErr as Error).message);
-                    }
-
                     // Prepare WhatsApp Notification data
                     let teacherPhone = '';
                     try {
                         const configStr = localStorage.getItem('SIRILA_CACHE_CONFIG');
                         if (configStr) {
                             const config = JSON.parse(configStr);
-                            const staffMatch = config.staff?.find((s: any) => s.group?.replace(/\\s+/g, '').toUpperCase() === student.group?.replace(/\\s+/g, '').toUpperCase());
+                            const staffMatch = config.staff?.find((s: any) => s.group?.replace(/\s+/g, '').toUpperCase() === student.group?.replace(/\s+/g, '').toUpperCase());
                             if (staffMatch?.phone) teacherPhone = staffMatch.phone;
                         }
                     } catch(e) {}
@@ -523,12 +510,22 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                         passed: true
                     });
 
-                    setActiveHtmlGame(null); // Close game
+                    setActiveHtmlGame(null); // Close game IMMEDIATELY so UI doesn't lag
 
-                    // Refresh data
-                    if (student?.group) {
-                        loadAssignments(student.group);
-                    }
+                    // Execute slow network requests in background (don't await them blocking UI)
+                    api.submitAssignment(student.id, activeHtmlGame.id, {
+                        score: finalScore,
+                        type: 'HTML_GAME',
+                        areaScores: areaScores,
+                        isLate: isLate
+                    }, student).then(() => {
+                        api.processQueue().catch(console.error);
+                        if (student?.group) {
+                            loadAssignments(student.group);
+                        }
+                    }).catch(submitErr => {
+                        console.warn("submitAssignment notice:", submitErr);
+                    });
 
                 } catch (e) {
                     console.error("Error submitting game score", e);
