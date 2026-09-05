@@ -2890,10 +2890,8 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                         <span className="text-white font-bold text-sm tracking-wide truncate pr-4">{activeHtmlGame.title}</span>
                         <div className="flex items-center gap-2">
                             <button onClick={() => {
-                                // Forzar entrega manual simulando el evento
-                                handleGameMessage({ 
-                                    data: { type: 'GAME_COMPLETE', score: 10, maxScore: 10 } 
-                                } as MessageEvent);
+                                // Forzar entrega manual emitiendo el evento global
+                                window.postMessage({ type: 'GAME_COMPLETE', score: 100, maxScore: 100 }, '*');
                             }} className="text-white bg-emerald-600 hover:bg-emerald-700 px-3 py-1 rounded font-bold text-xs shadow-md transition-colors flex items-center gap-1">
                                 ✅ FORZAR ENTREGA
                             </button>
