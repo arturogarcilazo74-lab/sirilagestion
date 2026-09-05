@@ -245,6 +245,24 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
     const [assignments, setAssignments] = useState<Assignment[]>([]);
     const [filter, setFilter] = useState<'ALL' | 'PENDING' | 'COMPLETED'>('ALL');
 
+    const allCalendarEvents = React.useMemo(() => {
+        const dbEvents = events || [];
+        const officialEvents = OFFICIAL_CALENDAR_EVENTS_2026_2027.map(ev => ({
+            id: ev.id,
+            title: ev.title,
+            date: ev.date,
+            type: ev.type as any,
+            description: ev.description
+        }));
+        const merged = [...dbEvents];
+        for (const oEv of officialEvents) {
+            if (!merged.some(e => e.id === oEv.id || (e.date === oEv.date && e.title === oEv.title))) {
+                merged.push(oEv);
+            }
+        }
+        return merged;
+    }, [events]);
+
     useEffect(() => {
         if (student?.group) {
             try {
@@ -1595,80 +1613,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                         </div>
                                     )}
 
-                                    {/* DETAILED AVERAGE BREAKDOWN CARD */}
-                                    <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 animate-fadeIn">
-                                        <div className="flex items-center gap-2 border-b border-slate-100 pb-3 mb-4">
-                                            <div className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg">
-                                                <Award size={18} />
-                                            </div>
-                                            <div>
-                                                <h4 className="font-extrabold text-sm text-slate-800">Criterios y Desglose del Promedio</h4>
-                                                <p className="text-[10px] text-slate-400 font-medium">Detalle del cálculo para obtener {metrics.finalAvg}</p>
-                                            </div>
-                                        </div>
 
-                                        {isWeighted ? (
-                                            <div className="space-y-4">
-                                                <p className="text-xs text-slate-500 font-semibold leading-relaxed">
-                                                    El colegio aplica una ponderación de calificaciones. A continuación, se muestra cómo se obtiene la nota de su hijo(a):
-                                                </p>
-                                                
-                                                <div className="grid grid-cols-2 gap-3 text-xs">
-                                                    {academicW > 0 && (
-                                                        <div className="bg-slate-50/70 p-3 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
-                                                            <div>
-                                                                <span className="font-black text-slate-700 block text-[10px] uppercase tracking-wider mb-1">Académico (NEM)</span>
-                                                                <span className="block text-slate-500">Nota: <strong className="text-slate-700">{academicVal.toFixed(1)}</strong></span>
-                                                                <span className="block text-slate-500">Peso: {academicW}%</span>
-                                                            </div>
-                                                            <span className="font-black text-indigo-600 mt-2 block text-xs">Suma: +{academicContrib.toFixed(2)}</span>
-                                                        </div>
-                                                    )}
-
-                                                    {homeworkW > 0 && (
-                                                        <div className="bg-slate-50/70 p-3 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
-                                                            <div>
-                                                                <span className="font-black text-slate-700 block text-[10px] uppercase tracking-wider mb-1">Tareas</span>
-                                                                <span className="block text-slate-500">Nota: <strong className="text-slate-700">{hwVal.toFixed(1)}</strong> <span className="text-[10px]">({metrics.hwPercentage}%)</span></span>
-                                                                <span className="block text-slate-500">Peso: {homeworkW}%</span>
-                                                            </div>
-                                                            <span className="font-black text-indigo-600 mt-2 block text-xs">Suma: +{hwContrib.toFixed(2)}</span>
-                                                        </div>
-                                                    )}
-
-                                                    {conductW > 0 && (
-                                                        <div className="bg-slate-50/70 p-3 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
-                                                            <div>
-                                                                <span className="font-black text-slate-700 block text-[10px] uppercase tracking-wider mb-1">Conducta</span>
-                                                                <span className="block text-slate-500">Nota: <strong className="text-slate-700">{conductVal.toFixed(1)}</strong></span>
-                                                                <span className="block text-slate-500">Peso: {conductW}%</span>
-                                                            </div>
-                                                            <span className="font-black text-indigo-600 mt-2 block text-xs">Suma: +{conductContrib.toFixed(2)}</span>
-                                                        </div>
-                                                    )}
-
-                                                    {attendanceW > 0 && (
-                                                        <div className="bg-slate-50/70 p-3 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
-                                                            <div>
-                                                                <span className="font-black text-slate-700 block text-[10px] uppercase tracking-wider mb-1">Asistencia</span>
-                                                                <span className="block text-slate-500">Nota: <strong className="text-slate-700">{attendanceVal.toFixed(1)}</strong> <span className="text-[10px]">({Math.round(metrics.attendanceRate)}%)</span></span>
-                                                                <span className="block text-slate-500">Peso: {attendanceW}%</span>
-                                                            </div>
-                                                            <span className="font-black text-indigo-600 mt-2 block text-xs">Suma: +{attendanceContrib.toFixed(2)}</span>
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                <div className="text-[10px] text-slate-400 bg-slate-50 px-3 py-2.5 rounded-xl border border-slate-100 font-mono text-center">
-                                                    Cálculo: {academicW > 0 && `(${academicVal.toFixed(1)} × ${academicW}%)`}{homeworkW > 0 && ` + (${hwVal.toFixed(1)} × ${homeworkW}%)`}{conductW > 0 && ` + (${conductVal.toFixed(1)} × ${conductW}%)`}{attendanceW > 0 && ` + (${attendanceVal.toFixed(1)} × ${attendanceW}%)`} = <strong className="text-indigo-600">{metrics.finalAvg}</strong>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <p className="text-xs text-slate-500 italic font-semibold leading-relaxed">
-                                                El promedio general de su hijo(a) se calcula actualmente mediante el promedio académico simple de los parciales evaluados (100% Calificaciones NEM).
-                                            </p>
-                                        )}
-                                    </div>
                                 </div>
                             );
                         })()}
@@ -1794,12 +1739,12 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                 <button onClick={() => setCurrentTab('CALENDAR')} className="text-indigo-600 text-xs font-bold">Ver Todo</button>
                             </div>
                             <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
-                                {events.slice(0, 3).length === 0 ? (
+                                {allCalendarEvents.filter(ev => ev.date >= new Date().toISOString().split('T')[0]).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 3).length === 0 ? (
                                     <div className="w-full bg-white p-4 rounded-xl border border-slate-100 text-slate-400 text-sm text-center">
                                         No hay eventos próximos.
                                     </div>
                                 ) : (
-                                    events.slice(0, 3).map(ev => (
+                                    allCalendarEvents.filter(ev => ev.date >= new Date().toISOString().split('T')[0]).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 3).map(ev => (
                                         <div key={ev.id} className="min-w-[200px] bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col">
                                             <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-500 mb-1">{ev.type}</span>
                                             <h4 className="font-bold text-slate-800 text-sm mb-1">{ev.title}</h4>
@@ -1809,6 +1754,109 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                 )}
                             </div>
                         </div>
+
+                        {/* DETAILED AVERAGE BREAKDOWN CARD (MOVED TO BOTTOM) */}
+                        {(() => {
+                            if (!student) return null;
+                            const cachedConfig = localStorage.getItem('SIRILA_CACHE_CONFIG');
+                            const config = cachedConfig ? JSON.parse(cachedConfig) : {};
+                            const metrics = calculateStudentMetrics(student, assignments, config);
+                            const isWeighted = !!config.includeHomeworkInAverage;
+                            const academicW = config.academicWeight ?? 70;
+                            const homeworkW = config.homeworkWeight ?? 30;
+                            const conductW = config.conductWeight ?? 0;
+                            const attendanceW = config.attendanceWeight ?? 0;
+
+                            const hwScore = metrics.hwPercentage / 10;
+                            const conductScore = Math.max(5, Math.min(10, 8 + (metrics.behaviorPoints * 0.1)));
+                            const attendanceScore = metrics.attendanceRate / 10;
+
+                            const academicVal = metrics.academicAvg;
+                            const hwVal = hwScore;
+                            const conductVal = conductScore;
+                            const attendanceVal = attendanceScore;
+
+                            const academicContrib = (academicVal * academicW) / 100;
+                            const hwContrib = (hwVal * homeworkW) / 100;
+                            const conductContrib = (conductVal * conductW) / 100;
+                            const attendanceContrib = (attendanceVal * attendanceW) / 100;
+
+                            return (
+                                <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 animate-fadeIn mt-6">
+                                    <div className="flex items-center gap-2 border-b border-slate-100 pb-3 mb-4">
+                                        <div className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg">
+                                            <Award size={18} />
+                                        </div>
+                                        <div>
+                                            <h4 className="font-extrabold text-sm text-slate-800">Criterios y Desglose del Promedio</h4>
+                                            <p className="text-[10px] text-slate-400 font-medium">Detalle del cálculo para obtener {metrics.finalAvg}</p>
+                                        </div>
+                                    </div>
+
+                                    {isWeighted ? (
+                                        <div className="space-y-4">
+                                            <p className="text-xs text-slate-500 font-semibold leading-relaxed">
+                                                El colegio aplica una ponderación de calificaciones. A continuación, se muestra cómo se obtiene la nota de su hijo(a):
+                                            </p>
+                                            
+                                            <div className="grid grid-cols-2 gap-3 text-xs">
+                                                {academicW > 0 && (
+                                                    <div className="bg-slate-50/70 p-3 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
+                                                        <div>
+                                                            <span className="font-black text-slate-700 block text-[10px] uppercase tracking-wider mb-1">Académico (NEM)</span>
+                                                            <span className="block text-slate-500">Nota: <strong className="text-slate-700">{academicVal.toFixed(1)}</strong></span>
+                                                            <span className="block text-slate-500">Peso: {academicW}%</span>
+                                                        </div>
+                                                        <span className="font-black text-indigo-600 mt-2 block text-xs">Suma: +{academicContrib.toFixed(2)}</span>
+                                                    </div>
+                                                )}
+
+                                                {homeworkW > 0 && (
+                                                    <div className="bg-slate-50/70 p-3 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
+                                                        <div>
+                                                            <span className="font-black text-slate-700 block text-[10px] uppercase tracking-wider mb-1">Tareas</span>
+                                                            <span className="block text-slate-500">Nota: <strong className="text-slate-700">{hwVal.toFixed(1)}</strong> <span className="text-[10px]">({metrics.hwPercentage}%)</span></span>
+                                                            <span className="block text-slate-500">Peso: {homeworkW}%</span>
+                                                        </div>
+                                                        <span className="font-black text-indigo-600 mt-2 block text-xs">Suma: +{hwContrib.toFixed(2)}</span>
+                                                    </div>
+                                                )}
+
+                                                {conductW > 0 && (
+                                                    <div className="bg-slate-50/70 p-3 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
+                                                        <div>
+                                                            <span className="font-black text-slate-700 block text-[10px] uppercase tracking-wider mb-1">Conducta</span>
+                                                            <span className="block text-slate-500">Nota: <strong className="text-slate-700">{conductVal.toFixed(1)}</strong></span>
+                                                            <span className="block text-slate-500">Peso: {conductW}%</span>
+                                                        </div>
+                                                        <span className="font-black text-indigo-600 mt-2 block text-xs">Suma: +{conductContrib.toFixed(2)}</span>
+                                                    </div>
+                                                )}
+
+                                                {attendanceW > 0 && (
+                                                    <div className="bg-slate-50/70 p-3 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
+                                                        <div>
+                                                            <span className="font-black text-slate-700 block text-[10px] uppercase tracking-wider mb-1">Asistencia</span>
+                                                            <span className="block text-slate-500">Nota: <strong className="text-slate-700">{attendanceVal.toFixed(1)}</strong> <span className="text-[10px]">({Math.round(metrics.attendanceRate)}%)</span></span>
+                                                            <span className="block text-slate-500">Peso: {attendanceW}%</span>
+                                                        </div>
+                                                        <span className="font-black text-indigo-600 mt-2 block text-xs">Suma: +{attendanceContrib.toFixed(2)}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <div className="text-[10px] text-slate-400 bg-slate-50 px-3 py-2.5 rounded-xl border border-slate-100 font-mono text-center">
+                                                Cálculo: {academicW > 0 && `(${academicVal.toFixed(1)} × ${academicW}%)`}{homeworkW > 0 && ` + (${hwVal.toFixed(1)} × ${homeworkW}%)`}{conductW > 0 && ` + (${conductVal.toFixed(1)} × ${conductW}%)`}{attendanceW > 0 && ` + (${attendanceVal.toFixed(1)} × ${attendanceW}%)`} = <strong className="text-indigo-600">{metrics.finalAvg}</strong>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <p className="text-xs text-slate-500 italic font-semibold leading-relaxed">
+                                            El promedio general de su hijo(a) se calcula actualmente mediante el promedio académico simple de los parciales evaluados (100% Calificaciones NEM).
+                                        </p>
+                                    )}
+                                </div>
+                            );
+                        })()}
                     </div>
                 )}
 
@@ -1986,7 +2034,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                         </h3>
                         {/* Placeholder for full calendar, using list for now */}
                         <div className="space-y-3">
-                            {events.map(ev => (
+                            {allCalendarEvents.filter(ev => ev.date >= new Date().toISOString().split('T')[0]).sort((a, b) => a.date.localeCompare(b.date)).map(ev => (
                                 <div key={ev.id} className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex items-start gap-4">
                                     <div className="bg-indigo-50 w-12 h-12 rounded-lg flex flex-col items-center justify-center text-indigo-600 flex-shrink-0">
                                         <span className="text-xs font-bold uppercase">{new Date(ev.date).toLocaleString('default', { month: 'short' })}</span>
@@ -2172,9 +2220,16 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                     <div className={`p-1 rounded-full ${currentTab === 'CALENDAR' ? 'bg-indigo-100' : ''}`}><CalendarIcon size={20} /></div>
                     <span className="text-[10px] font-bold">Eventos</span>
                 </button>
-                <button onClick={() => setCurrentTab('MESSAGES')} className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all w-16 ${currentTab === 'MESSAGES' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}>
-                    <div className={`p-1 rounded-full ${currentTab === 'MESSAGES' ? 'bg-indigo-100' : ''}`}><MessageCircle size={20} /></div>
-                    <span className="text-[10px] font-bold">Chat</span>
+                <button onClick={() => {
+                    if (!teacherPhone) {
+                        alert("El número de teléfono del maestro no está configurado.");
+                        return;
+                    }
+                    const msg = `Hola, soy el padre/tutor de ${student?.name}. Quisiera hacer una consulta:`;
+                    sendWhatsAppMessage(teacherPhone, msg);
+                }} className="flex flex-col items-center gap-1 p-2 rounded-xl transition-all w-16 text-slate-400 hover:text-slate-600">
+                    <div className="p-1 rounded-full"><MessageCircle size={20} /></div>
+                    <span className="text-[10px] font-bold">WhatsApp</span>
                 </button>
                 <button onClick={() => setCurrentTab('PROFILE')} className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all w-16 ${currentTab === 'PROFILE' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}>
                     <div className={`p-1 rounded-full ${currentTab === 'PROFILE' ? 'bg-indigo-100' : ''}`}><User size={20} /></div>
@@ -2649,50 +2704,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                 </div>
             </div>
 
-            {/* CTA or Extra Actions */}
-            {/* Messages Section */}
-            <div>
-                <h3 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
-                    <MessageCircle size={18} className="text-teal-500" />
-                    Mensajes con el Docente
-                </h3>
 
-                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-4">
-                    <div className="h-64 overflow-y-auto p-4 space-y-3 bg-slate-50">
-                        {messages.length === 0 ? (
-                            <p className="text-center text-xs text-slate-400 mt-10">Inicia una conversación con el docente.</p>
-                        ) : (
-                            messages.map(msg => (
-                                <div key={msg.id} className={`flex ${msg.sender === 'PARENT' ? 'justify-end' : 'justify-start'}`}>
-                                    <div className={`max-w-[80%] p-3 rounded-xl text-xs ${msg.sender === 'PARENT' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white border border-slate-200 text-slate-700 rounded-tl-none'}`}>
-                                        <p>{msg.message}</p>
-                                        <span className={`block text-[9px] mt-1 text-right ${msg.sender === 'PARENT' ? 'text-indigo-200' : 'text-slate-400'}`}>
-                                            {new Date(msg.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                        </span>
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                    </div>
-                    <div className="p-3 bg-white border-t border-slate-100 flex gap-2">
-                        <input
-                            type="text"
-                            value={newMessage}
-                            onChange={e => setNewMessage(e.target.value)}
-                            placeholder="Escribe un mensaje..."
-                            className="flex-1 bg-slate-100 px-4 py-2 rounded-full text-sm outline-none focus:ring-2 focus:ring-teal-500"
-                            onKeyPress={e => e.key === 'Enter' && handleSendMessage()}
-                        />
-                        <button
-                            onClick={handleSendMessage}
-                            disabled={sendingMsg}
-                            className="p-2 bg-teal-500 text-white rounded-full hover:bg-teal-600 disabled:opacity-50"
-                        >
-                            <Send size={18} />
-                        </button>
-                    </div>
-                </div>
-            </div>
 
             {/* DETAIL MODALS */}
             {activeDetail === 'GRADES' && (
