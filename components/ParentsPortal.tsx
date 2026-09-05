@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
+import { OFFICIAL_CALENDAR_EVENTS_2026_2027 } from '../services/schoolCalendarUtils';
 import { calculateStudentMetrics, getTrimesterAvg } from '../services/gradeUtils';
 import { Student, SchoolEvent, Notification, Assignment, DraggableItem, InteractiveZone, BehaviorLog } from '../types';
 import { Bell, Calendar as CalendarIcon, LogOut, MessageCircle, User, CheckCircle, Smartphone, Send, Play, Trophy, HelpCircle, X, Check, AlertCircle, BookOpen, Circle, Move, Trash2, LayoutDashboard, Medal, Star, Award, Users, ChevronRight } from 'lucide-react';
@@ -239,9 +240,25 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
     const [studentsToSelect, setStudentsToSelect] = useState<Student[] | null>(null);
     const [hasMultipleStudents, setHasMultipleStudents] = useState(false);
     const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [teacherPhone, setTeacherPhone] = useState<string>('');
     const [events, setEvents] = useState<SchoolEvent[]>([]);
     const [assignments, setAssignments] = useState<Assignment[]>([]);
     const [filter, setFilter] = useState<'ALL' | 'PENDING' | 'COMPLETED'>('ALL');
+
+    useEffect(() => {
+        if (student?.group) {
+            try {
+                const configStr = localStorage.getItem('SIRILA_CACHE_CONFIG');
+                if (configStr) {
+                    const config = JSON.parse(configStr);
+                    const staffMatch = config.staff?.find((s: any) => s.group?.replace(/\s+/g, '').toUpperCase() === student.group?.replace(/\s+/g, '').toUpperCase());
+                    if (staffMatch?.phone) {
+                        setTeacherPhone(staffMatch.phone);
+                    }
+                }
+            } catch(e) { console.error("Error setting teacher phone", e); }
+        }
+    }, [student?.group]);
 
     // Quiz State
     const [activeQuiz, setActiveQuiz] = useState<Assignment | null>(null);
@@ -1366,7 +1383,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                     <div>
                         <p className="text-indigo-200 text-sm font-medium">Bienvenido, papá/mamá de</p>
                         <h1 className="text-2xl font-bold flex items-center gap-2">
-                            {student?.name.split(' ')[0]}
+                            {student?.name}
                             {student?.group && <span className="text-xs bg-white/20 px-2 py-1 rounded-lg font-normal tracking-wider border border-white/10">{student.group}</span>}
                         </h1>
                     </div>
@@ -1987,58 +2004,28 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                 )}
 
                 {currentTab === 'MESSAGES' && (
-                    <div className="animate-fadeIn pb-24 max-w-3xl mx-auto space-y-4 px-1">
-                        <div className="bg-white rounded-2xl h-[calc(100vh-320px)] md:h-[60vh] flex flex-col border border-slate-200 shadow-sm overflow-hidden">
-                            <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-white z-10 relative">
-                                <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                                    <MessageCircle className="text-indigo-600" />
-                                    Chat con el Docente
-                                </h3>
-                                <span className="text-xs text-slate-400 bg-slate-50 px-2 py-1 rounded-full border border-slate-100">
-                                    {messages.length} mensajes
-                                </span>
+                    <div className="animate-fadeIn pb-24 max-w-3xl mx-auto space-y-4 px-4 mt-8">
+                        <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 flex flex-col items-center text-center">
+                            <div className="w-20 h-20 bg-green-50 text-[#25D366] rounded-full flex items-center justify-center mb-4">
+                                <MessageCircle size={40} />
                             </div>
-
-                            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50 custom-scrollbar relative">
-                                {messages.length === 0 ? (
-                                    <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 opacity-60">
-                                        <MessageCircle size={48} className="mb-2" />
-                                        <p className="text-sm font-medium">No hay mensajes aún</p>
-                                    </div>
-                                ) : (
-                                    messages.map((msg: any, idx: number) => (
-                                        <div key={msg.id || idx} className={`flex ${msg.sender === 'PARENT' ? 'justify-end' : 'justify-start'}`}>
-                                            <div className={`max-w-[80%] p-3 rounded-2xl text-sm shadow-sm ${msg.sender === 'PARENT'
-                                                ? 'bg-indigo-600 text-white rounded-br-none'
-                                                : 'bg-white border border-slate-200 text-slate-700 rounded-bl-none'
-                                                }`}>
-                                                <p>{msg.message}</p>
-                                                <span className={`block text-[10px] mt-1 text-right ${msg.sender === 'PARENT' ? 'text-indigo-200' : 'text-slate-400'}`}>
-                                                    {new Date(msg.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-
-                            <div className="p-3 border-t border-slate-100 bg-white flex gap-2 z-10 relative">
-                                <input
-                                    type="text"
-                                    value={newMessage}
-                                    onChange={(e) => setNewMessage(e.target.value)}
-                                    placeholder="Escribe un mensaje..."
-                                    className="flex-1 bg-slate-100 border-transparent focus:bg-white focus:border-indigo-300 border rounded-xl px-4 py-3 text-sm transition-all outline-none"
-                                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                                />
-                                <button
-                                    onClick={handleSendMessage}
-                                    disabled={sendingMsg || !newMessage.trim()}
-                                    className="bg-indigo-600 text-white p-3 rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:scale-95 transition-all shadow-lg shadow-indigo-200 flex items-center justify-center min-w-[3rem]"
-                                >
-                                    {sendingMsg ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Send size={20} />}
-                                </button>
-                            </div>
+                            <h3 className="text-2xl font-black text-slate-800 mb-2">Contactar al Docente</h3>
+                            <p className="text-slate-500 mb-8 max-w-sm">
+                                Para una comunicación más rápida y directa, por favor contacta a tu maestro a través de WhatsApp.
+                            </p>
+                            <button
+                                onClick={() => {
+                                    if (teacherPhone) {
+                                        window.open(`https://wa.me/${teacherPhone}`, '_blank');
+                                    } else {
+                                        alert("El número del maestro no está configurado.");
+                                    }
+                                }}
+                                className="w-full sm:w-auto px-8 py-4 bg-[#25D366] hover:bg-[#1DA851] text-white font-bold rounded-2xl flex items-center justify-center gap-3 transition-all shadow-lg shadow-green-200 hover:-translate-y-1"
+                            >
+                                <MessageCircle size={24} />
+                                Abrir en WhatsApp
+                            </button>
                         </div>
                     </div>
                 )}
@@ -2166,13 +2153,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                             </div>
                         </div>
 
-                        <button
-                            onClick={handleLogout}
-                            className="w-full py-4 bg-red-50 text-red-600 font-bold rounded-2xl flex items-center justify-center gap-2 hover:bg-red-100 transition-colors"
-                        >
-                            <LogOut size={20} />
-                            Desconectar Cuenta
-                        </button>
+                        
                     </div>
                 )}
             </div>
