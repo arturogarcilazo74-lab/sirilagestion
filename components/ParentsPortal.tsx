@@ -3,7 +3,7 @@ import { api } from '../services/api';
 import { OFFICIAL_CALENDAR_EVENTS_2026_2027 } from '../services/schoolCalendarUtils';
 import { calculateStudentMetrics, getTrimesterAvg } from '../services/gradeUtils';
 import { Student, SchoolEvent, Notification, Assignment, DraggableItem, InteractiveZone, BehaviorLog } from '../types';
-import { Bell, Calendar as CalendarIcon, LogOut, MessageCircle, User, CheckCircle, Smartphone, Send, Play, Trophy, HelpCircle, X, Check, AlertCircle, BookOpen, Circle, Move, Trash2, LayoutDashboard, Medal, Star, Award, Users, ChevronRight } from 'lucide-react';
+import { Bell, Calendar as CalendarIcon, LogOut, MessageCircle, User, CheckCircle, Smartphone, Send, Play, Trophy, HelpCircle, X, Check, AlertCircle, BookOpen, Circle, Move, Trash2, LayoutDashboard, Medal, Star, Award, Users, ChevronRight, FileText, Download } from 'lucide-react';
 import { sendWhatsAppMessage } from '../whatsappUtils';
 
 const CelebrationCanvas: React.FC = () => {
@@ -1941,6 +1941,20 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                                         </div>
                                                     )}
 
+                                                    {assign.attachmentUrl && (
+                                                        <a
+                                                            href={assign.attachmentUrl}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="flex items-center gap-2 p-2 bg-slate-50 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-100 transition-colors border border-slate-200 mb-3"
+                                                            download="Adjunto_Tarea"
+                                                        >
+                                                            <FileText size={14} className="text-indigo-500" />
+                                                            Ver Archivo Adjunto
+                                                            <Download size={12} className="ml-auto opacity-50" />
+                                                        </a>
+                                                    )}
+
                                                     {isInteractive && (
                                                         <div className="space-y-2">
                                                             <button
@@ -2007,6 +2021,18 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                                     <p className="text-[10px] text-slate-400">
                                                         Vencía: {new Date(assign.dueDate).toLocaleDateString()}
                                                     </p>
+                                                    {assign.attachmentUrl && (
+                                                        <a
+                                                            href={assign.attachmentUrl}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="mt-2 flex items-center gap-2 p-1.5 bg-white text-slate-600 rounded text-[10px] font-bold hover:bg-slate-50 transition-colors border border-slate-200 w-fit"
+                                                            download="Adjunto_Tarea"
+                                                        >
+                                                            <FileText size={10} className="text-indigo-500" />
+                                                            Archivo Adjunto
+                                                        </a>
+                                                    )}
                                                     {isInteractive && (
                                                         <button
                                                             onClick={() => handleStartQuiz(assign)}

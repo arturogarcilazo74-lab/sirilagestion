@@ -143,6 +143,7 @@ export interface Assignment {
   instructions?: string; // NEW: Optional instructions for the activity
   externalLinks?: string[]; // NEW: Optional links to videos or other pages
   maxAttempts?: number; // NEW: Maximum number of times a student can take this activity
+  attachmentUrl?: string; // NEW: Optional file attachment for simple tasks
 }
 
 export interface FinanceEvent {

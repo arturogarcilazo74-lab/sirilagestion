@@ -55,6 +55,8 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isProcessingFile, setIsProcessingFile] = useState(false);
   const [worksheetImage, setWorksheetImage] = useState('');
+  const [taskAttachmentUrl, setTaskAttachmentUrl] = useState(''); // NEW: For simple tasks
+  const [taskAttachmentName, setTaskAttachmentName] = useState(''); // NEW: For simple tasks
   const [gradingCriteria, setGradingCriteria] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [answerKeyPoints, setAnswerKeyPoints] = useState<{ x: number, y: number }[]>([]);
@@ -243,7 +245,8 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
           isVisibleInParentsPortal: isVisibleInParentsPortal,
           targetGroup: targetGroup.trim().toUpperCase() || 'GLOBAL',
           instructions: (activityType === 'TASK' && newInstructions.trim()) ? newInstructions.trim() : undefined,
-          externalLinks: (activityType === 'TASK' && newExternalLinks.length > 0) ? newExternalLinks : undefined
+          externalLinks: (activityType === 'TASK' && newExternalLinks.length > 0) ? newExternalLinks : undefined,
+          attachmentUrl: (activityType === 'TASK' && taskAttachmentUrl) ? taskAttachmentUrl : undefined
         };
 
         console.log('[ActivitiesView] Creating activity:', activityType, 'Title:', newTitle);
@@ -366,10 +369,12 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
         setNewExternalLinks([]);
         setCurrentLinkInput('');
         setHtmlGameUrl('');
-        setHtmlGameContent(null);
+        setHtmlGameContent('');
         setNemPlanResult('');
         setAiContextText('');
         setWorksheetImage('');
+        setTaskAttachmentUrl('');
+        setTaskAttachmentName('');
       } catch (err: any) {
         alert("Error al guardar la actividad: " + (err.message || "Error desconocido"));
       } finally {
@@ -687,6 +692,51 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                                 </button>
                               </div>
                             ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* File Attachment */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-bold text-slate-700">Archivo Adjunto (Opcional)</label>
+                        <p className="text-xs text-slate-500 mb-2">Ideal para subir una foto del cuaderno o pizarrón para alumnos ausentes.</p>
+                        {taskAttachmentUrl ? (
+                           <div className="flex items-center justify-between bg-white p-3 rounded-lg border border-indigo-200 shadow-sm">
+                             <div className="flex items-center gap-2 truncate text-sm text-indigo-700 font-bold">
+                               <FileText size={16} />
+                               {taskAttachmentName || 'Archivo Adjunto'}
+                             </div>
+                             <button type="button" onClick={() => { setTaskAttachmentUrl(''); setTaskAttachmentName(''); }} className="text-red-400 hover:text-red-600 p-1">
+                               <Trash2 size={16} />
+                             </button>
+                           </div>
+                        ) : (
+                          <div className="relative border-2 border-dashed border-slate-300 rounded-xl p-4 text-center hover:bg-slate-100 transition-colors">
+                            <input
+                              type="file"
+                              accept="image/*,.pdf"
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  if (file.size > 2 * 1024 * 1024) { // 2MB simple warning limit
+                                      const proceed = confirm("El archivo supera los 2MB. Podría tardar en subir. ¿Deseas continuar?");
+                                      if(!proceed) return;
+                                  }
+                                  setTaskAttachmentName(file.name);
+                                  const reader = new FileReader();
+                                  reader.onload = (re) => {
+                                    if (re.target?.result) {
+                                      setTaskAttachmentUrl(re.target.result as string);
+                                    }
+                                  };
+                                  reader.readAsDataURL(file);
+                                }
+                              }}
+                            />
+                            <Upload className="mx-auto text-slate-400 mb-2" size={24} />
+                            <p className="text-sm font-bold text-slate-600">Haz clic o arrastra un archivo aquí</p>
+                            <p className="text-xs text-slate-400 mt-1">Imágenes (.jpg, .png) o PDFs</p>
                           </div>
                         )}
                       </div>
