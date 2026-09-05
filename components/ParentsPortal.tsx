@@ -502,13 +502,17 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                         const configStr = localStorage.getItem('SIRILA_CACHE_CONFIG');
                         if (configStr) {
                             const config = JSON.parse(configStr);
-                            const staffMatch = config.staff?.find((s: any) => s.group === student.group);
+                            const staffMatch = config.staff?.find((s: any) => s.group?.trim().toUpperCase() === student.group?.trim().toUpperCase());
                             if (staffMatch?.phone) teacherPhone = staffMatch.phone;
                         }
                     } catch(e) {}
 
                     const waMsg = `¡Hola! Soy el tutor de ${student.name}. Te informo que ha completado el juego interactivo "${activeHtmlGame.title}" con calificación de ${finalScore}/10.`;
                     
+                    if (teacherPhone) {
+                        sendWhatsAppMessage(teacherPhone, waMsg);
+                    }
+
                     setPendingWhatsApp({
                         phone: teacherPhone,
                         msg: waMsg,
@@ -785,13 +789,17 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                 const configStr = localStorage.getItem('SIRILA_CACHE_CONFIG');
                 if (configStr) {
                     const config = JSON.parse(configStr);
-                    const staffMatch = config.staff?.find((s: any) => s.group === student.group);
+                    const staffMatch = config.staff?.find((s: any) => s.group?.trim().toUpperCase() === student.group?.trim().toUpperCase());
                     if (staffMatch?.phone) teacherPhone = staffMatch.phone;
                 }
             } catch(e) {}
 
             const waMsg = `¡Hola! Soy el tutor de ${student.name}. Te informo que ha completado la ficha interactiva "${activeWorksheet.title}" con calificación de ${score}/10.`;
             
+            if (teacherPhone) {
+                sendWhatsAppMessage(teacherPhone, waMsg);
+            }
+
             setPendingWhatsApp({
                 phone: teacherPhone,
                 msg: waMsg,
@@ -1017,11 +1025,15 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
             const configStr = localStorage.getItem('SIRILA_CACHE_CONFIG');
             if (configStr) {
                 const config = JSON.parse(configStr);
-                const staffMatch = config.staff?.find((s: any) => s.group === student.group);
+                const staffMatch = config.staff?.find((s: any) => s.group?.trim().toUpperCase() === student.group?.trim().toUpperCase());
                 if (staffMatch?.phone) teacherPhone = staffMatch.phone;
             }
         } catch(e) {}
         const waMsg = `¡Hola! Soy el tutor de ${student.name}. Te informo que ha completado el quiz "${activeQuiz.title}" con calificación de ${score}/10.`;
+
+        if (teacherPhone) {
+            sendWhatsAppMessage(teacherPhone, waMsg);
+        }
 
         let feedbackMsg = passed 
             ? (attemptsLeft > 0 ? `\n\nTe quedan ${attemptsLeft} intento(s) si deseas mejorar tu nota.` : '') 
