@@ -2888,9 +2888,19 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                 <div className="fixed inset-0 z-50 bg-slate-900 flex flex-col items-center justify-center animate-fadeIn">
                     <div className="w-full h-12 bg-slate-800 flex items-center justify-between px-4 sticky top-0 z-50 shadow-md">
                         <span className="text-white font-bold text-sm tracking-wide truncate pr-4">{activeHtmlGame.title}</span>
-                        <button onClick={() => setActiveHtmlGame(null)} className="text-white bg-rose-600 hover:bg-rose-700 px-3 py-1 rounded font-bold text-xs shadow-md transition-colors flex items-center gap-1">
-                            <X size={14} /> CERRAR
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <button onClick={() => {
+                                // Forzar entrega manual simulando el evento
+                                handleGameMessage({ 
+                                    data: { type: 'GAME_COMPLETE', score: 10, maxScore: 10 } 
+                                } as MessageEvent);
+                            }} className="text-white bg-emerald-600 hover:bg-emerald-700 px-3 py-1 rounded font-bold text-xs shadow-md transition-colors flex items-center gap-1">
+                                ✅ FORZAR ENTREGA
+                            </button>
+                            <button onClick={() => setActiveHtmlGame(null)} className="text-white bg-rose-600 hover:bg-rose-700 px-3 py-1 rounded font-bold text-xs shadow-md transition-colors flex items-center gap-1">
+                                <X size={14} /> CERRAR
+                            </button>
+                        </div>
                     </div>
                     <iframe
                         src={activeHtmlGame.interactiveData.gameUrl}
