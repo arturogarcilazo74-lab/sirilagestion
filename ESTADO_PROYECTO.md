@@ -112,6 +112,18 @@ Si necesitas hacer modificaciones, aquí es donde debes buscar:
 
 ---
 
+### 9. Mejoras UI/UX en Portal de Padres (Septiembre 5, 2026)
+- **Implementación:** Se reestructuró la interfaz principal para priorizar información clave.
+- **Detalles:** 
+  - Se configuró para mostrar el nombre completo del alumno en la cabecera.
+  - El desglose de Criterios de Evaluación se reubicó al final del documento para no obstruir los elementos interactivos principales (como las métricas circulares y actividades).
+  - Se eliminó el chat interno, reemplazándolo por un botón de "Contacto por WhatsApp" que extrae inteligentemente el número del maestro usando la configuración del caché institucional.
+  - La Agenda Escolar (`events`) ahora se fusiona de manera transparente con el Calendario Oficial 2026-2027 (`OFFICIAL_CALENDAR_EVENTS_2026_2027`).
+  - Se eliminó la opción "Desconectar Cuenta" por seguridad y retención.
+  - Se generó una nueva compilación de la PWA (bumping the Cache Buster) para forzar la actualización de Service Workers en los clientes.
+
+---
+
 ## 4. Guía para Nuevas Modificaciones y Despliegue
 
 - **Base de Datos**: La base de datos de producción opera en MySQL en Hostinger. Las credenciales se gestionan a través de variables de entorno en el servidor (`server/.env`).
@@ -124,4 +136,4 @@ Si necesitas hacer modificaciones, aquí es donde debes buscar:
   ```
 
 ---
-*Documento actualizado al 4 de Septiembre de 2026.*
+*Documento actualizado al 5 de Septiembre de 2026.*
