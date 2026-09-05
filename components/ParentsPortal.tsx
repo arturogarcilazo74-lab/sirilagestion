@@ -491,10 +491,11 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                             type: 'HTML_GAME',
                             areaScores: areaScores, // Pass area scores if provided
                             isLate: isLate
-                        });
+                        }, student);
                         api.processQueue().catch(console.error);
                     } catch (submitErr) {
                         console.warn("submitAssignment notice:", submitErr);
+                        alert("Error al entregar: " + (submitErr as Error).message);
                     }
 
                     // Prepare WhatsApp Notification data
@@ -503,7 +504,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                         const configStr = localStorage.getItem('SIRILA_CACHE_CONFIG');
                         if (configStr) {
                             const config = JSON.parse(configStr);
-                            const staffMatch = config.staff?.find((s: any) => s.group?.trim().toUpperCase() === student.group?.trim().toUpperCase());
+                            const staffMatch = config.staff?.find((s: any) => s.group?.replace(/\\s+/g, '').toUpperCase() === student.group?.replace(/\\s+/g, '').toUpperCase());
                             if (staffMatch?.phone) teacherPhone = staffMatch.phone;
                         }
                     } catch(e) {}
@@ -774,10 +775,11 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                     score: score,
                     type: 'WORKSHEET',
                     isLate: isLate
-                });
+                }, student);
                 api.processQueue().catch(console.error);
             } catch (err) {
                 console.warn("Failed to submit assignment securely", err);
+                alert("Error al entregar: " + (err as Error).message);
             }
 
             // Notify Teacher via internal Message
@@ -791,7 +793,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                 const configStr = localStorage.getItem('SIRILA_CACHE_CONFIG');
                 if (configStr) {
                     const config = JSON.parse(configStr);
-                    const staffMatch = config.staff?.find((s: any) => s.group?.trim().toUpperCase() === student.group?.trim().toUpperCase());
+                    const staffMatch = config.staff?.find((s: any) => s.group?.replace(/\\s+/g, '').toUpperCase() === student.group?.replace(/\\s+/g, '').toUpperCase());
                     if (staffMatch?.phone) teacherPhone = staffMatch.phone;
                 }
             } catch(e) {}
@@ -1011,9 +1013,12 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                 score: score,
                 type: 'QUIZ',
                 isLate: isLate
-            });
+            }, student);
             api.processQueue().catch(console.error);
-        } catch(e) { console.error("submitAssignment notice:", e); }
+        } catch(e) { 
+            console.error("submitAssignment notice:", e); 
+            alert("Error al entregar: " + (e as Error).message);
+        }
 
         const attemptsLeft = (activeQuiz.maxAttempts || 1) - newAttempts[activeQuiz.id];
 
@@ -1028,7 +1033,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
             const configStr = localStorage.getItem('SIRILA_CACHE_CONFIG');
             if (configStr) {
                 const config = JSON.parse(configStr);
-                const staffMatch = config.staff?.find((s: any) => s.group?.trim().toUpperCase() === student.group?.trim().toUpperCase());
+                const staffMatch = config.staff?.find((s: any) => s.group?.replace(/\\s+/g, '').toUpperCase() === student.group?.replace(/\\s+/g, '').toUpperCase());
                 if (staffMatch?.phone) teacherPhone = staffMatch.phone;
             }
         } catch(e) {}

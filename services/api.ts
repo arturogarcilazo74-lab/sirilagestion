@@ -632,19 +632,30 @@ export const api = {
         return await res.json();
     },
 
-    submitAssignment: async (studentId: string, assignmentId: string, result: { score: number, type: string, isLate?: boolean, areaScores?: Record<string, { correct: number, total: number }> }) => {
+    submitAssignment: async (studentId: string, assignmentId: string, result: { score: number, type: string, isLate?: boolean, areaScores?: Record<string, { correct: number, total: number }> }, fallbackStudent?: Student) => {
         // 1. Fetch current full state
-        const state = await api.checkStatus();
-        const student = state.students.find((s: Student) => s.id === studentId);
-        if (!student) throw new Error("Student not found");
+        let studentToUpdate = fallbackStudent ? { ...fallbackStudent } : null;
+        try {
+            const state = await api.checkStatus();
+            const serverStudent = state.students.find((s: Student) => s.id === studentId);
+            if (serverStudent) {
+                studentToUpdate = { ...serverStudent };
+            }
+        } catch (e) {
+            console.warn("Could not fetch server state, relying on fallback student", e);
+        }
+        
+        if (!studentToUpdate) {
+            throw new Error(`Student ${studentId} not found on server and no fallback provided`);
+        }
 
-        const updatedStudent = { ...student };
+        const updatedStudent = { ...studentToUpdate };
 
         // 2. Initialize arrays if missing
-        updatedStudent.completedAssignmentIds = Array.isArray(student.completedAssignmentIds) ? [...student.completedAssignmentIds] : [];
-        updatedStudent.assignmentResults = (student.assignmentResults && typeof student.assignmentResults === 'object') ? { ...student.assignmentResults } : {};
-        updatedStudent.assignmentAttempts = (student.assignmentAttempts && typeof student.assignmentAttempts === 'object') ? { ...student.assignmentAttempts } : {};
-        updatedStudent.assignmentAreaResults = (student.assignmentAreaResults && typeof student.assignmentAreaResults === 'object') ? { ...student.assignmentAreaResults } : {};
+        updatedStudent.completedAssignmentIds = Array.isArray(studentToUpdate.completedAssignmentIds) ? [...studentToUpdate.completedAssignmentIds] : [];
+        updatedStudent.assignmentResults = (studentToUpdate.assignmentResults && typeof studentToUpdate.assignmentResults === 'object') ? { ...studentToUpdate.assignmentResults } : {};
+        updatedStudent.assignmentAttempts = (studentToUpdate.assignmentAttempts && typeof studentToUpdate.assignmentAttempts === 'object') ? { ...studentToUpdate.assignmentAttempts } : {};
+        updatedStudent.assignmentAreaResults = (studentToUpdate.assignmentAreaResults && typeof studentToUpdate.assignmentAreaResults === 'object') ? { ...studentToUpdate.assignmentAreaResults } : {};
 
         // 3. Mark as complete if not already
         if (!updatedStudent.completedAssignmentIds.includes(assignmentId)) {
@@ -652,7 +663,7 @@ export const api = {
         }
 
         if (result.isLate) {
-            updatedStudent.lateAssignmentIds = Array.isArray(student.lateAssignmentIds) ? [...student.lateAssignmentIds] : [];
+            updatedStudent.lateAssignmentIds = Array.isArray(studentToUpdate.lateAssignmentIds) ? [...studentToUpdate.lateAssignmentIds] : [];
             if (!updatedStudent.lateAssignmentIds.includes(assignmentId)) {
                 updatedStudent.lateAssignmentIds.push(assignmentId);
             }
