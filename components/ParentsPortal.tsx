@@ -492,6 +492,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                             areaScores: areaScores, // Pass area scores if provided
                             isLate: isLate
                         });
+                        api.processQueue().catch(console.error);
                     } catch (submitErr) {
                         console.warn("submitAssignment notice:", submitErr);
                     }
@@ -774,6 +775,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                     type: 'WORKSHEET',
                     isLate: isLate
                 });
+                api.processQueue().catch(console.error);
             } catch (err) {
                 console.warn("Failed to submit assignment securely", err);
             }
@@ -1010,7 +1012,8 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                 type: 'QUIZ',
                 isLate: isLate
             });
-        } catch(e) {}
+            api.processQueue().catch(console.error);
+        } catch(e) { console.error("submitAssignment notice:", e); }
 
         const attemptsLeft = (activeQuiz.maxAttempts || 1) - newAttempts[activeQuiz.id];
 

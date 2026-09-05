@@ -25,7 +25,13 @@ export const sendWhatsAppMessage = (phone: string, message: string) => {
     const encodedMsg = encodeURIComponent(message);
     const whatsappUrl = `https://wa.me/${finalPhone}?text=${encodedMsg}`;
 
-    window.open(whatsappUrl, '_blank');
+    // On mobile devices, use location.href to bypass strict popup blockers
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if (isMobile) {
+        window.location.href = whatsappUrl;
+    } else {
+        window.open(whatsappUrl, '_blank');
+    }
 };
 
 /**
