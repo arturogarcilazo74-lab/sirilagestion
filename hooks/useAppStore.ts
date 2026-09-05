@@ -622,19 +622,35 @@ export const useAppStore = () => {
     // Activity/Assignment Logic
     const handleToggleAssignment = (studentId: string, assignmentId: string, score?: number) => {
         const currentStudent = students.find(s => s.id === studentId);
+        const currentAssignment = assignments.find(a => a.id === assignmentId);
         if (!currentStudent) return;
 
         const isCompleted = currentStudent.completedAssignmentIds?.includes(assignmentId);
         let newCompletedIds = [];
         let newResults = { ...(currentStudent.assignmentResults || {}) };
         let newAttempts = { ...(currentStudent.assignmentAttempts || {}) };
+        let newLateIds = [...(currentStudent.lateAssignmentIds || [])];
 
         if (isCompleted && score === undefined) {
             newCompletedIds = (currentStudent.completedAssignmentIds || []).filter(id => id !== assignmentId);
+            newLateIds = newLateIds.filter(id => id !== assignmentId);
             delete newResults[assignmentId];
             delete newAttempts[assignmentId];
         } else {
             newCompletedIds = [...new Set([...(currentStudent.completedAssignmentIds || []), assignmentId])];
+            
+            // LATE CHECK FOR MANUAL TOGGLES
+            if (!isCompleted && currentAssignment && currentAssignment.dueDate) {
+                const now = new Date();
+                const due = new Date(currentAssignment.dueDate);
+                due.setHours(23, 59, 59, 999);
+                if (now > due) {
+                    if (!newLateIds.includes(assignmentId)) {
+                        newLateIds.push(assignmentId);
+                    }
+                }
+            }
+
             if (score !== undefined) {
                 newResults[assignmentId] = score;
             }
@@ -643,6 +659,7 @@ export const useAppStore = () => {
         const updatedStudent = {
             ...currentStudent,
             completedAssignmentIds: newCompletedIds,
+            lateAssignmentIds: newLateIds,
             assignmentResults: newResults,
             assignmentAttempts: newAttempts,
             assignmentsCompleted: newCompletedIds.length,

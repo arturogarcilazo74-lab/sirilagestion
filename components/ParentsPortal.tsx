@@ -454,15 +454,29 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                 if (finalScore > 10) finalScore = 10;
                 if (finalScore < 0) finalScore = 0;
 
+                let isLate = false;
+                if (activeHtmlGame.dueDate) {
+                    const now = new Date();
+                    const due = new Date(activeHtmlGame.dueDate);
+                    due.setHours(23, 59, 59, 999);
+                    if (now > due) {
+                        isLate = true;
+                        finalScore = Math.round(finalScore * 0.7 * 10) / 10;
+                        alert("⚠️ Tu entrega está fuera de fecha. Tu calificación vale el 70% de la nota original.");
+                    }
+                }
+
                 try {
                     const newCompleted = [...new Set([...(student.completedAssignmentIds || []), activeHtmlGame.id])];
                     const newResults = { ...(student.assignmentResults || {}), [activeHtmlGame.id]: finalScore };
                     const newAttempts = { ...(student.assignmentAttempts || {}), [activeHtmlGame.id]: (student.assignmentAttempts?.[activeHtmlGame.id] || 0) + 1 };
                     const newAreaResults = areaScores ? { ...(student.assignmentAreaResults || {}), [activeHtmlGame.id]: areaScores } : (student.assignmentAreaResults || {});
+                    const newLateIds = isLate ? [...new Set([...(student.lateAssignmentIds || []), activeHtmlGame.id])] : student.lateAssignmentIds;
 
                     const updatedStudent: Student = {
                         ...student,
                         completedAssignmentIds: newCompleted,
+                        lateAssignmentIds: newLateIds,
                         assignmentResults: newResults,
                         assignmentAttempts: newAttempts,
                         assignmentAreaResults: newAreaResults,
@@ -475,7 +489,8 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                         await api.submitAssignment(student.id, activeHtmlGame.id, {
                             score: finalScore,
                             type: 'HTML_GAME',
-                            areaScores: areaScores // Pass area scores if provided
+                            areaScores: areaScores, // Pass area scores if provided
+                            isLate: isLate
                         });
                     } catch (submitErr) {
                         console.warn("submitAssignment notice:", submitErr);
@@ -715,13 +730,15 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
             }
 
             // LATE SUBMISSION CHECK
+            let isLate = false;
             if (activeWorksheet.dueDate) {
                 const now = new Date();
                 const due = new Date(activeWorksheet.dueDate);
                 due.setHours(23, 59, 59, 999);
                 if (now > due) {
-                    score = Math.round(score * 0.6 * 10) / 10; // 40% penalty
-                    feedback += "\n\n⚠️ (Entrega tardía. Valor: 60%)";
+                    isLate = true;
+                    score = Math.round(score * 0.7 * 10) / 10; // 70% penalty
+                    feedback += "\n\n⚠️ (Entrega tardía. Valor: 70%)";
                 }
             }
 
@@ -735,10 +752,12 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
             const newCompleted = [...new Set([...(student.completedAssignmentIds || []), activeWorksheet.id])];
             const newResults = { ...(student.assignmentResults || {}), [activeWorksheet.id]: score };
             const newAttempts = { ...(student.assignmentAttempts || {}), [activeWorksheet.id]: (student.assignmentAttempts?.[activeWorksheet.id] || 0) + 1 };
+            const newLateIds = isLate ? [...new Set([...(student.lateAssignmentIds || []), activeWorksheet.id])] : student.lateAssignmentIds;
 
             const updatedStudent = {
                 ...student,
                 completedAssignmentIds: newCompleted,
+                lateAssignmentIds: newLateIds,
                 assignmentResults: newResults,
                 assignmentAttempts: newAttempts,
                 assignmentsCompleted: newCompleted.length
@@ -748,7 +767,8 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
             try {
                 await api.submitAssignment(student.id, activeWorksheet.id, {
                     score: score,
-                    type: 'WORKSHEET'
+                    type: 'WORKSHEET',
+                    isLate: isLate
                 });
             } catch (err) {
                 console.warn("Failed to submit assignment securely", err);
@@ -936,7 +956,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
             due.setHours(23, 59, 59, 999);
             if (now > due) {
                 isLate = true;
-                rawScore = rawScore * 0.6; // 40% penalty
+                rawScore = rawScore * 0.7; // 70% penalty
             }
         }
 
@@ -946,7 +966,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
 
         setQuizResult({ score, passed, areaScores });
         if (isLate) {
-            alert("⚠️ Tu entrega está fuera de fecha. Tu calificación vale el 60% de la nota original.");
+            alert("⚠️ Tu entrega está fuera de fecha. Tu calificación vale el 70% de la nota original.");
         }
 
         const areaPercentageResults: Record<string, number> = {};
@@ -962,10 +982,12 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
         // Marcar siempre como completada/realizada al enviarse
         const newCompleted = [...new Set([...(student.completedAssignmentIds || []), activeQuiz.id])];
         const newResults = { ...(student.assignmentResults || {}), [activeQuiz.id]: score };
+        const newLateIds = isLate ? [...new Set([...(student.lateAssignmentIds || []), activeQuiz.id])] : student.lateAssignmentIds;
 
         const updatedStudent = {
             ...student,
             completedAssignmentIds: newCompleted,
+            lateAssignmentIds: newLateIds,
             assignmentResults: newResults,
             assignmentAreaResults: newAreaResults,
             assignmentAttempts: newAttempts,
@@ -977,7 +999,8 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
         try {
             await api.submitAssignment(student.id, activeQuiz.id, {
                 score: score,
-                type: 'QUIZ'
+                type: 'QUIZ',
+                isLate: isLate
             });
         } catch(e) {}
 
@@ -1892,6 +1915,11 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                                             <span className="text-emerald-600 flex items-center gap-1 text-[10px] font-bold bg-emerald-50 px-2 py-0.5 rounded">
                                                                 <CheckCircle size={10} /> Entregada
                                                             </span>
+                                                            {student?.lateAssignmentIds?.includes(assign.id) && (
+                                                                <span className="text-orange-600 flex items-center gap-1 text-[10px] font-bold bg-orange-50 px-2 py-0.5 rounded" title="Entregado fuera de tiempo">
+                                                                    <AlertCircle size={10} /> Tarde
+                                                                </span>
+                                                            )}
                                                         </div>
                                                     </div>
                                                     <p className="text-[10px] text-slate-400">

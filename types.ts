@@ -37,6 +37,7 @@ export interface Student {
   behaviorPoints: number; // Positive or negative
   assignmentsCompleted: number;
   completedAssignmentIds: string[]; // List of IDs of completed assignments
+  lateAssignmentIds?: string[]; // NEW: IDs of assignments submitted past the due date
   assignmentResults?: Record<string, number>; // assignmentId -> score (0-10)
   assignmentAreaResults?: Record<string, Record<string, number>>; // assignmentId -> { areaName: scorePercentage }
   assignmentAttempts?: Record<string, number>; // assignmentId -> number of attempts made

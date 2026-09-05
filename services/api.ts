@@ -632,7 +632,7 @@ export const api = {
         return await res.json();
     },
 
-    submitAssignment: async (studentId: string, assignmentId: string, result: { score: number, type: string, areaScores?: Record<string, { correct: number, total: number }> }) => {
+    submitAssignment: async (studentId: string, assignmentId: string, result: { score: number, type: string, isLate?: boolean, areaScores?: Record<string, { correct: number, total: number }> }) => {
         // 1. Fetch current full state
         const state = await api.checkStatus();
         const student = state.students.find((s: Student) => s.id === studentId);
@@ -649,6 +649,13 @@ export const api = {
         // 3. Mark as complete if not already
         if (!updatedStudent.completedAssignmentIds.includes(assignmentId)) {
             updatedStudent.completedAssignmentIds.push(assignmentId);
+        }
+
+        if (result.isLate) {
+            updatedStudent.lateAssignmentIds = Array.isArray(student.lateAssignmentIds) ? [...student.lateAssignmentIds] : [];
+            if (!updatedStudent.lateAssignmentIds.includes(assignmentId)) {
+                updatedStudent.lateAssignmentIds.push(assignmentId);
+            }
         }
 
         // 4. Update core counters

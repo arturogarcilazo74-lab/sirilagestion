@@ -102,6 +102,14 @@ Si necesitas hacer modificaciones, aquí es donde debes buscar:
 - **Diagnóstico:** El panel de control mostraba eventos pasados en la sección de Agenda Escolar, restando visibilidad a las próximas actividades relevantes.
 - **Solución implementada:** Se actualizó `DashboardView.tsx` para filtrar dinámicamente los eventos, ocultando todos aquellos cuya fecha sea anterior al día actual, y mostrando exclusivamente eventos de hoy y del futuro ordenados cronológicamente.
 
+### 7. Gestión de Entregas Tardías (Late Assignments)
+- **Implementación:** Se añadió soporte para identificar y penalizar las entregas de tareas y actividades interactivas enviadas después de la fecha límite (`dueDate`).
+- **Detalles:** Las entregas tardías sufren una penalización en su calificación final (el estudiante recibe un 70% del valor original). Se introdujo el campo `lateAssignmentIds` en el modelo del estudiante (`types.ts`) para persistir esto, y se añadió una etiqueta visual de "Tarde" en el Portal de Padres (`ParentsPortal.tsx`).
+
+### 8. Estabilidad de Dashboard y Persistencia de Avatares
+- **Implementación:** Se forzó el *background polling* en el panel de control para mantener la información siempre actualizada.
+- **Detalles:** Se corrigió un problema de sincronización que provocaba el borrado accidental del avatar de los alumnos al actualizar su información (`useAppStore.ts`).
+
 ---
 
 ## 4. Guía para Nuevas Modificaciones y Despliegue
@@ -116,4 +124,4 @@ Si necesitas hacer modificaciones, aquí es donde debes buscar:
   ```
 
 ---
-*Documento actualizado al 3 de Septiembre de 2026.*
+*Documento actualizado al 4 de Septiembre de 2026.*
