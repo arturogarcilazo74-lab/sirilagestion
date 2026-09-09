@@ -681,11 +681,29 @@ app.get('/sirila-v1/honor-roll', async (req, res) => {
                 // Cálculo ponderado del puntaje de honor (escala 0-10)
                 const progressScore = progressPercentage / 10;
                 let honorScore = 0;
+                
+                const getDiagAvg = (g) => {
+                    if (typeof g === 'object' && g !== null) {
+                        const fields = [Number(g.lenguajes || 0), Number(g.saberes || 0), Number(g.etica || 0), Number(g.humano || 0)];
+                        const validFields = fields.filter(v => v > 0);
+                        return validFields.length > 0 ? validFields.reduce((a, b) => a + b, 0) / validFields.length : 0;
+                    }
+                    return Number(g) || 0;
+                };
+                const diagnosticAvg = s.diagnosticGrade ? getDiagAvg(s.diagnosticGrade) : 0;
+
                 if (academicAvg > 0) {
                     if (interactiveAvg > 0) {
                         honorScore = (academicAvg * 0.50) + (interactiveAvg * 0.30) + (progressScore * 0.20);
                     } else {
                         honorScore = (academicAvg * 0.70) + (progressScore * 0.30);
+                    }
+                } else if (diagnosticAvg > 0) {
+                    // Al inicio del ciclo sin calificaciones trimestrales, usar diagnóstico como base académica
+                    if (interactiveAvg > 0) {
+                        honorScore = (diagnosticAvg * 0.50) + (interactiveAvg * 0.30) + (progressScore * 0.20);
+                    } else {
+                        honorScore = (diagnosticAvg * 0.70) + (progressScore * 0.30);
                     }
                 } else {
                     // Al inicio del ciclo sin calificaciones trimestrales aún capturadas

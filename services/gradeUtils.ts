@@ -103,11 +103,21 @@ export const calculateStudentMetrics = (
   // Puntaje ponderado para Cuadro de Honor (toma en cuenta académico, autocalificables y avance)
   const progressScore = hwPercentage / 10;
   let honorScore = 0;
+  
+  const diagnosticAvg = student.diagnosticGrade ? getTrimesterAvg(student.diagnosticGrade) : 0;
+
   if (academicAvg > 0) {
     if (interactiveAvg > 0) {
       honorScore = (academicAvg * 0.50) + (interactiveAvg * 0.30) + (progressScore * 0.20);
     } else {
       honorScore = (academicAvg * 0.70) + (progressScore * 0.30);
+    }
+  } else if (diagnosticAvg > 0) {
+    // Use diagnostic as initial reference for honor roll if no trimester grades exist
+    if (interactiveAvg > 0) {
+      honorScore = (diagnosticAvg * 0.50) + (interactiveAvg * 0.30) + (progressScore * 0.20);
+    } else {
+      honorScore = (diagnosticAvg * 0.70) + (progressScore * 0.30);
     }
   } else {
     if (interactiveAvg > 0) {
