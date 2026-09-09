@@ -172,6 +172,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
         avatar: student.avatar,
         annualFeePaid: student.annualFeePaid || false,
         grades: student.grades || [],
+        diagnosticGrade: student.diagnosticGrade,
         group: student.group || '',
         address: student.address || '',
         guardianOccupation: student.guardianOccupation || ''
