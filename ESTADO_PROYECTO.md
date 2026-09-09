@@ -140,6 +140,7 @@ Si necesitas hacer modificaciones, aquí es donde debes buscar:
   - La calificación diagnóstica se conserva de forma independiente en la base de datos (`diagnosticGrade`).
   - El sistema de generación de documentos en PDF (`pdfGenerator.ts`) ahora incluye esta calificación en la boleta académica en una fila rotulada "Diagnóstico" separada del Trimestre 1 y sin afectar el cálculo del Promedio General.
   - El **Cuadro de Honor Multidimensional** fue ajustado (`server.js`, `gradeUtils.ts`): al inicio del ciclo (cuando aún no existen calificaciones trimestrales), el sistema utiliza el promedio de la evaluación diagnóstica como base académica inicial para el cálculo de honor. Al capturarse el Trimestre 1, el Cuadro de Honor retoma automáticamente su comportamiento normal y vuelve a usar exclusivamente promedios trimestrales reales.
+  - Se implementó un parche en `StudentsView.tsx` para garantizar que la ventana de edición recupere correctamente la calificación diagnóstica al visualizar un expediente, evitando la pérdida accidental de datos.
 
 ---
 
