@@ -1896,8 +1896,8 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                                 <div key={assign.id} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm relative overflow-hidden transition-all hover:bg-slate-50">
                                                     <div className="flex justify-between items-start mb-2">
                                                         <div className="flex items-center gap-2">
-                                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${isInteractive ? 'bg-purple-100 text-purple-600' : 'bg-blue-100 text-blue-600'}`}>
-                                                                {isInteractive ? 'Interactiva' : 'Tarea'}
+                                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${isInteractive ? 'bg-purple-100 text-purple-600' : assign.type === 'CLASSWORK' ? 'bg-slate-100 text-slate-600' : 'bg-blue-100 text-blue-600'}`}>
+                                                                {isInteractive ? 'Interactiva' : assign.type === 'CLASSWORK' ? 'Trabajo en Clase' : 'Tarea'}
                                                             </span>
                                                             {isLate && (
                                                                 <span className="text-[10px] font-bold bg-red-100 text-red-600 px-2 py-0.5 rounded flex items-center gap-1">
@@ -1905,8 +1905,8 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                                                 </span>
                                                             )}
                                                         </div>
-                                                        <span className="text-orange-500 text-xs font-bold bg-orange-50 px-2 py-0.5 rounded-full">
-                                                            Por hacer
+                                                        <span className={`${assign.type === 'CLASSWORK' ? 'text-slate-500 bg-slate-100' : 'text-orange-500 bg-orange-50'} text-xs font-bold px-2 py-0.5 rounded-full`}>
+                                                            {assign.type === 'CLASSWORK' ? 'Registrado en Clase' : 'Por hacer'}
                                                         </span>
                                                     </div>
 

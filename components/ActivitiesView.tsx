@@ -38,7 +38,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
   const [targetGroup, setTargetGroup] = useState(defaultTargetGroup); // Default group
 
   // Interactive Quiz State
-  const [activityType, setActivityType] = useState<'TASK' | 'QUIZ' | 'WORKSHEET' | 'PLANNING' | 'HTML_GAME'>('TASK');
+  const [activityType, setActivityType] = useState<'TASK' | 'QUIZ' | 'WORKSHEET' | 'PLANNING' | 'HTML_GAME' | 'CLASSWORK'>('TASK');
   const [isGenerating, setIsGenerating] = useState(false);
   const [questions, setQuestions] = useState<InteractiveQuestion[]>([]);
   // NEM Plan State
@@ -241,7 +241,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
         const newAssignment: Partial<Assignment> = {
           title: newTitle,
           dueDate: newDate,
-          type: activityType === 'TASK' ? 'TASK' : 'INTERACTIVE',
+          type: (activityType === 'TASK' || activityType === 'CLASSWORK') ? activityType as any : 'INTERACTIVE',
           isVisibleInParentsPortal: isVisibleInParentsPortal,
           targetGroup: targetGroup.trim().toUpperCase() || 'GLOBAL',
           instructions: (activityType === 'TASK' && newInstructions.trim()) ? newInstructions.trim() : undefined,
@@ -491,7 +491,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                 {/* 1. Activity Type Selection - Responsive Grid */}
                 <section>
                   <label className="block text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">1. Tipo de Actividad</label>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
                     <button
                       type="button"
                       onClick={() => setActivityType('PLANNING')}
@@ -521,6 +521,22 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                       <h4 className={`font-bold text-sm md:text-lg mb-1 leading-tight ${activityType === 'TASK' ? 'text-indigo-900' : 'text-slate-700'}`}>Tarea Simple</h4>
                       <p className="hidden md:block text-sm text-slate-500 leading-snug">Tarea estándar.</p>
                       {activityType === 'TASK' && <div className="absolute top-2 right-2 md:top-4 md:right-4 text-indigo-600"><CheckCircle size={16} fill="currentColor" className="text-white md:w-5 md:h-5" /></div>}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setActivityType('CLASSWORK')}
+                      className={`relative p-3 md:p-6 rounded-2xl border-2 text-left transition-all group overflow-hidden ${activityType === 'CLASSWORK'
+                        ? 'border-blue-500 bg-blue-50 shadow-md transform scale-[1.02]'
+                        : 'border-slate-100 bg-white hover:border-blue-200 hover:shadow-sm'
+                        }`}
+                    >
+                      <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center mb-2 md:mb-4 transition-colors ${activityType === 'CLASSWORK' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-blue-100 group-hover:text-blue-600'}`}>
+                        <CheckCircle size={18} className="md:w-6 md:h-6" />
+                      </div>
+                      <h4 className={`font-bold text-sm md:text-lg mb-1 leading-tight ${activityType === 'CLASSWORK' ? 'text-blue-900' : 'text-slate-700'}`}>Trabajo en Clase</h4>
+                      <p className="hidden md:block text-sm text-slate-500 leading-snug">Informativa.</p>
+                      {activityType === 'CLASSWORK' && <div className="absolute top-2 right-2 md:top-4 md:right-4 text-blue-600"><CheckCircle size={16} fill="currentColor" className="text-white md:w-5 md:h-5" /></div>}
                     </button>
 
                     <button
@@ -625,7 +641,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                 </section>
 
                 {/* 2.5 Simple Activity Details */}
-                {activityType === 'TASK' && (
+                {(activityType === 'TASK' || activityType === 'CLASSWORK') && (
                   <section className="animate-fadeIn">
                     <label className="block text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">2.5 Detalles de la Tarea</label>
                     <div className="bg-slate-50 p-4 md:p-6 rounded-2xl border border-slate-100 space-y-4">
@@ -745,7 +761,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                 )}
 
                 {/* 3. Specific Configuration */}
-                {activityType !== 'TASK' && (
+                {(activityType !== 'TASK' && activityType !== 'CLASSWORK') && (
                   <section className="animate-slideUp">
                     <label className="block text-sm font-bold text-indigo-400 uppercase tracking-wider mb-4">
                       3. Editor de Contenido - {

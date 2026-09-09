@@ -135,7 +135,7 @@ export interface Assignment {
   dueDate: string;
   completedStudentIds: string[]; // Keep for redundancy/fast lookup if needed
   description?: string;
-  type?: 'TASK' | 'INTERACTIVE';
+  type?: 'TASK' | 'INTERACTIVE' | 'CLASSWORK';
   interactiveData?: InteractiveData;
   isVisibleInParentsPortal?: boolean;
   targetGroup?: string; // NEW: To filter assignments by teacher group
