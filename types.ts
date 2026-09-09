@@ -44,6 +44,7 @@ export interface Student {
   totalAssignments: number;
   participationCount: number;
   grades: TrimesterGrade[]; // Array of exactly 3 trimesters (indices 0, 1, 2)
+  diagnosticGrade?: TrimesterGrade; // Evaluación diagnóstica (opcional)
   annualFeePaid: boolean; // Cuota Anual
   annualFeeStatus?: 'PAGADO' | 'PENDIENTE' | 'PARCIAL'; // Estado de cuota anual
   annualFeeAbono?: number; // Monto abonado

@@ -1067,6 +1067,81 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
                         <FileText size={16} /> Calificaciones por Campo Formativo
                       </h4>
 
+                      {/* Evaluación Diagnóstica */}
+                      <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
+                        <h5 className="text-xs font-bold text-amber-700 uppercase mb-2">Evaluación Diagnóstica</h5>
+                        <div className="grid grid-cols-2 gap-3">
+                          {/* Lenguajes */}
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-500 truncate" title="Lenguajes">Lenguajes</label>
+                            <input
+                              type="number" min="5" max="10" step="0.1"
+                              className="w-full p-1 text-sm border border-slate-300 rounded text-center"
+                              value={formData.diagnosticGrade?.lenguajes || ''}
+                              onChange={(e) => {
+                                const newDiag = formData.diagnosticGrade || { lenguajes: 0, saberes: 0, etica: 0, humano: 0 };
+                                setFormData({
+                                  ...formData,
+                                  diagnosticGrade: { ...newDiag, lenguajes: parseFloat(e.target.value) || 0 }
+                                });
+                              }}
+                              placeholder="-"
+                            />
+                          </div>
+                          {/* Saberes */}
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-500 truncate" title="Saberes y Pensamiento Científico">Saberes y P.C.</label>
+                            <input
+                              type="number" min="5" max="10" step="0.1"
+                              className="w-full p-1 text-sm border border-slate-300 rounded text-center"
+                              value={formData.diagnosticGrade?.saberes || ''}
+                              onChange={(e) => {
+                                const newDiag = formData.diagnosticGrade || { lenguajes: 0, saberes: 0, etica: 0, humano: 0 };
+                                setFormData({
+                                  ...formData,
+                                  diagnosticGrade: { ...newDiag, saberes: parseFloat(e.target.value) || 0 }
+                                });
+                              }}
+                              placeholder="-"
+                            />
+                          </div>
+                          {/* Ética */}
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-500 truncate" title="Ética, Naturaleza y Sociedades">Ética, Nat. y Soc.</label>
+                            <input
+                              type="number" min="5" max="10" step="0.1"
+                              className="w-full p-1 text-sm border border-slate-300 rounded text-center"
+                              value={formData.diagnosticGrade?.etica || ''}
+                              onChange={(e) => {
+                                const newDiag = formData.diagnosticGrade || { lenguajes: 0, saberes: 0, etica: 0, humano: 0 };
+                                setFormData({
+                                  ...formData,
+                                  diagnosticGrade: { ...newDiag, etica: parseFloat(e.target.value) || 0 }
+                                });
+                              }}
+                              placeholder="-"
+                            />
+                          </div>
+                          {/* De lo Humano */}
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-500 truncate" title="De lo Humano y lo Comunitario">De lo Humano</label>
+                            <input
+                              type="number" min="5" max="10" step="0.1"
+                              className="w-full p-1 text-sm border border-slate-300 rounded text-center"
+                              value={formData.diagnosticGrade?.humano || ''}
+                              onChange={(e) => {
+                                const newDiag = formData.diagnosticGrade || { lenguajes: 0, saberes: 0, etica: 0, humano: 0 };
+                                setFormData({
+                                  ...formData,
+                                  diagnosticGrade: { ...newDiag, humano: parseFloat(e.target.value) || 0 }
+                                });
+                              }}
+                              placeholder="-"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
                       {[0, 1, 2].map((trimesterIdx) => (
                         <div key={trimesterIdx} className="bg-slate-50 p-3 rounded-lg border border-slate-200">
                           <h5 className="text-xs font-bold text-indigo-600 uppercase mb-2">Trimestre {trimesterIdx + 1}</h5>
@@ -1825,36 +1900,49 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
                     {reportStudent.grades.length === 0 ? (
                       <tr><td colSpan={7} className="p-4 text-center text-slate-400">Sin calificaciones registradas</td></tr>
                     ) : (
-                      reportStudent.grades.map((grade, idx) => {
-                        const metrics = calculateStudentMetrics(reportStudent, assignments);
-                        const score = metrics.trimAvgs[idx] || 0;
-                        const isObj = typeof grade === 'object' && grade !== null;
-                        const leng = isObj ? Number(grade.lenguajes || 0) : Number(grade) || 0;
-                        const sab = isObj ? Number(grade.saberes || 0) : Number(grade) || 0;
-                        const eti = isObj ? Number(grade.etica || 0) : Number(grade) || 0;
-                        const hum = isObj ? Number(grade.humano || 0) : Number(grade) || 0;
-
-                        return (
-                          <tr key={idx}>
-                            <td className="border border-slate-200 p-2 font-medium">Trimestre {idx + 1}</td>
-                            <td className="border border-slate-200 p-2 text-center">{leng > 0 ? leng.toFixed(1) : '-'}</td>
-                            <td className="border border-slate-200 p-2 text-center">{sab > 0 ? sab.toFixed(1) : '-'}</td>
-                            <td className="border border-slate-200 p-2 text-center">{eti > 0 ? eti.toFixed(1) : '-'}</td>
-                            <td className="border border-slate-200 p-2 text-center">{hum > 0 ? hum.toFixed(1) : '-'}</td>
-                            <td className="border border-slate-200 p-2 text-center font-bold">{score > 0 ? score.toFixed(1) : '-'}</td>
-                            <td className="border border-slate-200 p-2 text-center text-xs">
-                              {(() => {
-                                if (score <= 0) return '-';
-                                const val = Number(score);
-                                if (val >= 9) return <span className="px-2 py-0.5 rounded-full bg-green-50 text-green-700 font-bold">DESTACADO</span>;
-                                if (val >= 8) return <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-bold">SATISFACTORIO</span>;
-                                if (val >= 6) return <span className="px-2 py-0.5 rounded-full bg-yellow-50 text-yellow-700 font-bold">SUFICIENTE</span>;
-                                return <span className="px-2 py-0.5 rounded-full bg-red-50 text-red-700 font-bold">INSUFICIENTE</span>;
-                              })()}
-                            </td>
+                      <>
+                        {reportStudent.diagnosticGrade && (
+                          <tr className="bg-amber-50">
+                            <td className="border border-slate-200 p-2 font-medium text-amber-800">Diagnóstico</td>
+                            <td className="border border-slate-200 p-2 text-center text-amber-900">{reportStudent.diagnosticGrade.lenguajes > 0 ? reportStudent.diagnosticGrade.lenguajes.toFixed(1) : '-'}</td>
+                            <td className="border border-slate-200 p-2 text-center text-amber-900">{reportStudent.diagnosticGrade.saberes > 0 ? reportStudent.diagnosticGrade.saberes.toFixed(1) : '-'}</td>
+                            <td className="border border-slate-200 p-2 text-center text-amber-900">{reportStudent.diagnosticGrade.etica > 0 ? reportStudent.diagnosticGrade.etica.toFixed(1) : '-'}</td>
+                            <td className="border border-slate-200 p-2 text-center text-amber-900">{reportStudent.diagnosticGrade.humano > 0 ? reportStudent.diagnosticGrade.humano.toFixed(1) : '-'}</td>
+                            <td className="border border-slate-200 p-2 text-center font-bold text-amber-900">-</td>
+                            <td className="border border-slate-200 p-2 text-center text-xs">-</td>
                           </tr>
-                        )
-                      })
+                        )}
+                        {reportStudent.grades.map((grade, idx) => {
+                          const metrics = calculateStudentMetrics(reportStudent, assignments);
+                          const score = metrics.trimAvgs[idx] || 0;
+                          const isObj = typeof grade === 'object' && grade !== null;
+                          const leng = isObj ? Number(grade.lenguajes || 0) : Number(grade) || 0;
+                          const sab = isObj ? Number(grade.saberes || 0) : Number(grade) || 0;
+                          const eti = isObj ? Number(grade.etica || 0) : Number(grade) || 0;
+                          const hum = isObj ? Number(grade.humano || 0) : Number(grade) || 0;
+
+                          return (
+                            <tr key={idx}>
+                              <td className="border border-slate-200 p-2 font-medium">Trimestre {idx + 1}</td>
+                              <td className="border border-slate-200 p-2 text-center">{leng > 0 ? leng.toFixed(1) : '-'}</td>
+                              <td className="border border-slate-200 p-2 text-center">{sab > 0 ? sab.toFixed(1) : '-'}</td>
+                              <td className="border border-slate-200 p-2 text-center">{eti > 0 ? eti.toFixed(1) : '-'}</td>
+                              <td className="border border-slate-200 p-2 text-center">{hum > 0 ? hum.toFixed(1) : '-'}</td>
+                              <td className="border border-slate-200 p-2 text-center font-bold">{score > 0 ? score.toFixed(1) : '-'}</td>
+                              <td className="border border-slate-200 p-2 text-center text-xs">
+                                {(() => {
+                                  if (score <= 0) return '-';
+                                  const val = Number(score);
+                                  if (val >= 9) return <span className="px-2 py-0.5 rounded-full bg-green-50 text-green-700 font-bold">DESTACADO</span>;
+                                  if (val >= 8) return <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-bold">SATISFACTORIO</span>;
+                                  if (val >= 6) return <span className="px-2 py-0.5 rounded-full bg-yellow-50 text-yellow-700 font-bold">SUFICIENTE</span>;
+                                  return <span className="px-2 py-0.5 rounded-full bg-red-50 text-red-700 font-bold">INSUFICIENTE</span>;
+                                })()}
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </>
                     )}
                   </tbody>
                 </table>

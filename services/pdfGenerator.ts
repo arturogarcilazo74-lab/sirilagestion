@@ -252,6 +252,21 @@ export const generateReportCard = async (student: Student, config: SchoolConfig)
         const grades = student.grades || [];
         const gradesData: string[][] = [];
 
+        if (student.diagnosticGrade) {
+            const leng = Number(student.diagnosticGrade.lenguajes || 0);
+            const sab = Number(student.diagnosticGrade.saberes || 0);
+            const eti = Number(student.diagnosticGrade.etica || 0);
+            const hum = Number(student.diagnosticGrade.humano || 0);
+            gradesData.push([
+                'Diagnóstico',
+                leng > 0 ? leng.toFixed(1) : '-',
+                sab > 0 ? sab.toFixed(1) : '-',
+                eti > 0 ? eti.toFixed(1) : '-',
+                hum > 0 ? hum.toFixed(1) : '-',
+                '-'
+            ]);
+        }
+
         grades.forEach((grade, index) => {
             if (typeof grade === 'object' && grade !== null) {
                 const leng = Number(grade.lenguajes || 0);
@@ -1224,6 +1239,22 @@ export const generateCompleteStudentReport = async (
 
     const grades = student.grades || [];
     const gradesBody: string[][] = [];
+
+    if (student.diagnosticGrade) {
+        const leng = Number(student.diagnosticGrade.lenguajes || 0);
+        const sab = Number(student.diagnosticGrade.saberes || 0);
+        const eti = Number(student.diagnosticGrade.etica || 0);
+        const hum = Number(student.diagnosticGrade.humano || 0);
+        gradesBody.push([
+            'Diagnóstico',
+            leng > 0 ? leng.toFixed(1) : '-',
+            sab > 0 ? sab.toFixed(1) : '-',
+            eti > 0 ? eti.toFixed(1) : '-',
+            hum > 0 ? hum.toFixed(1) : '-',
+            '-',
+            '-'
+        ]);
+    }
 
     grades.forEach((grade, idx) => {
         if (typeof grade === 'object' && grade !== null) {
