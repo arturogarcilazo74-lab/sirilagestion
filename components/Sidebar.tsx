@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-    LayoutDashboard, Users, QrCode, ListTodo, BookCheck, ClipboardList, Wallet, FileText, MessageSquare, Wrench, Settings, LogOut, Smartphone, Building2, Library, GraduationCap, Gamepad2
+    LayoutDashboard, Users, QrCode, ListTodo, BookCheck, ClipboardList, Wallet, FileText, MessageSquare, Wrench, Settings, LogOut, Smartphone, Building2, Library, GraduationCap, Gamepad2, AlertCircle
 } from 'lucide-react';
 import { ViewState, SchoolConfig } from '../types';
 
@@ -64,6 +64,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, s
                         >
                             <LayoutDashboard size={20} />
                             <span className="font-medium">Panel General</span>
+                        </button>
+
+                        <button
+                            onClick={() => setCurrentView('EARLY_WARNING')}
+                            className={`flex items-center gap-3 w-full p-3 rounded-xl transition-all duration-300 group ${currentView === 'EARLY_WARNING' ? 'bg-indigo-600 shadow-[0_0_20px_rgba(79,70,229,0.5)] text-white' : 'text-slate-400 hover:bg-white/10 hover:text-white'}`}
+                        >
+                            <AlertCircle size={20} />
+                            <span className="font-medium">Alerta Temprana</span>
                         </button>
 
                         <button

@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-    LayoutDashboard, Users, QrCode, ListTodo, BookCheck, ClipboardList, Wallet, FileText, MessageSquare, Wrench, Settings, Menu, X, Smartphone, LogOut, Library, GraduationCap, Gamepad2
+    LayoutDashboard, Users, QrCode, ListTodo, BookCheck, ClipboardList, Wallet, FileText, MessageSquare, Wrench, Settings, Menu, X, Smartphone, LogOut, Library, GraduationCap, Gamepad2, AlertCircle
 } from 'lucide-react';
 import { ViewState } from '../types';
 
@@ -65,6 +65,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({
                 <div className="fixed inset-0 bg-slate-900/95 backdrop-blur-xl z-40 pt-20 px-4 md:hidden overflow-y-auto print:hidden">
                     <nav className="space-y-4 pb-10">
                         <NavItem view="DASHBOARD" icon={LayoutDashboard} label="Panel General" currentView={currentView} onClick={handleNavClick} />
+                        <NavItem view="EARLY_WARNING" icon={AlertCircle} label="Alerta Temprana" currentView={currentView} onClick={handleNavClick} />
                         <NavItem view="STUDENTS" icon={Users} label="Estudiantes" currentView={currentView} onClick={handleNavClick} />
                         <NavItem view="ATTENDANCE" icon={QrCode} label="Asistencia QR" currentView={currentView} onClick={handleNavClick} />
                         <NavItem view="ACTIVITIES" icon={ListTodo} label="Actividades" currentView={currentView} onClick={handleNavClick} />

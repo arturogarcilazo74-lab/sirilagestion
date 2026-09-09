@@ -24,6 +24,8 @@ import { LibraryView } from './components/LibraryView';
 import { LiteracyView } from './components/LiteracyView';
 import { ExamGeneratorView } from './components/ExamGeneratorView';
 import { CTEGamePlayerView } from './components/CTEGamePlayerView';
+import { CTEGamesView } from './components/CTEGamesView';
+import { EarlyWarningView } from './components/EarlyWarningView';
 
 const App: React.FC = () => {
   // Initialize View based on URL mainly for independent Parents Portal access
@@ -287,6 +289,15 @@ const App: React.FC = () => {
                 onEditEvent={store.handleEditEvent}
                 onDeleteEvent={store.handleDeleteEvent}
                 onNavigate={setCurrentView}
+                store={store}
+              />
+            );
+          })()}
+          {currentView === 'EARLY_WARNING' && (() => {
+            return (
+              <EarlyWarningView
+                students={visibleStudents}
+                assignments={visibleAssignments}
                 store={store}
               />
             );
