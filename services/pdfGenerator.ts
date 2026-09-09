@@ -534,7 +534,7 @@ export const generateStudentCredentials = async (students: Student[], config: Sc
         doc.roundedRect(xF, yF, cardW, cardH, 3, 3, 'FD');
 
         // Header Modern
-        const headerHeight = 25;
+        const headerHeight = 28;
         doc.setFillColor(30, 58, 138); // Azul oscuro
         doc.roundedRect(xF + 0.2, yF + 0.2, cardW - 0.4, headerHeight, 3, 3, 'F');
         doc.rect(xF + 0.2, yF + headerHeight - 3, cardW - 0.4, 3, 'F'); // cuadrar abajo
@@ -543,6 +543,9 @@ export const generateStudentCredentials = async (students: Student[], config: Sc
         const logoSize = 14;
         if (schoolLogoBase64) {
             try {
+                // Dibujar logo con fondo blanco (pequeño escudo/rectángulo redondeado)
+                doc.setFillColor(255, 255, 255);
+                doc.roundedRect(xF + 3, yF + 4, logoSize + 2, logoSize + 2, 2, 2, 'F');
                 doc.addImage(schoolLogoBase64, 'PNG', xF + 4, yF + 5, logoSize, logoSize);
             } catch (e) {
                 console.warn('Logo draw failed', e);
@@ -551,89 +554,101 @@ export const generateStudentCredentials = async (students: Student[], config: Sc
 
         // School Name Text
         doc.setTextColor(255, 255, 255);
-        doc.setFontSize(7);
+        doc.setFontSize(8);
         doc.setFont('helvetica', 'bold');
-        
-        const schoolNameLines = doc.splitTextToSize(config.schoolName.toUpperCase(), cardW - logoSize - 10);
-        doc.text(schoolNameLines, xF + 20, yF + 9, { align: 'left' });
+        doc.text(config.schoolName.toUpperCase(), xF + 22, yF + 10, { align: 'left' });
 
         doc.setFontSize(5);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(150, 180, 255);
-        doc.text("IDENTIDAD OFICIAL", xF + 20, yF + 9 + (schoolNameLines.length * 3), { align: 'left' });
+        doc.setFont('helvetica', 'bold');
+        doc.text(`CCT: ${config.cct || ''} Z.E.: ${config.zone || ''} SECTOR: ${config.sector || 'II'}`, xF + 22, yF + 15, { align: 'left' });
+
+        doc.setFontSize(5);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`${(config.location || 'GUASAVE, SINALOA').toUpperCase()}`, xF + cardW / 2 + 5, yF + 20, { align: 'center' });
 
         // Photo
-        const photoY = yF + 30;
-        const photoSize = 26;
+        const photoY = yF + 32;
+        const photoW = 28;
+        const photoH = 24;
 
         // Shadow simulation
         doc.setFillColor(230, 230, 230);
-        doc.roundedRect(xF + (cardW - photoSize) / 2 + 1, photoY + 1, photoSize, photoSize, 4, 4, 'F');
+        doc.roundedRect(xF + (cardW - photoW) / 2 + 1, photoY + 1, photoW, photoH, 3, 3, 'F');
         doc.setFillColor(255, 255, 255);
-        doc.roundedRect(xF + (cardW - photoSize) / 2, photoY, photoSize, photoSize, 4, 4, 'F');
+        doc.roundedRect(xF + (cardW - photoW) / 2, photoY, photoW, photoH, 3, 3, 'F');
 
         if (avatarBase64) {
             try {
-                doc.addImage(avatarBase64, 'JPEG', xF + (cardW - photoSize) / 2, photoY, photoSize, photoSize);
+                doc.addImage(avatarBase64, 'JPEG', xF + (cardW - photoW) / 2, photoY, photoW, photoH);
             } catch {
                 doc.setFillColor(240, 240, 240);
-                doc.roundedRect(xF + (cardW - photoSize) / 2, photoY, photoSize, photoSize, 4, 4, 'F');
+                doc.roundedRect(xF + (cardW - photoW) / 2, photoY, photoW, photoH, 3, 3, 'F');
             }
         } else {
             doc.setFillColor(240, 240, 240);
-            doc.roundedRect(xF + (cardW - photoSize) / 2, photoY, photoSize, photoSize, 4, 4, 'F');
+            doc.roundedRect(xF + (cardW - photoW) / 2, photoY, photoW, photoH, 3, 3, 'F');
         }
 
-        // Photo white border
+        // Photo white border (Grueso para tapar esquinas)
         doc.setDrawColor(255, 255, 255);
         doc.setLineWidth(1.5);
-        doc.roundedRect(xF + (cardW - photoSize) / 2, photoY, photoSize, photoSize, 4, 4, 'S');
+        doc.roundedRect(xF + (cardW - photoW) / 2, photoY, photoW, photoH, 3, 3, 'S');
 
         // Student Content
-        const infoY = photoY + photoSize + 6;
+        const infoY = photoY + photoH + 7;
         
-        doc.setFontSize(5);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(30, 58, 138);
-        doc.text('ESTUDIANTE AUTORIZADO', xF + cardW / 2, infoY, { align: 'center' });
-
         doc.setTextColor(20, 20, 30);
-        doc.setFontSize(9);
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'bold');
         const splitName = doc.splitTextToSize(student.name.toUpperCase(), cardW - 6);
-        doc.text(splitName, xF + cardW / 2, infoY + 5, { align: 'center' });
+        doc.text(splitName, xF + cardW / 2, infoY, { align: 'center' });
 
-        const studentGroup = student.group || config.gradeGroup || 'Sin Grupo';
-        doc.setFontSize(7);
-        doc.setFont('helvetica', 'italic');
-        doc.setTextColor(100, 100, 110);
-        const nextYAfterName = infoY + 5 + (splitName.length * 3);
-        doc.text(`Grado: ${studentGroup}`, xF + cardW / 2, nextYAfterName, { align: 'center' });
+        const nextYAfterName = infoY + (splitName.length * 3) + 2;
+        
+        doc.setFontSize(6);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(30, 58, 138); // Azul
+        doc.text(`CURP: ${student.curp || 'NO REGISTRADA'}`, xF + cardW / 2, nextYAfterName, { align: 'center' });
 
         // ID / Role Box
-        const boxY = nextYAfterName + 4;
+        const boxY = nextYAfterName + 5;
         doc.setFillColor(248, 248, 250);
-        doc.setDrawColor(230, 230, 235);
+        doc.setDrawColor(220, 220, 225);
         doc.setLineWidth(0.2);
-        doc.roundedRect(xF + 6, boxY, cardW - 12, 12, 2, 2, 'FD');
+        doc.roundedRect(xF + 4, boxY, cardW - 8, 14, 2, 2, 'FD');
 
+        // Titles
         doc.setFontSize(4);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(150, 150, 160);
-        doc.text('ID CÓDIGO', xF + 9, boxY + 4);
-        doc.text('ROL SISTEMA', xF + cardW - 9, boxY + 4, { align: 'right' });
-
-        doc.setFontSize(7);
-        doc.setTextColor(20, 20, 30);
-        doc.text(student.id.substring(0, 8), xF + 9, boxY + 9);
+        doc.text('ID CÓDIGO', xF + 7, boxY + 4);
         
+        doc.setFontSize(5);
         doc.setTextColor(30, 58, 138);
-        doc.text('ALUMNO', xF + cardW - 9, boxY + 9, { align: 'right' });
+        doc.text('Grado', xF + cardW / 2, boxY + 5, { align: 'center' });
+
+        doc.setFontSize(4);
+        doc.setTextColor(150, 150, 160);
+        doc.text('ROL SISTEMA', xF + cardW - 7, boxY + 4, { align: 'right' });
+
+        // Values
+        doc.setFontSize(6);
+        doc.setTextColor(20, 20, 30);
+        doc.text(student.id.substring(0, 8), xF + 7, boxY + 10);
+        
+        const studentGroup = student.group || config.gradeGroup || 'Sin Grupo';
+        doc.setFontSize(10);
+        doc.setTextColor(30, 58, 138);
+        doc.text(studentGroup, xF + cardW / 2, boxY + 11, { align: 'center' });
+
+        doc.setFontSize(6);
+        doc.setTextColor(30, 58, 138);
+        doc.text('ALUMNO', xF + cardW - 7, boxY + 10, { align: 'right' });
 
         // Bottom blue accent
         doc.setFillColor(30, 58, 138);
         doc.roundedRect(xF + 0.2, yF + cardH - 3, cardW - 0.4, 3, 2, 2, 'F');
         doc.rect(xF + 0.2, yF + cardH - 3, cardW - 0.4, 1.5, 'F');
-
 
         // ====================
         // BACK SIDE
@@ -642,13 +657,13 @@ export const generateStudentCredentials = async (students: Student[], config: Sc
         const yB = y;
 
         // Background dark blue
-        doc.setFillColor(20, 30, 50);
+        doc.setFillColor(20, 30, 45); // Un azul navy ligeramente más gris/oscuro
         doc.roundedRect(xB, yB, cardW, cardH, 3, 3, 'F');
 
         // Header Text
-        doc.setFontSize(8);
+        doc.setFontSize(7);
         doc.setFont('helvetica', 'bold');
-        doc.setTextColor(80, 110, 180);
+        doc.setTextColor(100, 140, 200); // Azul acero claro
         doc.text('DATOS DE VERIFICACIÓN', xB + cardW / 2, yB + 10, { align: 'center' });
 
         doc.setFontSize(5);
@@ -660,44 +675,38 @@ export const generateStudentCredentials = async (students: Student[], config: Sc
         doc.setLineWidth(0.2);
         doc.line(xB + 10, yB + 18, xB + cardW - 10, yB + 18);
 
-        // QR Code on white rect
-        const qrSize = 34;
-        const qrY = yB + 24;
+        // QR Code on white rect (más grande)
+        const qrSize = 40;
+        const qrY = yB + 22;
         doc.setFillColor(255, 255, 255);
         doc.roundedRect(xB + (cardW - qrSize - 4) / 2, qrY - 2, qrSize + 4, qrSize + 4, 3, 3, 'F');
         doc.addImage(qrDataUrl, 'PNG', xB + (cardW - qrSize) / 2, qrY, qrSize, qrSize);
 
         doc.setFontSize(6);
         doc.setFont('helvetica', 'bold');
-        doc.setTextColor(80, 110, 180);
+        doc.setTextColor(100, 140, 200);
         doc.text('ESCANEAR PARA VALIDAR', xB + cardW / 2, qrY + qrSize + 6, { align: 'center' });
 
         doc.setFontSize(4);
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(180, 180, 190);
         const descText = 'Este documento es oficial e intransferible. La lectura del QR valida en tiempo real la información del estudiante.';
-        doc.text(doc.splitTextToSize(descText, cardW - 14), xB + cardW / 2, qrY + qrSize + 10, { align: 'center' });
+        doc.text(doc.splitTextToSize(descText, cardW - 10), xB + cardW / 2, qrY + qrSize + 10, { align: 'center' });
 
-        // Directora Signature
+        // Directora Names
         const sigY = qrY + qrSize + 16;
-        doc.setDrawColor(100, 120, 150);
-        doc.line(xB + 15, sigY, xB + cardW - 15, sigY);
-        doc.setFontSize(4);
-        doc.setTextColor(120, 140, 160);
-        doc.text('FIRMA DE LA DIRECTORA', xB + cardW / 2, sigY + 3, { align: 'center' });
-
-        // Footer ownership
+        
         doc.setFontSize(5);
         doc.setFont('helvetica', 'bold');
-        doc.setTextColor(100, 100, 110);
-        doc.text('PROPIEDAD DE:', xB + cardW / 2, yB + cardH - 12, { align: 'center' });
-        
-        doc.setFontSize(6);
         doc.setTextColor(255, 255, 255);
-        doc.text(doc.splitTextToSize(config.schoolName.toUpperCase(), cardW - 10), xB + cardW / 2, yB + cardH - 8, { align: 'center' });
+        const directorName = (config.directorName || 'NANCY CAROLINA JASSO VERGARA').toUpperCase();
+        doc.text(directorName, xB + cardW / 2, sigY + 3, { align: 'center' });
+        doc.text('DIRECTORA DEL PLANTEL', xB + cardW / 2, sigY + 6, { align: 'center' });
 
-        // Orange accent bottom
-        doc.setFillColor(220, 100, 30);
+        // Orange & Blue accent bottom
+        doc.setFillColor(220, 100, 30); // Naranja
+        doc.rect(xB + 0.2, yB + cardH - 4, cardW - 0.4, 2, 'F');
+        doc.setFillColor(10, 20, 35); // Azul super oscuro casi negro 
         doc.roundedRect(xB + 0.2, yB + cardH - 2, cardW - 0.4, 2, 2, 2, 'F');
         doc.rect(xB + 0.2, yB + cardH - 2, cardW - 0.4, 1, 'F'); // cuadrar arriba
 
