@@ -666,7 +666,25 @@ export const useAppStore = () => {
             totalAssignments: currentStudent.totalAssignments || assignments.length
         };
 
-        api.saveStudent(updatedStudent).catch(() => setPendingActions(api.getQueueLength()));
+        // ACTUALIZACIÓN SEGURA: Evitar sobrescribir entregas recientes del alumno
+        api.checkStatus().then(state => {
+            const serverStudent = state.students.find((s: any) => s.id === studentId);
+            const baseStudent = serverStudent || currentStudent;
+            
+            const mergedStudent = {
+                ...baseStudent,
+                completedAssignmentIds: newCompletedIds,
+                lateAssignmentIds: newLateIds,
+                assignmentResults: { ...(baseStudent.assignmentResults || {}), ...newResults },
+                assignmentAttempts: { ...(baseStudent.assignmentAttempts || {}), ...newAttempts },
+                assignmentsCompleted: newCompletedIds.length,
+                totalAssignments: baseStudent.totalAssignments || assignments.length
+            };
+            
+            api.saveStudent(mergedStudent).catch(() => setPendingActions(api.getQueueLength()));
+        }).catch(() => {
+            api.saveStudent(updatedStudent).catch(() => setPendingActions(api.getQueueLength()));
+        });
 
         setStudents(prev => {
             const next = prev.map(student => student.id === studentId ? updatedStudent : student);

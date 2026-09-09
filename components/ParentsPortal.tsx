@@ -2011,11 +2011,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                                             <span className="text-emerald-600 flex items-center gap-1 text-[10px] font-bold bg-emerald-50 px-2 py-0.5 rounded">
                                                                 <CheckCircle size={10} /> Entregada
                                                             </span>
-                                                            {student?.lateAssignmentIds?.includes(assign.id) && (
-                                                                <span className="text-orange-600 flex items-center gap-1 text-[10px] font-bold bg-orange-50 px-2 py-0.5 rounded" title="Entregado fuera de tiempo">
-                                                                    <AlertCircle size={10} /> Tarde
-                                                                </span>
-                                                            )}
+                                                            {/* Etiqueta tarde eliminada */}
                                                         </div>
                                                     </div>
                                                     <p className="text-[10px] text-slate-400">

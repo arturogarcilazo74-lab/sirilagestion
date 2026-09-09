@@ -1695,12 +1695,6 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                                   </span>
                                 )}
 
-                                {student.lateAssignmentIds?.includes(assignment.id) && (
-                                  <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-orange-50 text-orange-600 border border-orange-100 flex items-center gap-1" title="Entregado fuera de tiempo">
-                                    <AlertCircle size={10} /> Tarde
-                                  </span>
-                                )}
-
                                 {attempts > 0 && (
                                   <span className="text-[9px] font-semibold text-slate-400">
                                     {attempts} {assignment.maxAttempts ? `/${assignment.maxAttempts}` : ''} int.
@@ -1789,11 +1783,6 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                                   {score !== undefined && (
                                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${score >= 6 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
                                       {score}/10
-                                    </span>
-                                  )}
-                                  {student.lateAssignmentIds?.includes(assignment.id) && (
-                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 flex items-center gap-1" title="Entregado fuera de tiempo">
-                                      <AlertCircle size={10} /> Tarde
                                     </span>
                                   )}
                                   {attempts > 0 && (

@@ -2532,11 +2532,8 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                                                             </div>
                                                         </div>
                                                         <div className="flex flex-col items-end gap-2">
-                                                            <div className={`px-3 py-1.5 rounded-full text-xs font-bold ${task.status === 'COMPLETED' ? 'bg-green-500 text-white' :
-                                                                isLate ? 'bg-red-500 text-white' :
-                                                                    'bg-blue-500 text-white'
-                                                                }`}>
-                                                                {task.status === 'COMPLETED' ? '✓ Completada' : isLate ? '⚠ Tarde' : '⏳ Pendiente'}
+                                                            <div className={`px-3 py-1.5 rounded-full text-xs font-bold ${task.status === 'COMPLETED' ? 'bg-green-500 text-white' : 'bg-blue-500 text-white'}`}>
+                                                                {task.status === 'COMPLETED' ? '✓ Completada' : '⏳ Pendiente'}
                                                             </div>
                                                             <div className="text-right">
                                                                 <div className="text-2xl font-bold text-slate-700">
