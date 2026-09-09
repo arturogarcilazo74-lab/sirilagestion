@@ -554,17 +554,22 @@ export const generateStudentCredentials = async (students: Student[], config: Sc
 
         // School Name Text
         doc.setTextColor(255, 255, 255);
-        doc.setFontSize(8);
+        const textCenterX = xF + 39;
+        
+        doc.setFontSize(9);
         doc.setFont('helvetica', 'bold');
-        doc.text(config.schoolName.toUpperCase(), xF + 22, yF + 10, { align: 'left' });
+        const schoolNameLines = doc.splitTextToSize(config.schoolName.toUpperCase(), cardW - 20);
+        doc.text(schoolNameLines, textCenterX, yF + 10, { align: 'center' });
 
-        doc.setFontSize(5);
-        doc.setFont('helvetica', 'bold');
-        doc.text(`CCT: ${config.cct || ''} Z.E.: ${config.zone || ''} SECTOR: ${config.sector || 'II'}`, xF + 22, yF + 15, { align: 'left' });
+        const nextY = yF + 10 + (schoolNameLines.length * 3.5);
 
-        doc.setFontSize(5);
+        doc.setFontSize(4.5);
         doc.setFont('helvetica', 'bold');
-        doc.text(`${(config.location || 'GUASAVE, SINALOA').toUpperCase()}`, xF + cardW / 2 + 5, yF + 20, { align: 'center' });
+        doc.text(`CCT: ${config.cct || ''} Z.E.: ${config.zone || ''} SECTOR: ${config.sector || 'II'}`, textCenterX, nextY, { align: 'center' });
+
+        doc.setFontSize(4.5);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`${(config.location || 'GUASAVE, SINALOA').toUpperCase()}`, textCenterX, nextY + 4, { align: 'center' });
 
         // Photo
         const photoY = yF + 32;
@@ -634,7 +639,7 @@ export const generateStudentCredentials = async (students: Student[], config: Sc
         // Values
         doc.setFontSize(6);
         doc.setTextColor(20, 20, 30);
-        doc.text(student.id.substring(0, 8), xF + 7, boxY + 10);
+        doc.text(student.id, xF + 7, boxY + 10);
         
         const studentGroup = student.group || config.gradeGroup || 'Sin Grupo';
         doc.setFontSize(10);
