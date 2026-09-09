@@ -124,6 +124,15 @@ Si necesitas hacer modificaciones, aquí es donde debes buscar:
 
 ---
 
+### 10. Mejoras de Documentos y Experiencia de Usuario (Septiembre 9, 2026)
+- **Implementación:** Rediseño de documentos oficiales, independización de la Alerta Temprana y ajustes en el portal.
+- **Detalles:**
+  - **Credenciales y Constancias:** Se corrigió un error que impedía generar constancias (debido a campos nulos en la configuración). Las credenciales de alumnos recibieron un rediseño completo, alineándolas al estilo corporativo "Otay Vista" (fondo blanco/azul navy, inclusión del código QR grande en el reverso, eliminación de la leyenda "ESTUDIANTE AUTORIZADO", firma asignada a la Directora del Plantel, y mostrar el CURP y todos los datos oficiales completos).
+  - **Alerta Temprana:** Se extrajo el bloque de "Alerta de Atención Temprana" del Panel General y se trasladó a una vista independiente (`EarlyWarningView.tsx`) para mantener el Dashboard más limpio, accesible desde el menú principal.
+  - **Portal de Padres y Actividades:** Se ocultó visualmente la etiqueta penalizadora de "entregas tardías". Además, se modificó el comportamiento de las actividades marcadas como "en clase" para que se muestren de forma meramente informativa en el portal de padres, permitiendo a las familias saber si su hijo trabaja en clase o no.
+
+---
+
 ## 4. Guía para Nuevas Modificaciones y Despliegue
 
 - **Base de Datos**: La base de datos de producción opera en MySQL en Hostinger. Las credenciales se gestionan a través de variables de entorno en el servidor (`server/.env`).
@@ -136,4 +145,4 @@ Si necesitas hacer modificaciones, aquí es donde debes buscar:
   ```
 
 ---
-*Documento actualizado al 5 de Septiembre de 2026.*
+*Documento actualizado al 9 de Septiembre de 2026.*
