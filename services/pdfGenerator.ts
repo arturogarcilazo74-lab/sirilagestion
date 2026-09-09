@@ -543,9 +543,7 @@ export const generateStudentCredentials = async (students: Student[], config: Sc
         const logoSize = 14;
         if (schoolLogoBase64) {
             try {
-                // Dibujar logo con fondo blanco (pequeño escudo/rectángulo redondeado)
-                doc.setFillColor(255, 255, 255);
-                doc.roundedRect(xF + 3, yF + 4, logoSize + 2, logoSize + 2, 2, 2, 'F');
+                // Dibujar logo limpio sin fondo
                 doc.addImage(schoolLogoBase64, 'PNG', xF + 4, yF + 5, logoSize, logoSize);
             } catch (e) {
                 console.warn('Logo draw failed', e);
@@ -569,7 +567,7 @@ export const generateStudentCredentials = async (students: Student[], config: Sc
 
         doc.setFontSize(4.5);
         doc.setFont('helvetica', 'bold');
-        doc.text(`${(config.location || 'GUASAVE, SINALOA').toUpperCase()}`, textCenterX, nextY + 4, { align: 'center' });
+        doc.text(`GUASAVE, SINALOA`, textCenterX, nextY + 4, { align: 'center' });
 
         // Photo
         const photoY = yF + 32;
