@@ -133,6 +133,16 @@ Si necesitas hacer modificaciones, aquí es donde debes buscar:
 
 ---
 
+### 11. Implementación de Evaluación Diagnóstica y Ajuste a Cuadro de Honor (Septiembre 9, 2026)
+- **Implementación:** Se añadió el soporte para registrar la Evaluación Diagnóstica inicial sin afectar la escala de promedios trimestrales.
+- **Detalles:**
+  - Se agregó una sección exclusiva ("Evaluación Diagnóstica") en los expedientes de los alumnos (`StudentsView.tsx`).
+  - La calificación diagnóstica se conserva de forma independiente en la base de datos (`diagnosticGrade`).
+  - El sistema de generación de documentos en PDF (`pdfGenerator.ts`) ahora incluye esta calificación en la boleta académica en una fila rotulada "Diagnóstico" separada del Trimestre 1 y sin afectar el cálculo del Promedio General.
+  - El **Cuadro de Honor Multidimensional** fue ajustado (`server.js`, `gradeUtils.ts`): al inicio del ciclo (cuando aún no existen calificaciones trimestrales), el sistema utiliza el promedio de la evaluación diagnóstica como base académica inicial para el cálculo de honor. Al capturarse el Trimestre 1, el Cuadro de Honor retoma automáticamente su comportamiento normal y vuelve a usar exclusivamente promedios trimestrales reales.
+
+---
+
 ## 4. Guía para Nuevas Modificaciones y Despliegue
 
 - **Base de Datos**: La base de datos de producción opera en MySQL en Hostinger. Las credenciales se gestionan a través de variables de entorno en el servidor (`server/.env`).
@@ -146,3 +156,4 @@ Si necesitas hacer modificaciones, aquí es donde debes buscar:
 
 ---
 *Documento actualizado al 9 de Septiembre de 2026.*
+
