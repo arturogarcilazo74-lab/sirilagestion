@@ -390,8 +390,16 @@ app.get('/sirila-v1/full-state', async (req, res) => {
             behaviorLogs,
             financeEvents,
             schoolConfig,
-            staffTasks: taskRows.map(r => ({ ...r, id: r.id })),
-            books: bookRows.map(r => ({ ...r, id: r.id })),
+            staffTasks: taskRows.map(r => {
+                let d = r.data_json || {};
+                if (typeof d === 'string') { try { d = JSON.parse(d); } catch (e) { } }
+                return { ...d, id: r.id };
+            }),
+            books: bookRows.map(r => {
+                let d = r.data_json || {};
+                if (typeof d === 'string') { try { d = JSON.parse(d); } catch (e) { } }
+                return { ...d, id: r.id };
+            }),
             cteGames,
             cteGameResults,
             ctePresentations,
