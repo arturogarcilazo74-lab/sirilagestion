@@ -70,14 +70,20 @@ export const useAppStore = () => {
     // -- PERSISTENCE UTILS --
     const saveToCache = (key: string, data: any) => {
         try {
-            localStorage.setItem(key, JSON.stringify(data));
+            let dataToSave = data;
+            // Optimización: No guardar PDFs ni portadas en LocalStorage para no saturar los 5MB
+            if (key === 'SIRILA_CACHE_BOOKS' && Array.isArray(data)) {
+                dataToSave = data.map((b: any) => {
+                    const { fileUrl, cover, ...rest } = b;
+                    return rest;
+                });
+            }
+            localStorage.setItem(key, JSON.stringify(dataToSave));
         } catch (e) {
             console.error(`ERROR CRÍTICO: No se pudo guardar ${key} en el dispositivo.`, e);
             const win = window as any;
             if (!win.localStorage_alert_shown) {
-                // Suppress alert for Cloud users, just warn in console
                 console.warn("⚠️ LocalStorage limit reached. Offline backup might be incomplete, but Cloud data is safe.");
-                // alert("⚠️ MEMORIA LLENA: ..."); 
                 win.localStorage_alert_shown = true;
             }
         }
@@ -193,8 +199,7 @@ export const useAppStore = () => {
     }, [staffTasks]);
 
     useEffect(() => {
-        try { localStorage.setItem('SIRILA_CACHE_BOOKS', JSON.stringify(books)); }
-        catch (e) { console.warn("Cache Books failed", e); }
+        saveToCache('SIRILA_CACHE_BOOKS', books);
     }, [books]);
 
     useEffect(() => {
