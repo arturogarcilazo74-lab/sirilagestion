@@ -175,7 +175,7 @@ export const DashboardView: React.FC<DashboardProps> = ({
       if (isCompleted) return;
 
       // Check dates
-      const dueDate = new Date(task.dueDate);
+      const dueDate = new Date(task.dueDate + (task.dueDate.includes('T') ? '' : 'T12:00:00'));
       const today = new Date();
       // Reset time parts for accurate day comparison
       dueDate.setHours(0, 0, 0, 0);
@@ -567,7 +567,7 @@ export const DashboardView: React.FC<DashboardProps> = ({
                       </span>
                       {task.dueDate && (
                         <span className="text-xs text-slate-400 font-medium flex items-center gap-1">
-                          <Clock size={12} /> {new Date(task.dueDate).toLocaleDateString()}
+                          <Clock size={12} /> {new Date(task.dueDate + (task.dueDate.includes('T') ? '' : 'T12:00:00')).toLocaleDateString()}
                         </span>
                       )}
                     </div>
@@ -593,7 +593,7 @@ export const DashboardView: React.FC<DashboardProps> = ({
                         }
 
                         // Calculate days until due date
-                        const dueDate = new Date(task.dueDate);
+                        const dueDate = new Date(task.dueDate + (task.dueDate.includes('T') ? '' : 'T12:00:00'));
                         const today = new Date();
                         const daysDiff = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
                         const isUrgent = daysDiff <= 1 && daysDiff >= 0;
@@ -772,7 +772,7 @@ export const DashboardView: React.FC<DashboardProps> = ({
                       ></div>
                     </div>
                     <div className="mt-1 text-right">
-                      <span className="text-[10px] text-slate-400">Vence: {new Date(assignment.dueDate).toLocaleDateString()}</span>
+                      <span className="text-[10px] text-slate-400">Vence: {new Date(assignment.dueDate + (assignment.dueDate.includes('T') ? '' : 'T12:00:00')).toLocaleDateString()}</span>
                     </div>
                   </div>
                 )

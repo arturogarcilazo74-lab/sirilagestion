@@ -2035,7 +2035,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
                         assignments.filter(a => !reportStudent.completedAssignmentIds?.includes(a.id)).map(a => (
                           <div key={a.id} className="flex justify-between items-center bg-white p-2 rounded-lg border border-slate-100">
                             <span className="text-[10px] font-bold text-slate-700 truncate">{a.title}</span>
-                            <span className="text-[9px] text-slate-400">{new Date(a.dueDate).toLocaleDateString()}</span>
+                            <span className="text-[9px] text-slate-400">{new Date(a.dueDate + (a.dueDate.includes('T') ? '' : 'T12:00:00')).toLocaleDateString()}</span>
                           </div>
                         ))
                       )}

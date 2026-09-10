@@ -190,7 +190,7 @@ export const HomeworkQRView: React.FC<HomeworkQRViewProps> = ({ students, assign
                   className="flex-1 p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white/80 text-slate-900 text-sm"
                 >
                   {assignments.map(a => (
-                    <option key={a.id} value={a.id}>{a.title} ({new Date(a.dueDate).toLocaleDateString()})</option>
+                    <option key={a.id} value={a.id}>{a.title} ({new Date(a.dueDate + (a.dueDate.includes('T') ? '' : 'T12:00:00')).toLocaleDateString()})</option>
                   ))}
                 </select>
                 <button
@@ -398,7 +398,7 @@ export const HomeworkQRView: React.FC<HomeworkQRViewProps> = ({ students, assign
 
             <div className="text-center mb-6 bg-slate-50 p-3 rounded-lg w-full">
               <h4 className="font-bold text-indigo-700 text-lg">{selectedAssignment.title}</h4>
-              <p className="text-sm text-slate-500">Fecha Límite: {new Date(selectedAssignment.dueDate).toLocaleDateString()}</p>
+              <p className="text-sm text-slate-500">Fecha Límite: {new Date(selectedAssignment.dueDate + (selectedAssignment.dueDate.includes('T') ? '' : 'T12:00:00')).toLocaleDateString()}</p>
             </div>
 
             <div className="bg-white p-4 rounded-xl border-2 border-slate-100 shadow-inner mb-6">

@@ -2470,7 +2470,7 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                                                 : 1;
                                             const completedCount = task.completedBy?.length || 0;
                                             const progress = totalStaff > 0 ? (completedCount / totalStaff) * 100 : 0;
-                                            const isLate = new Date(task.dueDate) < new Date() && task.status !== 'COMPLETED';
+                                            const isLate = new Date(task.dueDate + (task.dueDate.includes('T') ? '' : 'T12:00:00')) < new Date() && task.status !== 'COMPLETED';
 
                                             return (
                                                 <div
@@ -2593,7 +2593,7 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                                                             !task.completedBy?.includes(staff.id)
                                                         );
 
-                                                        const dueDate = new Date(task.dueDate);
+                                                        const dueDate = new Date(task.dueDate + (task.dueDate.includes('T') ? '' : 'T12:00:00'));
                                                         const today = new Date();
                                                         const daysDiff = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
                                                         const showReminder = daysDiff <= 1 && daysDiff >= 0 && task.status !== 'COMPLETED';

@@ -361,7 +361,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
             if (filtered.length === 0) {
                 console.warn(`[ParentsPortal] No assignments found! Check targetGroup values. Available groups:`, [...new Set(all.map(a => a.targetGroup || 'N/A'))]);
             }
-            setAssignments(filtered.sort((a, b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime()));
+            setAssignments(filtered.sort((a, b) => new Date(b.dueDate + (b.dueDate.includes('T') ? '' : 'T12:00:00')).getTime() - new Date(a.dueDate + (a.dueDate.includes('T') ? '' : 'T12:00:00')).getTime()));
         } catch (e) {
             console.error('[ParentsPortal] Error loading assignments:', e);
         }
@@ -492,7 +492,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                 let isLate = false;
                 if (activeHtmlGame.dueDate) {
                     const now = new Date();
-                    const due = new Date(activeHtmlGame.dueDate);
+                    const due = new Date(activeHtmlGame.dueDate + (activeHtmlGame.dueDate.includes('T') ? '' : 'T12:00:00'));
                     due.setHours(23, 59, 59, 999);
                     if (now > due) {
                         isLate = true;
@@ -771,7 +771,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
             let isLate = false;
             if (activeWorksheet.dueDate) {
                 const now = new Date();
-                const due = new Date(activeWorksheet.dueDate);
+                const due = new Date(activeWorksheet.dueDate + (activeWorksheet.dueDate.includes('T') ? '' : 'T12:00:00'));
                 due.setHours(23, 59, 59, 999);
                 if (now > due) {
                     isLate = true;
@@ -996,7 +996,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
         let isLate = false;
         if (activeQuiz.dueDate) {
             const now = new Date();
-            const due = new Date(activeQuiz.dueDate);
+            const due = new Date(activeQuiz.dueDate + (activeQuiz.dueDate.includes('T') ? '' : 'T12:00:00'));
             due.setHours(23, 59, 59, 999);
             if (now > due) {
                 isLate = true;
@@ -1888,7 +1888,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                             const isInteractive = assign.type === 'INTERACTIVE' ||
                                                 (assign.interactiveData &&
                                                     ['QUIZ', 'WORKSHEET', 'HTML_GAME'].includes(assign.interactiveData.type));
-                                            const dueEnd = new Date(assign.dueDate);
+                                            const dueEnd = new Date(assign.dueDate + (assign.dueDate.includes('T') ? '' : 'T12:00:00'));
                                             dueEnd.setHours(23, 59, 59);
                                             const isLate = dueEnd < new Date();
 
@@ -1913,7 +1913,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                                     <h4 className="font-bold text-slate-800 text-sm mb-1">{assign.title}</h4>
                                                     <p className="text-xs text-slate-500 mb-3 flex items-center gap-1">
                                                         <CalendarIcon size={12} />
-                                                        Vence: {new Date(assign.dueDate).toLocaleDateString()}
+                                                        Vence: {new Date(assign.dueDate + (assign.dueDate.includes('T') ? '' : 'T12:00:00')).toLocaleDateString()}
                                                         {assign.description && <span className="ml-2 opacity-70">- {assign.description}</span>}
                                                     </p>
 
@@ -2015,7 +2015,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                                         </div>
                                                     </div>
                                                     <p className="text-[10px] text-slate-400">
-                                                        Vencía: {new Date(assign.dueDate).toLocaleDateString()}
+                                                        Vencía: {new Date(assign.dueDate + (assign.dueDate.includes('T') ? '' : 'T12:00:00')).toLocaleDateString()}
                                                     </p>
                                                     {assign.attachmentUrl && (
                                                         <a

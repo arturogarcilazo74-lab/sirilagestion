@@ -1600,7 +1600,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                             </button>
                             <button
                               onClick={() => {
-                                const msg = getTaskMessage(assignment.title, new Date(assignment.dueDate).toLocaleDateString(), assignment.description);
+                                const msg = getTaskMessage(assignment.title, new Date(assignment.dueDate + (assignment.dueDate.includes('T') ? '' : 'T12:00:00')).toLocaleDateString(), assignment.description);
                                 const encodedMsg = encodeURIComponent(msg);
                                 window.open(`https://wa.me/?text=${encodedMsg}`, '_blank');
                               }}
@@ -1616,7 +1616,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                         </div>
                         <div className="text-[10px] text-slate-400 font-normal mt-1 flex items-center gap-1">
                           <Calendar size={10} />
-                          {new Date(assignment.dueDate).toLocaleDateString()}
+                          {new Date(assignment.dueDate + (assignment.dueDate.includes('T') ? '' : 'T12:00:00')).toLocaleDateString()}
                         </div>
                       </th>
                     ))}
@@ -1792,7 +1792,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                                   )}
                                   <div>
                                     <p className={`text-xs font-bold ${isCompleted ? 'text-emerald-700' : 'text-slate-600'}`}>{assignment.title}</p>
-                                    <p className="text-[9px] text-slate-400">Vence: {new Date(assignment.dueDate).toLocaleDateString()}</p>
+                                    <p className="text-[9px] text-slate-400">Vence: {new Date(assignment.dueDate + (assignment.dueDate.includes('T') ? '' : 'T12:00:00')).toLocaleDateString()}</p>
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-2">

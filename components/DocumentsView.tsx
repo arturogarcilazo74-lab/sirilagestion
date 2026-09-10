@@ -507,7 +507,7 @@ Docente:               ${student ? getTeacherForStudent(config, student.group) :
 `;
 
                     pending.forEach((a, idx) => {
-                        const isLate = new Date(a.dueDate) < new Date();
+                        const isLate = new Date(a.dueDate + (a.dueDate.includes('T') ? '' : 'T12:00:00')) < new Date();
                         const typeLabel = a.type === 'INTERACTIVE' ? '[INTERACTIVA]' : '[TAREA]';
                         const statusLabel = isLate ? '⚠ VENCIDA' : '⏳ PENDIENTE';
                         
