@@ -707,7 +707,8 @@ export const useAppStore = () => {
             assignmentType: assignmentData.assignmentType,
             instructions: assignmentData.instructions,
             externalLinks: assignmentData.externalLinks,
-            maxAttempts: assignmentData.maxAttempts
+            maxAttempts: assignmentData.maxAttempts,
+            attachmentUrl: assignmentData.attachmentUrl
         };
 
         console.log('[useAppStore] handleAddAssignment received:', {
