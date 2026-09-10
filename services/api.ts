@@ -525,7 +525,7 @@ export const api = {
     saveBook: async (book: Book) => {
         try {
             const res = await fetch(`${API_URL}/books`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(book)
+                method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(book)
             });
             if (!res.ok) throw new Error(`Server error: ${res.status}`);
         } catch (e) {
