@@ -648,16 +648,16 @@ export const LandingView: React.FC<LandingViewProps> = ({ onSelectRole, onSelect
 
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 h-96">
                         <div className="md:col-span-2 relative group overflow-hidden rounded-3xl">
-                            <img src="https://images.unsplash.com/photo-1577896851231-70ef18881754?q=80&w=1000&auto=format&fit=crop" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt="Students Library" />
+                            <img src="/portada/primaria_entrada.jpg" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt="Entrada Primaria" />
                             <div className="absolute inset-x-0 bottom-0 p-6 bg-gradient-to-t from-black/60 to-transparent">
                                 <p className="text-white font-bold">Aprendizaje Colaborativo</p>
                             </div>
                         </div>
                         <div className="relative group overflow-hidden rounded-3xl">
-                            <img src="https://images.unsplash.com/photo-1546410531-bb4caa6b424d?q=80&w=1000&auto=format&fit=crop" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt="Classroom" />
+                            <img src="/portada/Portal_primaria.jpg" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt="Portal Primaria" />
                         </div>
                         <div className="relative group overflow-hidden rounded-3xl">
-                            <img src="https://images.unsplash.com/photo-1509062522246-3755977927d7?q=80&w=1000&auto=format&fit=crop" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt="School Activities" />
+                            <img src="/portada/directora.jpg" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt="Directora" />
                         </div>
                     </div>
                 </div>
