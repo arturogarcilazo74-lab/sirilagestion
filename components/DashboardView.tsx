@@ -705,7 +705,7 @@ export const DashboardView: React.FC<DashboardProps> = ({
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                const msg = getEventMessage(evt.title, new Date(evt.date + (evt.date.includes('T') ? '' : 'T12:00:00')).toLocaleDateString(), evt.description);
+                                const msg = getEventMessage(evt.title, new Date(evt.date.split('T')[0] + 'T12:00:00').toLocaleDateString(), evt.description);
                                 // For general events, we open WhatsApp without a phone so the user can choose a group or contact
                                 const encodedMsg = encodeURIComponent(msg);
                                 window.open(`https://wa.me/?text=${encodedMsg}`, '_blank');
@@ -1618,7 +1618,7 @@ export const DashboardView: React.FC<DashboardProps> = ({
                   onClick={(e) => {
                     // Logic to save first then share
                     handleSaveEvent(e as any);
-                    const msg = getEventMessage(eventFormData.title, new Date(eventFormData.date).toLocaleDateString(), eventFormData.description);
+                    const msg = getEventMessage(eventFormData.title, new Date(eventFormData.date.split('T')[0] + 'T12:00:00').toLocaleDateString(), eventFormData.description);
                     const encodedMsg = encodeURIComponent(msg);
                     window.open(`https://wa.me/?text=${encodedMsg}`, '_blank');
                   }}

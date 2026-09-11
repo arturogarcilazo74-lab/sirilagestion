@@ -1470,7 +1470,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                     <h3 className="text-xl font-black mb-1">{event.title}</h3>
                                     <p className="text-sm font-medium text-indigo-50 mb-3 flex items-center gap-1">
                                         <Clock size={14} />
-                                        {new Date(event.date + (event.date.includes('T') ? '' : 'T12:00:00')).toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                                        {new Date(event.date.split('T')[0] + 'T12:00:00').toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                                     </p>
                                     {event.description && (
                                         <div className="bg-white/10 p-3 rounded-xl border border-white/20 text-sm">
@@ -1775,7 +1775,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                         <div key={ev.id} className="min-w-[200px] bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col">
                                             <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-500 mb-1">{ev.type}</span>
                                             <h4 className="font-bold text-slate-800 text-sm mb-1">{ev.title}</h4>
-                                            <p className="text-xs text-slate-500 mb-2">{new Date(ev.date + (ev.date.includes('T') ? '' : 'T12:00:00')).toLocaleDateString()}</p>
+                                            <p className="text-xs text-slate-500 mb-2">{new Date(ev.date.split('T')[0] + 'T12:00:00').toLocaleDateString()}</p>
                                         </div>
                                     ))
                                 )}
@@ -2086,8 +2086,8 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                             {allCalendarEvents.filter(ev => ev.date >= new Date().toISOString().split('T')[0]).sort((a, b) => a.date.localeCompare(b.date)).map(ev => (
                                 <div key={ev.id} className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex items-start gap-4">
                                     <div className="bg-indigo-50 w-12 h-12 rounded-lg flex flex-col items-center justify-center text-indigo-600 flex-shrink-0">
-                                        <span className="text-xs font-bold uppercase">{new Date(ev.date + (ev.date.includes('T') ? '' : 'T12:00:00')).toLocaleString('default', { month: 'short' })}</span>
-                                        <span className="text-lg font-black">{new Date(ev.date + (ev.date.includes('T') ? '' : 'T12:00:00')).getDate()}</span>
+                                        <span className="text-xs font-bold uppercase">{new Date(ev.date.split('T')[0] + 'T12:00:00').toLocaleString('default', { month: 'short' })}</span>
+                                        <span className="text-lg font-black">{new Date(ev.date.split('T')[0] + 'T12:00:00').getDate()}</span>
                                     </div>
                                     <div>
                                         <h4 className="font-bold text-slate-800">{ev.title}</h4>
