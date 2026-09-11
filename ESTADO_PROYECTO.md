@@ -156,6 +156,15 @@ Si necesitas hacer modificaciones, aquí es donde debes buscar:
 
 ---
 
+### 13. Mejoras en Calendario y Portal de Padres (Septiembre 11, 2026)
+- **Implementación:** Se añadió prioridad a eventos importantes y se corrigió el manejo de zonas horarias en las fechas del calendario.
+- **Detalles:**
+  - **Avisos Prioritarios:** Se agregó la opción `showInParentPortal` en el modelo `SchoolEvent`. Al registrar un evento desde el Panel de Control, ahora se puede marcar una casilla para que este evento aparezca destacado como un banner principal en el inicio del Portal de Padres, por encima del Cuadro de Honor.
+  - **Zonas Horarias (Timezones):** Se implementó una corrección en el parseo de fechas (`YYYY-MM-DD`) extraídas de la base de datos (que vienen en formato ISO `...T00:00:00Z`). Ahora el sistema corta la hora heredada del servidor y reinyecta artificialmente el mediodía local (`T12:00:00`), previniendo que los eventos se recorran un día hacia atrás en el renderizado final o al compartirlos por WhatsApp.
+  - **Modal Interactivo:** Se habilitó que la vista de "Agenda Escolar" dentro del Panel de Docentes despliegue un modal con los detalles completos del evento al hacer clic sobre el mismo.
+
+---
+
 ## 4. Guía para Nuevas Modificaciones y Despliegue
 
 - **Base de Datos**: La base de datos de producción opera en MySQL en Hostinger. Las credenciales se gestionan a través de variables de entorno en el servidor (`server/.env`).
@@ -168,5 +177,5 @@ Si necesitas hacer modificaciones, aquí es donde debes buscar:
   ```
 
 ---
-*Documento actualizado al 10 de Septiembre de 2026.*
+*Documento actualizado al 11 de Septiembre de 2026.*
 
