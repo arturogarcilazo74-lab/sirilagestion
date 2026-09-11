@@ -1470,7 +1470,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                     <h3 className="text-xl font-black mb-1">{event.title}</h3>
                                     <p className="text-sm font-medium text-indigo-50 mb-3 flex items-center gap-1">
                                         <Clock size={14} />
-                                        {new Date(event.date + 'T12:00:00').toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                                        {new Date(event.date + (event.date.includes('T') ? '' : 'T12:00:00')).toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                                     </p>
                                     {event.description && (
                                         <div className="bg-white/10 p-3 rounded-xl border border-white/20 text-sm">
