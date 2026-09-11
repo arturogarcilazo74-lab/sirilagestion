@@ -695,13 +695,17 @@ export const DashboardView: React.FC<DashboardProps> = ({
                         <span className="text-xs uppercase">{month}</span>
                         <span className="text-xl leading-none">{day}</span>
                       </div>
-                      <div className="flex-1">
+                      <div 
+                        className="flex-1 cursor-pointer"
+                        onClick={() => openEventModal(evt)}
+                      >
                         <div className="flex justify-between items-start">
                           <h4 className="font-bold text-slate-800 line-clamp-1">{evt.title}</h4>
-                          <div className="flex opacity-0 group-hover:opacity-100 transition-opacity gap-1">
+                          <div className="flex opacity-0 group-hover:opacity-100 transition-opacity gap-1" onClick={e => e.stopPropagation()}>
                             <button
-                              onClick={() => {
-                                const msg = getEventMessage(evt.title, new Date(evt.date).toLocaleDateString(), evt.description);
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const msg = getEventMessage(evt.title, new Date(evt.date + (evt.date.includes('T') ? '' : 'T12:00:00')).toLocaleDateString(), evt.description);
                                 // For general events, we open WhatsApp without a phone so the user can choose a group or contact
                                 const encodedMsg = encodeURIComponent(msg);
                                 window.open(`https://wa.me/?text=${encodedMsg}`, '_blank');
@@ -711,12 +715,12 @@ export const DashboardView: React.FC<DashboardProps> = ({
                             >
                               <MessageCircle size={14} />
                             </button>
-                            <button onClick={() => openEventModal(evt)} className="text-blue-500 hover:bg-blue-50 p-1 rounded"><Edit2 size={14} /></button>
-                            <button onClick={() => onDeleteEvent && onDeleteEvent(evt.id)} className="text-red-500 hover:bg-red-50 p-1 rounded"><Trash2 size={14} /></button>
+                            <button onClick={(e) => { e.stopPropagation(); openEventModal(evt); }} className="text-blue-500 hover:bg-blue-50 p-1 rounded"><Edit2 size={14} /></button>
+                            <button onClick={(e) => { e.stopPropagation(); onDeleteEvent && onDeleteEvent(evt.id); }} className="text-red-500 hover:bg-red-50 p-1 rounded"><Trash2 size={14} /></button>
                           </div>
                         </div>
                         <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{evt.description}</p>
-                        <span className={`inline - block mt - 2 text - [10px] font - bold px - 2 py - 0.5 rounded - full ${EVENT_COLORS[evt.type]} `}>
+                        <span className={`inline-block mt-2 text-[10px] font-bold px-2 py-0.5 rounded-full ${EVENT_COLORS[evt.type]}`}>
                           {evt.type === 'ACTIVITY' ? 'Actividad' : evt.type === 'EXAM' ? 'Examen' : evt.type === 'MEETING' ? 'Junta' : 'Suspensión'}
                         </span>
                       </div>
