@@ -167,6 +167,7 @@ export interface SchoolEvent {
   description?: string;
   targetGroup?: string; // 'GLOBAL' (Director) or specific group id/name
   assignedTo?: string[] | 'ALL'; // List of Student IDs or 'ALL'
+  showInParentPortal?: boolean;
 }
 
 export interface StaffMember {

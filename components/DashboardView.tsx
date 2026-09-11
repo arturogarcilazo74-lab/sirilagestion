@@ -408,7 +408,8 @@ export const DashboardView: React.FC<DashboardProps> = ({
         title: event.title,
         date: event.date,
         type: event.type,
-        description: event.description || ''
+        description: event.description || '',
+        showInParentPortal: event.showInParentPortal || false
       });
     } else {
       setEditingEventId(null);
@@ -416,7 +417,8 @@ export const DashboardView: React.FC<DashboardProps> = ({
         title: '',
         date: getLocalDateString(),
         type: 'ACTIVITY',
-        description: ''
+        description: '',
+        showInParentPortal: false
       });
     }
     setIsEventModalOpen(true);
@@ -428,7 +430,8 @@ export const DashboardView: React.FC<DashboardProps> = ({
       title: '',
       date: dateStr,
       type: 'ACTIVITY',
-      description: ''
+      description: '',
+      showInParentPortal: false
     });
     setIsEventModalOpen(true);
   };
@@ -1577,6 +1580,18 @@ export const DashboardView: React.FC<DashboardProps> = ({
                   className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white text-slate-900 h-24 resize-none"
                   placeholder="Detalles adicionales..."
                 />
+              </div>
+
+              <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-slate-700 cursor-pointer p-2 bg-indigo-50 rounded-lg border border-indigo-100">
+                  <input
+                    type="checkbox"
+                    checked={eventFormData.showInParentPortal || false}
+                    onChange={e => setEventFormData({ ...eventFormData, showInParentPortal: e.target.checked })}
+                    className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+                  />
+                  <span>Mostrar como <strong className="text-indigo-700">aviso principal</strong> en el Portal de Padres</span>
+                </label>
               </div>
 
               <div className="pt-2 flex gap-3">

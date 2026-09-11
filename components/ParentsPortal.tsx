@@ -3,7 +3,7 @@ import { api } from '../services/api';
 import { OFFICIAL_CALENDAR_EVENTS_2026_2027 } from '../services/schoolCalendarUtils';
 import { calculateStudentMetrics, getTrimesterAvg } from '../services/gradeUtils';
 import { Student, SchoolEvent, Notification, Assignment, DraggableItem, InteractiveZone, BehaviorLog } from '../types';
-import { Bell, Calendar as CalendarIcon, LogOut, MessageCircle, User, CheckCircle, Smartphone, Send, Play, Trophy, HelpCircle, X, Check, AlertCircle, BookOpen, Circle, Move, Trash2, LayoutDashboard, Medal, Star, Award, Users, ChevronRight, FileText, Download } from 'lucide-react';
+import { Bell, Calendar as CalendarIcon, LogOut, MessageCircle, User, CheckCircle, Smartphone, Send, Play, Trophy, HelpCircle, X, Check, AlertCircle, BookOpen, Circle, Move, Trash2, LayoutDashboard, Medal, Star, Award, Users, ChevronRight, FileText, Download, Clock } from 'lucide-react';
 import { sendWhatsAppMessage } from '../whatsappUtils';
 
 const CelebrationCanvas: React.FC = () => {
@@ -1454,6 +1454,33 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                 {/* TAB CONTENT RENDER */}
                 {currentTab === 'HOME' && (
                     <div className="space-y-6 animate-fadeIn pb-24">
+                        {/* HIGH PRIORITY EVENTS BANNER */}
+                        {events.filter(e => e.showInParentPortal).map(event => (
+                            <div key={event.id} className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-3xl p-6 text-white shadow-lg relative overflow-hidden animate-slideDown">
+                                <div className="absolute top-0 right-0 p-4 opacity-20 transform translate-x-2 -translate-y-2">
+                                    <Bell size={80} className="animate-pulse" />
+                                </div>
+                                <div className="relative z-10">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <div className="bg-white/20 p-1.5 rounded-lg backdrop-blur-md">
+                                            <CalendarIcon size={16} className="text-white" />
+                                        </div>
+                                        <span className="text-xs font-bold uppercase tracking-wider text-indigo-100">Aviso Importante</span>
+                                    </div>
+                                    <h3 className="text-xl font-black mb-1">{event.title}</h3>
+                                    <p className="text-sm font-medium text-indigo-50 mb-3 flex items-center gap-1">
+                                        <Clock size={14} />
+                                        {new Date(event.date + 'T12:00:00').toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                                    </p>
+                                    {event.description && (
+                                        <div className="bg-white/10 p-3 rounded-xl border border-white/20 text-sm">
+                                            {event.description}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+
                         {/* HONOR ROLL SECTION - ALWAYS RENDERED FIRST */}
                         {(() => {
                             if (!student) return null;
