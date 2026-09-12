@@ -165,6 +165,14 @@ Si necesitas hacer modificaciones, aquí es donde debes buscar:
 
 ---
 
+### 14. Optimización de Memoria y Rendimiento IA (Septiembre 11, 2026)
+- **Implementación:** Se solucionó un problema crítico que provocaba cuelgues, cierres inesperados de la aplicación y el agotamiento de cuotas de red e inteligencia artificial (Gemini API).
+- **Detalles:**
+  - **Uso de Memoria (LocalStorage Quota):** La aplicación re-escribía todo el caché local de estudiantes cada 30 segundos de manera incondicional, incluso si los datos en el servidor no habían cambiado, provocando bloqueos del hilo principal (Main Thread) y eventualmente `QuotaExceededError`. Se implementó un sistema de comprobación profunda (`useRef` + `JSON.stringify(hash)`) en la sincronización automática (`useAppStore.ts`), de manera que la aplicación ahora omite la re-escritura y el re-renderizado si no hay datos nuevos reales en el servidor.
+  - **Bucle Infinito de IA:** El Panel de Control (`DashboardView.tsx`) ejecutaba el análisis predictivo de rendimiento del grupo automáticamente cada vez que los datos "cambiaban". Debido a la sobrescritura mencionada arriba, la IA era llamada cada 30 segundos, congelando la aplicación y agotando el límite de peticiones de Gemini (Too Many Requests). La interfaz fue modificada para que el botón de Análisis IA se active exclusivamente a voluntad del usuario o una sola vez por sesión.
+
+---
+
 ## 4. Guía para Nuevas Modificaciones y Despliegue
 
 - **Base de Datos**: La base de datos de producción opera en MySQL en Hostinger. Las credenciales se gestionan a través de variables de entorno en el servidor (`server/.env`).
