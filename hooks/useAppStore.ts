@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { api } from '../services/api';
 import { Student, Assignment, BehaviorLog, SchoolEvent, SchoolConfig, FinanceEvent, AttendanceStatus, StaffTask, Book, StaffAttendanceRecord, CTEGame, CTEPresentation, CTEGameResult } from '../types';
 import { MOCK_ASSIGNMENTS, MOCK_EVENTS, MOCK_STUDENTS, DEFAULT_CONFIG } from '../constants';
@@ -223,6 +223,7 @@ export const useAppStore = () => {
     }, [cteGameResults]);
 
     const [isServerOffline, setIsServerOffline] = useState(false);
+    const lastSyncHashRef = useRef<string>('');
 
     // -- AUTO-SYNC FROM SERVER UTIL --
     const reloadFromServer = async () => {
@@ -231,7 +232,14 @@ export const useAppStore = () => {
             const result = await api.checkStatus();
 
             if (result) {
-                console.log("%c✓ Datos recibidos del servidor", "color: green; font-weight: bold;");
+                // Optimización crítica: Evitar re-renderizados y escrituras a localStorage si los datos no cambiaron.
+                const currentHash = JSON.stringify(result);
+                if (currentHash === lastSyncHashRef.current) {
+                    return true;
+                }
+                lastSyncHashRef.current = currentHash;
+
+                console.log("%c✓ Datos recibidos del servidor (con cambios)", "color: green; font-weight: bold;");
                 if (result.schoolConfig) setSchoolConfig(result.schoolConfig);
 
                 if (!result.isEmpty) {

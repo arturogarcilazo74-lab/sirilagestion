@@ -240,7 +240,7 @@ export const DashboardView: React.FC<DashboardProps> = ({
   const [loadingRisk, setLoadingRisk] = useState(false);
   const [riskPlan, setRiskPlan] = useState<string | null>(null);
 
-  useEffect(() => {
+  const runAiAnalysis = () => {
     if (students.length > 0 && (import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.VITE_API_KEY)) {
       setLoadingAi(true);
       analyzeClassPerformance(students)
@@ -250,8 +250,17 @@ export const DashboardView: React.FC<DashboardProps> = ({
           setAiInsight("Error al conectar con Gemini. Verifique su API Key.");
         })
         .finally(() => setLoadingAi(false));
+    } else {
+      setAiInsight("No hay estudiantes suficientes o falta configurar la API Key de Gemini.");
     }
-  }, [students]);
+  };
+
+  useEffect(() => {
+    // Solo correr el análisis una vez al cargar si ya hay estudiantes y no se ha analizado
+    if (students.length > 0 && !aiInsight && !loadingAi) {
+      runAiAnalysis();
+    }
+  }, []); // Run only on mount or when manually triggered
 
   useEffect(() => {
     // Reset risk plan when modal closes or student changes
@@ -639,7 +648,16 @@ export const DashboardView: React.FC<DashboardProps> = ({
               <Sparkles className="w-6 h-6 text-yellow-300" />
             </div>
             <div>
-              <h3 className="font-bold text-xl mb-1 text-white tracking-tight">Análisis IA del Grupo</h3>
+              <div className="flex items-center gap-3 mb-1">
+                <h3 className="font-bold text-xl text-white tracking-tight">Análisis IA del Grupo</h3>
+                <button
+                  onClick={runAiAnalysis}
+                  disabled={loadingAi}
+                  className="px-3 py-1 bg-white/20 hover:bg-white/30 text-white rounded-lg text-xs font-bold shadow-sm transition-colors"
+                >
+                  {loadingAi ? "Analizando..." : "Actualizar Análisis"}
+                </button>
+              </div>
               <p className="text-indigo-50 text-sm leading-relaxed font-medium opacity-90">
                 {loadingAi ? "Analizando datos del grupo..." : aiInsight || "Agrega estudiantes y conecta Gemini para obtener recomendaciones."}
               </p>
