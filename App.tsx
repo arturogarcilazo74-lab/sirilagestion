@@ -220,6 +220,12 @@ const App: React.FC = () => {
           <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white/80 backdrop-blur-md">
             <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-4"></div>
             <p className="text-indigo-900 font-bold animate-pulse">Sincronizando datos...</p>
+            <button 
+              onClick={() => store.setIsLoading(false)} 
+              className="mt-6 px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 text-sm font-medium transition-colors"
+            >
+              Continuar Offline / Saltar
+            </button>
           </div>
         )}
         <LandingView
@@ -242,6 +248,12 @@ const App: React.FC = () => {
         <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white/80 backdrop-blur-md">
           <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-4"></div>
           <p className="text-indigo-900 font-bold animate-pulse">Sincronizando datos...</p>
+          <button 
+            onClick={() => store.setIsLoading(false)} 
+            className="mt-6 px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 text-sm font-medium transition-colors"
+          >
+            Continuar Offline / Saltar
+          </button>
         </div>
       )}
 

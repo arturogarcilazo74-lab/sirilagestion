@@ -171,6 +171,13 @@ Si necesitas hacer modificaciones, aquí es donde debes buscar:
   - **Uso de Memoria (LocalStorage Quota):** La aplicación re-escribía todo el caché local de estudiantes cada 30 segundos de manera incondicional, incluso si los datos en el servidor no habían cambiado, provocando bloqueos del hilo principal (Main Thread) y eventualmente `QuotaExceededError`. Se implementó un sistema de comprobación profunda (`useRef` + `JSON.stringify(hash)`) en la sincronización automática (`useAppStore.ts`), de manera que la aplicación ahora omite la re-escritura y el re-renderizado si no hay datos nuevos reales en el servidor.
   - **Bucle Infinito de IA:** El Panel de Control (`DashboardView.tsx`) ejecutaba el análisis predictivo de rendimiento del grupo automáticamente cada vez que los datos "cambiaban". Debido a la sobrescritura mencionada arriba, la IA era llamada cada 30 segundos, congelando la aplicación y agotando el límite de peticiones de Gemini (Too Many Requests). La interfaz fue modificada para que el botón de Análisis IA se active exclusivamente a voluntad del usuario o una sola vez por sesión.
 
+### 15. Corrección de Sincronización Infinita (Septiembre 13, 2026)
+- **Implementación:** Se añadió un límite de tiempo a la conexión inicial con el servidor y una vía de escape manual para evitar el bloqueo total de la aplicación.
+- **Detalles:**
+  - **Fallo en conexión:** Cuando el servidor de base de datos no respondía a tiempo, la petición de red (`fetch` en `/sirila-v1/full-state`) quedaba suspendida de forma indefinida, atrapando a los usuarios en la pantalla de "Sincronizando datos...".
+  - **Timeout:** Se implementó el uso de `AbortController` en `services/api.ts` con un límite de 8 segundos. Si el servidor no responde en este lapso, la petición se cancela forzosamente y el sistema transita al Modo Offline, ocultando la pantalla de carga de inmediato.
+  - **Botón de Rescate:** Se añadió un botón explícito de "Continuar Offline / Saltar" directamente en la capa de carga en `App.tsx`, el cual permite al usuario forzar la ocultación manual de la ventana de carga si por alguna razón la red es intermitente o la sincronización excede su paciencia, permitiendo el ingreso inmediato a la plataforma.
+
 ---
 
 ## 4. Guía para Nuevas Modificaciones y Despliegue

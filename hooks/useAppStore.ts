@@ -1364,6 +1364,7 @@ export const useAppStore = () => {
         cteGameResults,
         handleSaveCTEGameResult,
         handleDeleteCTEGameResults,
-        isLoading
+        isLoading,
+        setIsLoading
     };
 };

@@ -192,14 +192,19 @@ export const api = {
     // Check if DB is empty / Alive Check
     checkStatus: async () => {
         const url = `${API_URL}/full-state?_t=${Date.now()}`;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 seconds timeout
+        
         try {
-            const res = await fetch(url);
+            const res = await fetch(url, { signal: controller.signal });
+            clearTimeout(timeoutId);
             if (!res.ok) {
                 console.error(`[API] checkStatus failed with status: ${res.status} (${res.statusText})`);
                 throw new Error(`Server error: ${res.status}`);
             }
             return await res.json();
         } catch (e: any) {
+            clearTimeout(timeoutId);
             console.error(`[API] checkStatus Network/URL Error: ${e.message}`, { url });
             throw e;
         }
