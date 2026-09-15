@@ -76,7 +76,12 @@ const generateWithFallback = async (input: string | any[], config?: any): Promis
   }
 
   const errors: string[] = [];
-  const parts = Array.isArray(input) ? input : [{ text: input }];
+  
+  const languageRule = "\n\nREGLA ESTRICTA E IMPORTANTE: Tu respuesta DEBE estar completamente en idioma ESPAÑOL. NO incluyas notas al margen, traducciones, ni tu razonamiento interno. Genera ÚNICAMENTE el contenido solicitado listo para usarse y sin metadatos de contexto.";
+  const parts = Array.isArray(input) ? [...input] : [{ text: input }];
+  
+  // Apply language rule globally to prevent English hallucinations
+  parts.push({ text: languageRule });
 
   for (const model of modelsToTry) {
     try {
