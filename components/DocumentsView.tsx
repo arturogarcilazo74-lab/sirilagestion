@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Student, SchoolConfig, Assignment } from '../types';
 import { generateDocumentContent } from '../services/ai';
 import { generateStudentAnalysis } from '../services/ai';
-import { getTeacherForStudent, generateAttendanceListPDF, generateDashboardReportPDF, generateReportCardDeliveryListPDF } from '../services/pdfGenerator';
+import { getTeacherForStudent, generateAttendanceListPDF, generateDashboardReportPDF, generateReportCardDeliveryListPDF, generateFirstMeetingPDF } from '../services/pdfGenerator';
 import { calculateStudentMetrics, getTrimesterAvg, getStudentGlobalAverage } from '../services/gradeUtils';
 import { FileText, Download, Printer, Copy, CheckCircle, AlertTriangle, Calendar, User, FileOutput, Bus, Upload, ClipboardList, Award, Activity } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
@@ -646,6 +646,27 @@ Docente:               ${student ? getTeacherForStudent(config, student.group) :
             try {
                 await generateDashboardReportPDF(students, config, assignments);
                 setGeneratedContent('✅ PDF del Reporte de Rendimiento, Promedios y Plan de Intervención generado y descargado exitosamente.\n\nRevisa tu carpeta de descargas.');
+            } catch (error) {
+                console.error("Error generando PDF:", error);
+                setGeneratedContent(`Error al generar el PDF: ${error instanceof Error ? error.message : String(error)}`);
+            } finally {
+                setIsGenerating(false);
+            }
+            return;
+        }
+
+        // --- PRIMERA REUNION DE PADRES (PDF DIRECTO CON FORMATO ESPECIFICO) ---
+        if (selectedType === 'PRIMERA_REUNION_PADRES') {
+            try {
+                const currentGroup = student ? (student.group || config.gradeGroup) : (students[0] ? (students[0].group || config.gradeGroup) : config.gradeGroup);
+                const currentTeacher = student ? getTeacherForStudent(config, student.group) : (students[0] ? getTeacherForStudent(config, students[0].group) : config.teacherName);
+                
+                await generateFirstMeetingPDF(config, {
+                    date: citationDate || new Date().toLocaleDateString(),
+                    groupName: currentGroup,
+                    teacherName: currentTeacher
+                });
+                setGeneratedContent('✅ Acta de Primera Reunión de Padres generada y descargada exitosamente en PDF.\n\nRevisa tu carpeta de descargas.');
             } catch (error) {
                 console.error("Error generando PDF:", error);
                 setGeneratedContent(`Error al generar el PDF: ${error instanceof Error ? error.message : String(error)}`);

@@ -2603,3 +2603,143 @@ export const generateFinanceReportPDF = (
 
     doc.save(`Reporte_Financiero_${groupName.replace(/\s+/g, '_')}.pdf`);
 };
+
+export const generateFirstMeetingPDF = async (
+    config: SchoolConfig,
+    options: {
+        date: string;
+        groupName: string;
+        teacherName: string;
+    }
+) => {
+    const doc = new jsPDF('p', 'mm', 'letter');
+    const pageWidth = doc.internal.pageSize.width;
+    const margin = 15;
+    
+    // Pre-load logo
+    let printConfig = { ...config };
+    if (config.schoolLogo && !config.schoolLogo.startsWith('data:')) {
+        const base64Logo = await getBase64ImageFromUrl(config.schoolLogo);
+        if (base64Logo) printConfig.schoolLogo = base64Logo;
+    }
+
+    // Header with logo
+    if (printConfig.schoolLogo && printConfig.schoolLogo.startsWith('data:')) {
+        try {
+            const imgFormat = printConfig.schoolLogo.includes('image/png') ? 'PNG' : 'JPEG';
+            doc.addImage(printConfig.schoolLogo, imgFormat, margin, 10, 20, 20);
+        } catch (e) {
+            console.warn('Logo error', e);
+        }
+    }
+
+    doc.setFontSize(14);
+    doc.setTextColor(COLORS.primary[0], COLORS.primary[1], COLORS.primary[2]);
+    doc.setFont('helvetica', 'bold');
+    doc.text(printConfig.schoolName.toUpperCase(), pageWidth / 2, 18, { align: 'center' });
+
+    doc.setFontSize(8);
+    doc.setTextColor(COLORS.secondary[0], COLORS.secondary[1], COLORS.secondary[2]);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`CCT: ${printConfig.cct || ''} | Zona: ${printConfig.zone || ''} | Sector: ${printConfig.sector || 'N/A'}`, pageWidth / 2, 23, { align: 'center' });
+    doc.text(`Ciclo Escolar: ${printConfig.schoolYear || new Date().getFullYear().toString()}`, pageWidth / 2, 27, { align: 'center' });
+
+    doc.setDrawColor(COLORS.primary[0], COLORS.primary[1], COLORS.primary[2]);
+    doc.setLineWidth(0.5);
+    doc.line(margin, 31, pageWidth - margin, 31);
+
+    doc.setFontSize(14);
+    doc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2]);
+    doc.setFont('helvetica', 'bold');
+    doc.text('ACTA DE PRIMERA REUNIÓN DE PADRES DE FAMILIA', pageWidth / 2, 40, { align: 'center' });
+
+    // Meeting details box
+    doc.setFillColor(245, 247, 250);
+    doc.roundedRect(margin, 45, pageWidth - (margin * 2), 15, 2, 2, 'F');
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Grupo:', margin + 5, 54);
+    doc.setFont('helvetica', 'normal');
+    doc.text(options.groupName, margin + 20, 54);
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text('Docente:', margin + 55, 54);
+    doc.setFont('helvetica', 'normal');
+    doc.text(options.teacherName, margin + 75, 54);
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text('Fecha:', margin + 140, 54);
+    doc.setFont('helvetica', 'normal');
+    doc.text(options.date, margin + 155, 54);
+
+    let y = 70;
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Orden del día y Acuerdos:', margin, y);
+    y += 8;
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    const bulletPoints = [
+        "1. Bienvenida e inicio del ciclo escolar.",
+        "2. Presentación y revisión de la lista de materiales requeridos.",
+        "3. Información sobre la evaluación diagnóstica de los alumnos.",
+        "4. Toma de fotografía de la credencial de elector (INE) de las delegadas por ambos lados.",
+        "5. Asignación de responsabilidades y apoyo para próximos eventos (Kermés del viernes 18 de septiembre).",
+        "6. Apoyo en la vestimenta de los alumnos para la representación del Día de la Independencia (18 de septiembre).",
+        "7. Uso responsable y habitual del portal de padres en el sistema escolar.",
+        "8. Selección de tres delegadas de grupo que integrarán los comités de participación y asociación de padres:"
+    ];
+    
+    bulletPoints.forEach(pt => {
+        doc.text(pt, margin, y);
+        y += 6;
+    });
+
+    y += 4;
+    
+    // Draw 3 delegate boxes
+    doc.setFontSize(8);
+    doc.setDrawColor(150, 150, 150);
+    doc.setLineWidth(0.2);
+    
+    for (let i = 1; i <= 3; i++) {
+        doc.setFillColor(255, 255, 255);
+        doc.rect(margin, y, pageWidth - (margin * 2), 35);
+        
+        doc.setFont('helvetica', 'bold');
+        doc.text(`DELEGADA(O) ${i}:`, margin + 2, y + 5);
+        doc.setFont('helvetica', 'normal');
+        
+        doc.line(margin, y + 7, pageWidth - margin, y + 7);
+        
+        doc.text('NOMBRE DEL PADRE, MADRE O TUTOR:', margin + 2, y + 11);
+        doc.line(margin, y + 13, pageWidth - margin, y + 13);
+        
+        doc.text('TELÉFONO:', margin + 2, y + 17);
+        doc.text('CORREO:', margin + 70, y + 17);
+        doc.line(margin, y + 19, pageWidth - margin, y + 19);
+        
+        doc.text('DIRECCIÓN:', margin + 2, y + 23);
+        doc.line(margin, y + 25, pageWidth - margin, y + 25);
+        
+        doc.text('OCUPACIÓN:', margin + 2, y + 29);
+        doc.text('ALUMNO(A):', margin + 80, y + 29);
+        doc.line(margin, y + 31, pageWidth - margin, y + 31);
+        
+        doc.text('FIRMA:', margin + 2, y + 35);
+        
+        y += 40;
+    }
+    
+    // Final signature for Teacher
+    y += 10;
+    doc.line(pageWidth / 2 - 30, y, pageWidth / 2 + 30, y);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Firma del Docente', pageWidth / 2, y + 5, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+    doc.text(options.teacherName, pageWidth / 2, y + 10, { align: 'center' });
+
+    doc.save(`Acta_Primera_Reunion_${options.groupName.replace(/\s+/g, '_')}.pdf`);
+};
