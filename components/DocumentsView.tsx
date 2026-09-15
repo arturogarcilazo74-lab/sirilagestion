@@ -31,7 +31,7 @@ interface DocumentsViewProps {
     assignments?: Assignment[];
 }
 
-type DocumentType = 'INCIDENCIA' | 'CITATORIO' | 'FICHA_DESCRIPTIVA' | 'PLANEACION' | 'ACTA_HECHOS' | 'PERMISO_SALIDA' | 'AUTORIZACION_EVENTO' | 'PRESENTACION_RESULTADOS' | 'OBSERVACIONES_BOLETA' | 'INFORME_PADRES' | 'INFORME_ACTIVIDADES' | 'LISTA_ASISTENCIA_PADRES' | 'PLAN_REZAGO' | 'REPORTE_RENDIMIENTO_GRUPO' | 'LISTA_ENTREGA_BOLETAS' | 'SEMAFORO_ESCOLAR';
+type DocumentType = 'INCIDENCIA' | 'CITATORIO' | 'FICHA_DESCRIPTIVA' | 'PLANEACION' | 'ACTA_HECHOS' | 'PERMISO_SALIDA' | 'AUTORIZACION_EVENTO' | 'PRESENTACION_RESULTADOS' | 'OBSERVACIONES_BOLETA' | 'INFORME_PADRES' | 'INFORME_ACTIVIDADES' | 'LISTA_ASISTENCIA_PADRES' | 'PLAN_REZAGO' | 'REPORTE_RENDIMIENTO_GRUPO' | 'LISTA_ENTREGA_BOLETAS' | 'SEMAFORO_ESCOLAR' | 'PRIMERA_REUNION_PADRES';
 
 export const DocumentsView: React.FC<DocumentsViewProps> = ({ students, config, initialType, assignments = [] }) => {
     const [selectedType, setSelectedType] = useState<DocumentType>(initialType || 'INCIDENCIA');
@@ -848,6 +848,7 @@ Docente:               ${student ? getTeacherForStudent(config, student.group) :
                                 { id: 'FICHA_DESCRIPTIVA', label: 'Ficha Descriptiva', icon: User },
                                 { id: 'PLANEACION', label: 'Planeación Didáctica', icon: FileText },
                                 { id: 'PRESENTACION_RESULTADOS', label: 'Presentación de Resultados (Junta)', icon: FileOutput },
+                                { id: 'PRIMERA_REUNION_PADRES', label: '1ra Reunión de Padres', icon: FileOutput },
                                 { id: 'OBSERVACIONES_BOLETA', label: 'Observaciones Boleta', icon: FileText },
                             ].map((type) => (
                                 <button
@@ -890,7 +891,7 @@ Docente:               ${student ? getTeacherForStudent(config, student.group) :
                                 </div>
                             )}
 
-                             {selectedType !== 'PLANEACION' && selectedType !== 'PRESENTACION_RESULTADOS' && selectedType !== 'LISTA_ASISTENCIA_PADRES' && selectedType !== 'LISTA_ENTREGA_BOLETAS' && selectedType !== 'PLAN_REZAGO' && selectedType !== 'REPORTE_RENDIMIENTO_GRUPO' && selectedType !== 'SEMAFORO_ESCOLAR' && (
+                             {selectedType !== 'PLANEACION' && selectedType !== 'PRESENTACION_RESULTADOS' && selectedType !== 'LISTA_ASISTENCIA_PADRES' && selectedType !== 'LISTA_ENTREGA_BOLETAS' && selectedType !== 'PLAN_REZAGO' && selectedType !== 'REPORTE_RENDIMIENTO_GRUPO' && selectedType !== 'SEMAFORO_ESCOLAR' && selectedType !== 'PRIMERA_REUNION_PADRES' && (
                                 <>
                                     {(selectedType === 'FICHA_DESCRIPTIVA' || selectedType === 'OBSERVACIONES_BOLETA') && isBatchMode ? (
                                         <div className="space-y-4 border border-indigo-100 bg-indigo-50/20 p-4 rounded-xl">
@@ -1323,7 +1324,7 @@ Docente:               ${student ? getTeacherForStudent(config, student.group) :
                                 className={`w-full py-3 rounded-xl font-bold shadow-lg transition-all active:scale-95 disabled:opacity-70 flex items-center justify-center gap-2 mt-4 ${selectedType === 'INFORME_PADRES' ? 'bg-teal-600 hover:bg-teal-700 text-white' : selectedType === 'INFORME_ACTIVIDADES' ? 'bg-orange-600 hover:bg-orange-700 text-white' : selectedType === 'LISTA_ASISTENCIA_PADRES' ? 'bg-purple-600 hover:bg-purple-700 text-white' : selectedType === 'PLAN_REZAGO' ? 'bg-amber-600 hover:bg-amber-700 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}
                             >
                                 {isGenerating ? <span className="animate-spin">✨</span> : <FileText size={18} />}
-                                {isGenerating ? (batchProgress || 'Generando...') : selectedType === 'FICHA_DESCRIPTIVA' && isBatchMode ? 'Generar Fichas en Lote' : selectedType === 'OBSERVACIONES_BOLETA' && isBatchMode ? 'Generar Observaciones en Lote' : selectedType === 'INFORME_PADRES' ? 'Generar Informe con Análisis IA' : selectedType === 'INFORME_ACTIVIDADES' ? 'Generar Informe de Actividades' : selectedType === 'LISTA_ASISTENCIA_PADRES' ? 'Generar Lista de Asistencia' : selectedType === 'PLAN_REZAGO' ? 'Generar Plan de Intervención' : selectedType === 'REPORTE_RENDIMIENTO_GRUPO' ? 'Generar Reporte de Rendimiento' : selectedType === 'SEMAFORO_ESCOLAR' ? 'Generar Semáforo' : 'Generar Documento'}
+                                {isGenerating ? (batchProgress || 'Generando...') : selectedType === 'FICHA_DESCRIPTIVA' && isBatchMode ? 'Generar Fichas en Lote' : selectedType === 'OBSERVACIONES_BOLETA' && isBatchMode ? 'Generar Observaciones en Lote' : selectedType === 'INFORME_PADRES' ? 'Generar Informe con Análisis IA' : selectedType === 'INFORME_ACTIVIDADES' ? 'Generar Informe de Actividades' : selectedType === 'LISTA_ASISTENCIA_PADRES' ? 'Generar Lista de Asistencia' : selectedType === 'PLAN_REZAGO' ? 'Generar Plan de Intervención' : selectedType === 'REPORTE_RENDIMIENTO_GRUPO' ? 'Generar Reporte de Rendimiento' : selectedType === 'SEMAFORO_ESCOLAR' ? 'Generar Semáforo' : selectedType === 'PRIMERA_REUNION_PADRES' ? 'Generar Acta de Reunión' : 'Generar Documento'}
                             </button>
                         </div>
                     </div>

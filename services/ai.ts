@@ -239,6 +239,34 @@ Usa un tono formal, analítico, empático y estructurado en Markdown limpio y le
     prompt = `Permiso/Pase de salida. Alumno: ${data.studentName}, Sale con: ${data.authorizedPerson}, Motivo: ${data.reason}, Fecha: ${data.dateTime}.`;
   } else if (type === 'AUTORIZACION_EVENTO') {
     prompt = `Carta de autorización para evento: ${data.eventName}. Alumno: ${data.studentName}, Lugar: ${data.eventLocation}, Fecha: ${data.dateTime}. Firma padre: ${data.guardianName}.`;
+  } else if (type === 'PRIMERA_REUNION_PADRES') {
+    prompt = `Actúa como un Especialista Docente de la Nueva Escuela Mexicana (NEM) en México.
+Diseña un documento / acta formal para la Primera Reunión con Padres de Familia.
+
+DATOS GENERALES:
+- Escuela: ${data.schoolName}
+- Docente: ${data.teacherName}
+- Grupo: ${data.groupName}
+- Fecha: ${data.date}
+
+Debe abordar obligatoriamente los siguientes temas en formato de orden del día o acta (usar Markdown formal estructurado):
+1. Inicio del ciclo escolar.
+2. Lista de materiales.
+3. Evaluación de diagnóstico.
+4. Seleccionar tres delegadas de grupo mismas que integrarán los comités de participación y asociación de padres de familia. Para cada una de las 3 delegadas, incluye exactamente los siguientes campos en blanco para que los llenen a mano:
+   - NOMBRE DEL PADRE, MADRE DE FAMILIA O TUTOR:
+   - TELÉFONO:
+   - CORREO:
+   - DIRECCIÓN:
+   - OCUPACIÓN:
+   - NOMBRE Y GRUPO DEL ALUMNO:
+   - FIRMA:
+5. Tomar foto de la INE de las delegadas (por los dos lados).
+6. Eventos próximos y responsables de apoyar en las actividades que se están próximas, como la kermés del viernes 18 de septiembre.
+7. Apoyar en la vestimenta de los alumnos en su participación de la representación del Día de la Independencia ese mismo día viernes 18 de septiembre.
+8. Uso responsable y habitual del sistema (portal de padres) para realizar las actividades.
+
+Estructura el documento de manera profesional, empática y formal. Incluye al final los espacios para firmas del Docente de Grupo.`;
   } else if (type === 'PRESENTACION_RESULTADOS') {
     prompt = `Guion para junta de padres. Escuela: ${data.schoolName}. Datos grupo: Promedio ${data.groupAverage}, Asistencia ${data.groupAttendance}%, Riesgo ${data.atRiskCount}. Puntos: Bienvenida, Logros, Oportunidades, Plan, Cierre. Tono NEM.`;
   } else if (type === 'OBSERVACIONES_BOLETA') {
