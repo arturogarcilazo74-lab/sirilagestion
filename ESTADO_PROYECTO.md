@@ -180,6 +180,16 @@ Si necesitas hacer modificaciones, aquí es donde debes buscar:
 
 ---
 
+### 16. Estabilidad, Documentos y Promedios Diagnósticos (Septiembre 15, 2026)
+- **Implementación:** Se realizaron ajustes profundos a la estabilidad del entorno, generación de actas, reglas del motor de IA y el cálculo de promedios para el inicio del ciclo.
+- **Detalles:**
+  - **Estabilidad de Entorno Móvil (Vite/HMR):** Se mitigó un error que provocaba recargas infinitas en dispositivos móviles al usar el sistema. Se configuró `vite.config.ts` para ignorar explícitamente el archivo `server/database.json` durante el desarrollo local, evitando que los cambios de base de datos disparen recargas en caliente del servidor frontend, y se implementó un proxy nativo hacia el backend en el puerto 5000.
+  - **Documento Directo (Primera Reunión de Padres):** La generación del documento "Primera Reunión de Padres" se desvinculó de la IA y se trasladó a una generación PDF directa en `pdfGenerator.ts`. Ahora incluye el encabezado escolar oficial (logo, CCT, ciclo) y 3 recuadros obligatorios listos para llenar a mano con los datos de las delegadas de la asociación de padres (INE, firmas).
+  - **Regla Estricta de IA en Español:** Se interceptó el núcleo de conexión a Gemini (`ai.ts`) para inyectar una instrucción inquebrantable a nivel global que obliga al modelo a generar todos los documentos exclusivamente en español, limpio y sin metadatos de razonamiento interno (hallucinaciones en inglés como `*Context:*`).
+  - **Fallback a Promedio Diagnóstico:** En `gradeUtils.ts`, el motor de métricas se actualizó para que, en caso de que los estudiantes aún no cuenten con promedios formales de trimestre (al inicio de clases), el sistema asigne automáticamente el promedio de la "Evaluación Diagnóstica" como base. Esto solucionó el problema en la "Presentación de Resultados" donde los promedios grupales aparecían en 0.0 y fallaba la detección de estudiantes en alerta o rezago.
+
+---
+
 ## 4. Guía para Nuevas Modificaciones y Despliegue
 
 - **Base de Datos**: La base de datos de producción opera en MySQL en Hostinger. Las credenciales se gestionan a través de variables de entorno en el servidor (`server/.env`).
@@ -192,5 +202,4 @@ Si necesitas hacer modificaciones, aquí es donde debes buscar:
   ```
 
 ---
-*Documento actualizado al 11 de Septiembre de 2026.*
-
+*Documento actualizado al 15 de Septiembre de 2026.*
