@@ -128,10 +128,12 @@ export const calculateStudentMetrics = (
   }
   const finalHonorScore = Number(honorScore.toFixed(1));
 
-  // Promedio final (siempre es el promedio académico basado estrictamente en las calificaciones)
+  // Promedio final (siempre es el promedio académico basado estrictamente en las calificaciones, o diagnóstico si no hay)
   let finalAvgStr = '-';
   if (academicAvg > 0) {
     finalAvgStr = academicAvg.toFixed(1);
+  } else if (diagnosticAvg > 0) {
+    finalAvgStr = diagnosticAvg.toFixed(1);
   }
 
   return {

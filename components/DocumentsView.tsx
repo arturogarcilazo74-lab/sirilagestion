@@ -128,7 +128,7 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({ students, config, 
                     const totalGirls = students.filter(s => s.sex === 'MUJER').length;
                     
                     let groupAverage = '0';
-                    const studentsWithGrades = students.filter(s => s.grades && s.grades.length > 0);
+                    const studentsWithGrades = students.filter(s => (s.grades && s.grades.length > 0) || s.diagnosticGrade);
                     if (studentsWithGrades.length > 0) {
                         const totalAvg = studentsWithGrades.reduce((acc, s) => acc + getStudentGlobalAverage(s), 0);
                         groupAverage = (totalAvg / studentsWithGrades.length).toFixed(1);
@@ -694,7 +694,7 @@ Docente:               ${student ? getTeacherForStudent(config, student.group) :
 
         if (students.length > 0) {
             // Group Average using shared function
-            const studentsWithGrades = students.filter(s => s.grades && s.grades.length > 0);
+            const studentsWithGrades = students.filter(s => (s.grades && s.grades.length > 0) || s.diagnosticGrade);
             if (studentsWithGrades.length > 0) {
                 const totalAvg = studentsWithGrades.reduce((acc, s) => acc + getStudentGlobalAverage(s), 0);
                 groupAverage = (totalAvg / studentsWithGrades.length).toFixed(1);
@@ -722,7 +722,7 @@ Docente:               ${student ? getTeacherForStudent(config, student.group) :
 
         // Detect students in academic lag (rezago)
         const laggingStudentsList = students.filter(s => {
-            const average = s.grades?.length ? getStudentGlobalAverage(s) : 0;
+            const average = getStudentGlobalAverage(s);
             const hasLowGrades = average > 0 && average < 6.5;
 
             const homeworkRate = s.totalAssignments > 0 ? (s.assignmentsCompleted / s.totalAssignments) : 1;
@@ -736,7 +736,7 @@ Docente:               ${student ? getTeacherForStudent(config, student.group) :
             return hasLowGrades || hasLowHomework || hasLowAttendance || s.behaviorPoints < 0;
         }).map(s => ({
             name: s.name,
-            average: s.grades?.length ? getStudentGlobalAverage(s).toFixed(1) : 'N/A',
+            average: getStudentGlobalAverage(s) > 0 ? getStudentGlobalAverage(s).toFixed(1) : 'N/A',
             bap: s.bap || 'Ninguna',
             usaer: s.usaer ? 'Sí' : 'No',
             attendance: Object.keys(s.attendance || {}).length > 0
