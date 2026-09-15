@@ -325,7 +325,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
             console.log(`[ParentsPortal] Student group: "${studentGroup}"`);
             console.log(`[ParentsPortal] Available targetGroups:`, [...new Set(all.map((a: any) => a.targetGroup || 'N/A'))]);
 
-            const filtered = all.filter(a => {
+            const filtered = all.filter((a: any) => {
                 // 1. Check basic visibility flag
                 if (a.isVisibleInParentsPortal === false) return false;
 
@@ -359,9 +359,9 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
 
             console.log(`[ParentsPortal] Loaded ${filtered.length}/${all.length} assignments for group ${groupId}`);
             if (filtered.length === 0) {
-                console.warn(`[ParentsPortal] No assignments found! Check targetGroup values. Available groups:`, [...new Set(all.map(a => a.targetGroup || 'N/A'))]);
+                console.warn(`[ParentsPortal] No assignments found! Check targetGroup values. Available groups:`, [...new Set(all.map((a: any) => a.targetGroup || 'N/A'))]);
             }
-            setAssignments(filtered.sort((a, b) => new Date(b.dueDate + (b.dueDate.includes('T') ? '' : 'T12:00:00')).getTime() - new Date(a.dueDate + (a.dueDate.includes('T') ? '' : 'T12:00:00')).getTime()));
+            setAssignments(filtered.sort((a: any, b: any) => new Date(b.dueDate + (b.dueDate.includes('T') ? '' : 'T12:00:00')).getTime() - new Date(a.dueDate + (a.dueDate.includes('T') ? '' : 'T12:00:00')).getTime()));
         } catch (e) {
             console.error('[ParentsPortal] Error loading assignments:', e);
         }
@@ -913,7 +913,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
 
         const rect = canvas.getBoundingClientRect();
         const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
-        const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.TouchEvent).clientY;
+        const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
 
         // Correct offset calculation with scaling
         const scaleX = canvas.width / rect.width;

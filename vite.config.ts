@@ -70,8 +70,15 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
+    watch: {
+      ignored: ['**/server/database.json']
+    },
     proxy: {
       '/api': {
+        target: 'http://127.0.0.1:3001',
+        changeOrigin: true,
+      },
+      '/sirila-v1': {
         target: 'http://127.0.0.1:3001',
         changeOrigin: true,
       }
