@@ -190,6 +190,15 @@ Si necesitas hacer modificaciones, aquí es donde debes buscar:
 
 ---
 
+### 17. Desglose de Calificaciones en Portal de Padres (Septiembre 17, 2026)
+- **Implementación:** Se añadió una visualización detallada de las calificaciones trimestrales y diagnósticas en la Ficha Técnica (Perfil) del portal de alumnos y padres.
+- **Detalles:**
+  - Los padres ahora pueden consultar en todo momento el promedio del Diagnóstico, Primer, Segundo y Tercer Trimestre dentro del portal.
+  - Además del promedio general, se integró una cuadrícula que despliega la nota exacta en los 4 campos formativos de la Nueva Escuela Mexicana: Lenguajes, Saberes, Ética y De lo Humano.
+  - Se incluyeron indicadores de advertencia visual (color rojo) para promedios y asignaturas con calificación menor a 6.0, facilitando la detección de rezago académico.
+
+---
+
 ## 4. Guía para Nuevas Modificaciones y Despliegue
 
 - **Base de Datos**: La base de datos de producción opera en MySQL en Hostinger. Las credenciales se gestionan a través de variables de entorno en el servidor (`server/.env`).
@@ -202,4 +211,4 @@ Si necesitas hacer modificaciones, aquí es donde debes buscar:
   ```
 
 ---
-*Documento actualizado al 15 de Septiembre de 2026.*
+*Documento actualizado al 17 de Septiembre de 2026.*
