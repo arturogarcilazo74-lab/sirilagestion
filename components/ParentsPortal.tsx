@@ -2248,6 +2248,59 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                     {student?.address || 'No registrado'}
                                 </p>
                             </div>
+
+                            {/* Section 5: Evaluaciones (Calificaciones) */}
+                            <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
+                                <h4 className="text-xs font-black uppercase tracking-widest text-blue-600 mb-4 flex items-center gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-600"></div>
+                                    Calificaciones Trimestrales
+                                </h4>
+                                <div className="space-y-4">
+                                    {[
+                                        { title: 'Evaluación Diagnóstica', gradeObj: student?.diagnosticGrade },
+                                        { title: 'Primer Trimestre', gradeObj: student?.grades?.[0] },
+                                        { title: 'Segundo Trimestre', gradeObj: student?.grades?.[1] },
+                                        { title: 'Tercer Trimestre', gradeObj: student?.grades?.[2] }
+                                    ].map((evalItem, idx) => (
+                                        <div key={idx} className={`pb-3 ${idx < 3 ? 'border-b border-slate-50' : ''}`}>
+                                            <div className="flex justify-between items-center mb-1">
+                                                <span className="text-xs font-bold text-slate-400 uppercase tracking-tighter">{evalItem.title}</span>
+                                                <span className={`text-sm font-bold ${(evalItem.gradeObj ? getTrimesterAvg(evalItem.gradeObj) : 0) >= 6 ? 'text-emerald-600' : (evalItem.gradeObj ? 'text-red-500' : 'text-slate-800')}`}>
+                                                    {evalItem.gradeObj ? getTrimesterAvg(evalItem.gradeObj).toFixed(1) : '-'}
+                                                </span>
+                                            </div>
+                                            {evalItem.gradeObj && (
+                                                <div className="grid grid-cols-2 gap-2 mt-2 bg-slate-50/50 p-2.5 rounded-xl border border-slate-100">
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-[10px] font-bold text-slate-500">Lenguajes</span>
+                                                        <span className={`text-[11px] font-black ${Number(evalItem.gradeObj.lenguajes) >= 6 ? 'text-slate-700' : 'text-red-500'}`}>
+                                                            {Number(evalItem.gradeObj.lenguajes).toFixed(1)}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-[10px] font-bold text-slate-500">Saberes</span>
+                                                        <span className={`text-[11px] font-black ${Number(evalItem.gradeObj.saberes) >= 6 ? 'text-slate-700' : 'text-red-500'}`}>
+                                                            {Number(evalItem.gradeObj.saberes).toFixed(1)}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-[10px] font-bold text-slate-500">Ética, Nat. y Soc.</span>
+                                                        <span className={`text-[11px] font-black ${Number(evalItem.gradeObj.etica) >= 6 ? 'text-slate-700' : 'text-red-500'}`}>
+                                                            {Number(evalItem.gradeObj.etica).toFixed(1)}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-[10px] font-bold text-slate-500">De lo Humano</span>
+                                                        <span className={`text-[11px] font-black ${Number(evalItem.gradeObj.humano) >= 6 ? 'text-slate-700' : 'text-red-500'}`}>
+                                                            {Number(evalItem.gradeObj.humano).toFixed(1)}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
 
                         
