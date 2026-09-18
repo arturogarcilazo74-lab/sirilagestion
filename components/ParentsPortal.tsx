@@ -1454,8 +1454,8 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                 {/* TAB CONTENT RENDER */}
                 {currentTab === 'HOME' && (
                     <div className="space-y-6 animate-fadeIn pb-24">
-                        {/* HIGH PRIORITY EVENTS BANNER */}
-                        {events.filter(e => e.showInParentPortal).map(event => (
+                        {/* HIGH PRIORITY EVENTS BANNER (Filter out past events) */}
+                        {events.filter(e => e.showInParentPortal && e.date >= new Date().toISOString().split('T')[0]).map(event => (
                             <div key={event.id} className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-3xl p-6 text-white shadow-lg relative overflow-hidden animate-slideDown">
                                 <div className="absolute top-0 right-0 p-4 opacity-20 transform translate-x-2 -translate-y-2">
                                     <Bell size={80} className="animate-pulse" />
@@ -2786,12 +2786,12 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                     Avisos y Notificaciones
                 </h3>
                 <div className="space-y-3">
-                    {notifications.length === 0 ? (
+                    {notifications.filter(n => (Date.now() - new Date(n.date).getTime()) < 14 * 24 * 60 * 60 * 1000).length === 0 ? (
                         <div className="bg-white p-6 rounded-2xl border border-slate-100 text-center text-slate-400 text-sm">
-                            No hay notificaciones nuevas.
+                            No hay notificaciones recientes.
                         </div>
                     ) : (
-                        notifications.map((notif) => (
+                        notifications.filter(n => (Date.now() - new Date(n.date).getTime()) < 14 * 24 * 60 * 60 * 1000).map((notif) => (
                             <div key={notif.id} className={`bg-white p-4 rounded-2xl border border-slate-100 shadow-sm relative overflow-hidden ${!notif.isRead ? 'border-l-4 border-l-orange-500' : ''}`}>
                                 <div className="flex justify-between items-start mb-1">
                                     <h4 className="font-bold text-slate-800 text-sm">{notif.title}</h4>
