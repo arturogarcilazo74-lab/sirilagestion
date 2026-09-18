@@ -78,6 +78,27 @@ export const useAppStore = () => {
                     return rest;
                 });
             }
+            if (key === 'SIRILA_CACHE_STUDENTS' && Array.isArray(data)) {
+                dataToSave = data.map((s: any) => {
+                    // Si el avatar es un Base64 muy largo, lo eliminamos del caché para no crashear la memoria de iOS
+                    if (s.avatar && s.avatar.length > 500) {
+                        const { avatar, ...rest } = s;
+                        return rest;
+                    }
+                    return s;
+                });
+            }
+            
+            // Para tareas pesadas, limpiamos el contenido HTML antes de convertir a string
+            if (key === 'SIRILA_CACHE_ASSIGNMENTS' && Array.isArray(data)) {
+                dataToSave = data.map((a: any) => {
+                    if (a.interactiveData?.type === 'HTML_GAME' && a.interactiveData.htmlContent && a.interactiveData.htmlContent.length > 50000) {
+                        return { ...a, interactiveData: { ...a.interactiveData, htmlContent: undefined, hasContent: true } };
+                    }
+                    return a;
+                });
+            }
+
             localStorage.setItem(key, JSON.stringify(dataToSave));
         } catch (e) {
             console.error(`ERROR CRÍTICO: No se pudo guardar ${key} en el dispositivo.`, e);
@@ -150,52 +171,31 @@ export const useAppStore = () => {
     // We separate these to ensure that if one (like students with images) exceeds quota, 
     // others (like config or tasks) are still saved.
     useEffect(() => {
-        try { localStorage.setItem('SIRILA_CACHE_STUDENTS', JSON.stringify(students)); }
-        catch (e) { console.warn("Cache Students failed (Quota?)", e); }
+        saveToCache('SIRILA_CACHE_STUDENTS', students);
     }, [students]);
 
     useEffect(() => {
-        try {
-            const serialized = JSON.stringify(assignments);
-            if (serialized.length > 4 * 1024 * 1024) {
-                console.warn("Assignments array too large for localStorage. Clearing large HTML content from cache to prevent crash.");
-                const optimized = assignments.map(a => {
-                    if (a.interactiveData?.type === 'HTML_GAME' && a.interactiveData.htmlContent && a.interactiveData.htmlContent.length > 500000) {
-                        return { ...a, interactiveData: { ...a.interactiveData, htmlContent: undefined, hasContent: true } };
-                    }
-                    return a;
-                });
-                localStorage.setItem('SIRILA_CACHE_ASSIGNMENTS', JSON.stringify(optimized));
-            } else {
-                localStorage.setItem('SIRILA_CACHE_ASSIGNMENTS', serialized);
-            }
-        }
-        catch (e) { console.warn("Cache Assignments failed (Storage Full?)", e); }
+        saveToCache('SIRILA_CACHE_ASSIGNMENTS', assignments);
     }, [assignments]);
 
     useEffect(() => {
-        try { localStorage.setItem('SIRILA_CACHE_EVENTS', JSON.stringify(events)); }
-        catch (e) { console.warn("Cache Events failed", e); }
+        saveToCache('SIRILA_CACHE_EVENTS', events);
     }, [events]);
 
     useEffect(() => {
-        try { localStorage.setItem('SIRILA_CACHE_LOGS', JSON.stringify(behaviorLogs)); }
-        catch (e) { console.warn("Cache Logs failed", e); }
+        saveToCache('SIRILA_CACHE_LOGS', behaviorLogs);
     }, [behaviorLogs]);
 
     useEffect(() => {
-        try { localStorage.setItem('SIRILA_CACHE_CONFIG', JSON.stringify(schoolConfig)); }
-        catch (e) { console.warn("Cache Config failed", e); }
+        saveToCache('SIRILA_CACHE_CONFIG', schoolConfig);
     }, [schoolConfig]);
 
     useEffect(() => {
-        try { localStorage.setItem('SIRILA_CACHE_FINANCE', JSON.stringify(financeEvents)); }
-        catch (e) { console.warn("Cache Finance failed", e); }
+        saveToCache('SIRILA_CACHE_FINANCE', financeEvents);
     }, [financeEvents]);
 
     useEffect(() => {
-        try { localStorage.setItem('SIRILA_CACHE_TASKS', JSON.stringify(staffTasks)); }
-        catch (e) { console.warn("Cache Tasks failed", e); }
+        saveToCache('SIRILA_CACHE_TASKS', staffTasks);
     }, [staffTasks]);
 
     useEffect(() => {
