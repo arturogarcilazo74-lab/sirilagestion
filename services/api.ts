@@ -3,7 +3,12 @@ import { Student, Assignment, SchoolEvent, BehaviorLog, FinanceEvent, SchoolConf
 // --- CONFIGURATION ---
 const GET_BASE_URL = () => {
     // Priority 1: Check for explicit override in localStorage
-    let stored = localStorage.getItem('SIRILA_SERVER_URL');
+    let stored = null;
+    try {
+        stored = localStorage.getItem('SIRILA_SERVER_URL');
+    } catch (e) {
+        console.warn('localStorage is not available', e);
+    }
 
     // INTELLIGENT OVERRIDE:
     // If we are on Hostinger (or any remote domain) but stored points to localhost or orender,

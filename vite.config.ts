@@ -65,7 +65,8 @@ export default defineConfig({
   ],
   build: {
     outDir: 'dist-app',
-    emptyOutDir: true
+    emptyOutDir: true,
+    target: ['es2015', 'safari11']
   },
   server: {
     host: true,
