@@ -398,6 +398,12 @@ app.get('/sirila-v1/full-state', async (req, res) => {
             books: bookRows.map(r => {
                 let d = r.data_json || {};
                 if (typeof d === 'string') { try { d = JSON.parse(d); } catch (e) { } }
+                
+                // CRITICAL FIX: Strip massive fileUrl (PDF Base64) to prevent iOS memory crash during sync
+                if (d.fileUrl && d.fileUrl.length > 1000) {
+                    d.fileUrl = "PENDING_LOAD";
+                }
+                
                 return { ...d, id: r.id };
             }),
             cteGames,
@@ -763,6 +769,19 @@ app.get('/sirila-v1/assignments/:id', async (req, res) => {
     try {
         const pool = getPool();
         const [rows] = await pool.query('SELECT data_json FROM assignments WHERE id = ?', [req.params.id]);
+        if (rows.length === 0) return res.status(404).json({ error: 'Not found' });
+        const d = typeof rows[0].data_json === 'string' ? JSON.parse(rows[0].data_json) : rows[0].data_json;
+        res.json(d);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// NEW: Endpoint to fetch specific book data (for loading large PDFs lazily)
+app.get('/sirila-v1/books/:id', async (req, res) => {
+    try {
+        const pool = getPool();
+        const [rows] = await pool.query('SELECT data_json FROM books WHERE id = ?', [req.params.id]);
         if (rows.length === 0) return res.status(404).json({ error: 'Not found' });
         const d = typeof rows[0].data_json === 'string' ? JSON.parse(rows[0].data_json) : rows[0].data_json;
         res.json(d);

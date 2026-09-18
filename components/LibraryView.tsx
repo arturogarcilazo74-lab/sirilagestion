@@ -57,7 +57,26 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ students, books, onBac
         reader.readAsDataURL(file);
     };
 
-    const openBook = (fileUrl: string | undefined) => {
+    const openBook = async (book: Book) => {
+        let fileUrl = book.fileUrl;
+        
+        if (fileUrl === 'PENDING_LOAD') {
+            try {
+                // Notificar al usuario que se está descargando (opcional: agregar un estado visual)
+                console.log("Descargando libro desde el servidor...");
+                const { api } = await import('../services/api');
+                const fullBook = await api.getBookById(book.id);
+                fileUrl = fullBook.fileUrl;
+                if (!fileUrl || fileUrl === 'PENDING_LOAD') {
+                    throw new Error("El archivo del libro no está disponible.");
+                }
+            } catch (error) {
+                console.error("Error al descargar libro:", error);
+                alert("Hubo un error al descargar el archivo del libro. Es posible que sea demasiado grande o tu conexión sea inestable.");
+                return;
+            }
+        }
+
         if (!fileUrl) return;
 
         // If it's already a URL, just open it
@@ -218,7 +237,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ students, books, onBac
                                     {book.fileUrl && (
                                         <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                             <button
-                                                onClick={() => { if (book.fileUrl) openBook(book.fileUrl); }}
+                                                onClick={() => openBook(book)}
                                                 className="bg-white text-slate-900 p-3 rounded-full hover:scale-110 transition-transform shadow-lg"
                                                 title="Abrir Libro"
                                             >

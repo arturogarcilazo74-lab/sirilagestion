@@ -636,6 +636,12 @@ export const api = {
         return await res.json();
     },
 
+    getBookById: async (id: string) => {
+        const res = await fetch(`${API_URL}/books/${id}`);
+        if (!res.ok) throw new Error('Failed to fetch book details');
+        return await res.json();
+    },
+
     getGroupHistory: async (groupName: string) => {
         const res = await fetch(`${API_URL}/group-history/${encodeURIComponent(groupName)}`);
         if (!res.ok) throw new Error('Failed to fetch group history');
