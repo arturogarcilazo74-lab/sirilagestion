@@ -667,6 +667,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
             {showUSE && activeTab === 'USE' && (
                 <UseFinanceSection
                     movements={useMovements}
+                    config={config}
                     onAddMovement={onAddUseMovement}
                     onDeleteMovement={onDeleteUseMovement}
                     readOnly={readOnly}

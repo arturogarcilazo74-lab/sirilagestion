@@ -1,9 +1,10 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { Student, SchoolConfig, BehaviorLog, Assignment, AttendanceStatus } from '../types';
+import { Student, SchoolConfig, BehaviorLog, Assignment, AttendanceStatus, UseMovement } from '../types';
 import QRCode from 'qrcode';
 import { SCHOOL_PERIODS, isSchoolDay, getSchoolPeriod } from './schoolCalendarUtils';
 import { getStudentGlobalAverage, calculateStudentMetrics, getTrimesterAvg } from './gradeUtils';
+import { USE_CATEGORY_LABELS, USE_PAYMENT_LABELS, formatUseDate, formatUseMoney, summarizeUseMovements } from './useFinance';
 
 
 type ColorTuple = [number, number, number];
@@ -2602,6 +2603,168 @@ export const generateFinanceReportPDF = (
     doc.text(`Progreso de Recaudación: ${totalEsperado > 0 ? ((totalRecaudado / totalEsperado) * 100).toFixed(1) : '0'}%`, 20, finalY + 20);
 
     doc.save(`Reporte_Financiero_${groupName.replace(/\s+/g, '_')}.pdf`);
+};
+
+/**
+ * Construye el reporte USE y devuelve el documento sin guardarlo.
+ * Permite probar la generación sin navegador; el guardado lo hace
+ * `generateUseReportPDF`.
+ */
+export const buildUseReportPDF = (
+    movements: UseMovement[],
+    config: SchoolConfig,
+    options?: { periodLabel?: string; generatedBy?: string }
+): jsPDF => {
+    const doc = new jsPDF('p', 'mm', 'letter');
+    const pageWidth = doc.internal.pageSize.width;
+    const pageHeight = doc.internal.pageSize.height;
+    const periodLabel = options?.periodLabel || 'Todo el historial';
+    const list = movements || [];
+    const { income, expense, balance } = summarizeUseMovements(list);
+
+    addHeader(doc, config, 'REPORTE DE INGRESOS Y GASTOS - USE');
+
+    doc.setFontSize(10);
+    doc.setTextColor(COLORS.secondary[0], COLORS.secondary[1], COLORS.secondary[2]);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Unidad de Consumo Escolar', pageWidth / 2, 56, { align: 'center' });
+
+    doc.setFontSize(9);
+    doc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2]);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Periodo: ${periodLabel}`, 20, 64);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Fecha de impresión: ${new Date().toLocaleDateString('es-MX')}`, pageWidth - 20, 64, { align: 'right' });
+
+    // --- Resumen del periodo ---
+    const boxY = 70;
+    const boxHeight = 18;
+    const boxWidth = (pageWidth - 40 - 10) / 3;
+    const boxes = [
+        { label: 'INGRESOS', value: formatUseMoney(income), color: [16, 185, 129] },
+        { label: 'GASTOS', value: formatUseMoney(expense), color: [244, 63, 94] },
+        { label: 'BALANCE', value: formatUseMoney(balance), color: balance < 0 ? [244, 63, 94] : COLORS.primary }
+    ];
+
+    boxes.forEach((box, index) => {
+        const x = 20 + index * (boxWidth + 5);
+        doc.setDrawColor(203, 213, 225);
+        doc.setLineWidth(0.3);
+        doc.roundedRect(x, boxY, boxWidth, boxHeight, 2, 2);
+
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(COLORS.secondary[0], COLORS.secondary[1], COLORS.secondary[2]);
+        doc.text(box.label, x + 3, boxY + 6.5);
+
+        doc.setFontSize(12);
+        doc.setTextColor(box.color[0], box.color[1], box.color[2]);
+        doc.text(box.value, x + 3, boxY + 14);
+    });
+
+    // --- Libro de movimientos ---
+    const body = list.map(m => [
+        formatUseDate(m.date),
+        m.concept,
+        USE_CATEGORY_LABELS[m.category] || m.category || '',
+        m.paymentMethod ? USE_PAYMENT_LABELS[m.paymentMethod] : '-',
+        m.receiptNumber || '-',
+        m.type === 'INCOME' ? formatUseMoney(Number(m.amount) || 0) : '',
+        m.type === 'EXPENSE' ? formatUseMoney(Number(m.amount) || 0) : ''
+    ]);
+
+    autoTable(doc, {
+        startY: boxY + boxHeight + 6,
+        head: [['Fecha', 'Concepto', 'Categoría', 'Método', 'Folio', 'Ingreso', 'Gasto']],
+        body: body.length > 0 ? body : [['-', 'Sin movimientos en el periodo seleccionado', '', '', '', '', '']],
+        theme: 'grid',
+        headStyles: { fillColor: COLORS.primary, fontSize: 8, halign: 'center' },
+        styles: { fontSize: 8, cellPadding: 2, valign: 'middle' },
+        columnStyles: {
+            0: { cellWidth: 26, halign: 'center' },
+            2: { cellWidth: 40 },
+            3: { cellWidth: 24, halign: 'center' },
+            4: { cellWidth: 20, halign: 'center' },
+            5: { cellWidth: 24, halign: 'right' },
+            6: { cellWidth: 24, halign: 'right' }
+        },
+        foot: body.length > 0
+            ? [['', '', '', '', 'TOTALES', formatUseMoney(income), formatUseMoney(expense)]]
+            : undefined,
+        footStyles: { fillColor: [241, 245, 249], textColor: COLORS.text, fontStyle: 'bold', fontSize: 8 }
+    });
+
+    let cursorY = (doc as any).lastAutoTable.finalY + 10;
+
+    if (cursorY > pageHeight - 60) {
+        doc.addPage();
+        cursorY = 30;
+    }
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2]);
+    doc.text(`Balance del periodo: ${formatUseMoney(balance)}`, 20, cursorY);
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(COLORS.secondary[0], COLORS.secondary[1], COLORS.secondary[2]);
+    doc.text(`Total de movimientos: ${list.length}`, 20, cursorY + 6);
+
+    // --- Firmas ---
+    let signatureY = cursorY + 30;
+    if (signatureY > pageHeight - 30) {
+        doc.addPage();
+        signatureY = 50;
+    }
+
+    const signatureWidth = (pageWidth - 40) / 3;
+    const signatures = [
+        'Elaboró / Tesorería USE',
+        'Revisó / Dirección del Plantel',
+        'Vo. Bo. Comité de Padres'
+    ];
+
+    signatures.forEach((label, index) => {
+        const centerX = 20 + index * signatureWidth + signatureWidth / 2;
+        doc.setDrawColor(COLORS.text[0], COLORS.text[1], COLORS.text[2]);
+        doc.setLineWidth(0.3);
+        doc.line(centerX - signatureWidth / 2 + 6, signatureY, centerX + signatureWidth / 2 - 6, signatureY);
+
+        doc.setFontSize(7.5);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(COLORS.secondary[0], COLORS.secondary[1], COLORS.secondary[2]);
+        doc.text(label, centerX, signatureY + 5, { align: 'center' });
+    });
+
+    if (options?.generatedBy) {
+        doc.setFontSize(7.5);
+        doc.text(`Generado por: ${options.generatedBy}`, 20, pageHeight - 10);
+    }
+
+    return doc;
+};
+
+/**
+ * Reporte imprimible de la Unidad de Consumo Escolar (USE).
+ *
+ * Recibe exactamente los movimientos que el usuario ve en pantalla (ya
+ * filtrados por periodo y tipo), de modo que el papel y la vista coincidan.
+ */
+export const generateUseReportPDF = (
+    movements: UseMovement[],
+    config: SchoolConfig,
+    options?: { periodLabel?: string; generatedBy?: string }
+) => {
+    const doc = buildUseReportPDF(movements, config, options);
+
+    const safePeriod = (options?.periodLabel || 'general')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '');
+
+    doc.save(`Reporte_USE_${safePeriod || 'general'}.pdf`);
 };
 
 export const generateFirstMeetingPDF = async (

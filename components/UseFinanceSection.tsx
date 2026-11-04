@@ -1,48 +1,23 @@
 import React, { useMemo, useState } from 'react';
-import { ArrowDownCircle, ArrowUpCircle, Download, Plus, ShoppingBasket, Trash2, Wallet } from 'lucide-react';
-import type { UseMovement, UseMovementType, UseMovementCategory, UsePaymentMethod } from '../types';
-
-const USE_CATEGORY_LABELS: Record<UseMovementCategory, string> = {
-    VENTA: 'Venta de productos',
-    ALIMENTOS: 'Alimentos / Cooperativa',
-    CUOTA: 'Cuota USE',
-    DONATIVO: 'Donativo',
-    INSUMOS: 'Insumos y mercancía',
-    SERVICIOS: 'Servicios (agua, luz, gas)',
-    MANTENIMIENTO: 'Mantenimiento y limpieza',
-    EQUIPAMIENTO: 'Equipamiento',
-    OTRO: 'Otro'
-};
-
-const USE_INCOME_CATEGORIES: UseMovementCategory[] = ['VENTA', 'ALIMENTOS', 'CUOTA', 'DONATIVO', 'OTRO'];
-const USE_EXPENSE_CATEGORIES: UseMovementCategory[] = ['INSUMOS', 'SERVICIOS', 'MANTENIMIENTO', 'EQUIPAMIENTO', 'OTRO'];
-
-const USE_PAYMENT_LABELS: Record<UsePaymentMethod, string> = {
-    EFECTIVO: 'Efectivo',
-    TRANSFERENCIA: 'Transferencia',
-    TARJETA: 'Tarjeta',
-    OTRO: 'Otro'
-};
-
-/** Formatea montos en pesos mexicanos. */
-const money = (value: number) =>
-    value.toLocaleString('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 2 });
-
-/**
- * Formatea una fecha YYYY-MM-DD fijando el mediodía local.
- * Evita el desfase de un día que produce interpretar la fecha como UTC.
- */
-const formatDate = (date?: string) => {
-    if (!date) return '—';
-    const parsed = new Date(`${date.slice(0, 10)}T12:00:00`);
-    if (isNaN(parsed.getTime())) return date;
-    return parsed.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
-};
+import { ArrowDownCircle, ArrowUpCircle, Download, Plus, Printer, ShoppingBasket, Trash2, Wallet } from 'lucide-react';
+import type { SchoolConfig, UseMovement, UseMovementType, UseMovementCategory, UsePaymentMethod } from '../types';
+import {
+    USE_CATEGORY_LABELS,
+    USE_INCOME_CATEGORIES,
+    USE_EXPENSE_CATEGORIES,
+    USE_PAYMENT_LABELS,
+    formatUseDate,
+    formatUseMoney,
+    formatUsePeriod,
+    summarizeUseMovements
+} from '../services/useFinance';
+import { generateUseReportPDF } from '../services/pdfGenerator';
 
 const currentMonth = () => new Date().toISOString().slice(0, 7);
 
 interface UseFinanceSectionProps {
     movements: UseMovement[];
+    config: SchoolConfig;
     onAddMovement?: (movement: Omit<UseMovement, 'id' | 'createdAt'>) => void;
     onDeleteMovement?: (id: string) => void;
     readOnly?: boolean;
@@ -55,6 +30,7 @@ interface UseFinanceSectionProps {
  */
 export const UseFinanceSection: React.FC<UseFinanceSectionProps> = ({
     movements = [],
+    config,
     onAddMovement,
     onDeleteMovement,
     readOnly
@@ -91,18 +67,9 @@ export const UseFinanceSection: React.FC<UseFinanceSectionProps> = ({
             });
     }, [movements, period, typeFilter]);
 
-    const { income, expense } = useMemo(() => {
-        let income = 0;
-        let expense = 0;
-        filtered.forEach(m => {
-            const amount = Number(m.amount) || 0;
-            if (m.type === 'INCOME') income += amount;
-            else expense += amount;
-        });
-        return { income, expense };
-    }, [filtered]);
+    const { income, expense, balance } = useMemo(() => summarizeUseMovements(filtered), [filtered]);
 
-    const balance = income - expense;
+    const periodLabel = formatUsePeriod(period);
 
     const changeType = (nextType: UseMovementType) => {
         setMovType(nextType);
@@ -137,6 +104,17 @@ export const UseFinanceSection: React.FC<UseFinanceSectionProps> = ({
         setMovReceipt('');
         setMovNotes('');
         setIsAdding(false);
+    };
+
+    const handlePrintReport = () => {
+        generateUseReportPDF(filtered, config, {
+            periodLabel: typeFilter === 'INCOME'
+                ? `${periodLabel} (solo ingresos)`
+                : typeFilter === 'EXPENSE'
+                    ? `${periodLabel} (solo gastos)`
+                    : periodLabel,
+            generatedBy: config.teacherName
+        });
     };
 
     const handleExportCSV = () => {
@@ -184,7 +162,7 @@ export const UseFinanceSection: React.FC<UseFinanceSectionProps> = ({
                     </div>
                     <div>
                         <div className="text-xs text-slate-500 font-bold uppercase">Ingresos</div>
-                        <div className="text-2xl font-black text-emerald-600">{money(income)}</div>
+                        <div className="text-2xl font-black text-emerald-600">{formatUseMoney(income)}</div>
                     </div>
                 </div>
 
@@ -194,7 +172,7 @@ export const UseFinanceSection: React.FC<UseFinanceSectionProps> = ({
                     </div>
                     <div>
                         <div className="text-xs text-slate-500 font-bold uppercase">Gastos</div>
-                        <div className="text-2xl font-black text-rose-600">{money(expense)}</div>
+                        <div className="text-2xl font-black text-rose-600">{formatUseMoney(expense)}</div>
                     </div>
                 </div>
 
@@ -204,7 +182,7 @@ export const UseFinanceSection: React.FC<UseFinanceSectionProps> = ({
                     </div>
                     <div>
                         <div className="text-xs text-slate-500 font-bold uppercase">Balance</div>
-                        <div className={`text-2xl font-black ${balance < 0 ? 'text-rose-600' : 'text-slate-800'}`}>{money(balance)}</div>
+                        <div className={`text-2xl font-black ${balance < 0 ? 'text-rose-600' : 'text-slate-800'}`}>{formatUseMoney(balance)}</div>
                         <div className={`text-xs font-bold ${balance < 0 ? 'text-rose-500' : 'text-emerald-600'}`}>
                             {balance < 0 ? 'Déficit en el periodo' : 'Superávit en el periodo'}
                         </div>
@@ -224,9 +202,7 @@ export const UseFinanceSection: React.FC<UseFinanceSectionProps> = ({
                         >
                             <option value="ALL">Todo el historial</option>
                             {periods.map(p => (
-                                <option key={p} value={p}>
-                                    {new Date(`${p}-01T12:00:00`).toLocaleDateString('es-MX', { month: 'long', year: 'numeric' })}
-                                </option>
+                                <option key={p} value={p}>{formatUsePeriod(p)}</option>
                             ))}
                         </select>
                     </div>
@@ -250,6 +226,19 @@ export const UseFinanceSection: React.FC<UseFinanceSectionProps> = ({
                 </div>
 
                 <div className="flex flex-wrap gap-2">
+                    <button
+                        onClick={handlePrintReport}
+                        disabled={filtered.length === 0}
+                        className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm border transition-all ${filtered.length === 0
+                            ? 'bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed'
+                            : 'bg-white text-indigo-600 border-indigo-200 hover:bg-indigo-50 shadow-sm'
+                            }`}
+                        title="Imprimir reporte de ingresos y gastos"
+                    >
+                        <Printer size={16} />
+                        Imprimir reporte
+                    </button>
+
                     <button
                         onClick={handleExportCSV}
                         disabled={filtered.length === 0}
@@ -439,7 +428,7 @@ export const UseFinanceSection: React.FC<UseFinanceSectionProps> = ({
                                     const isIncome = m.type === 'INCOME';
                                     return (
                                         <tr key={m.id} className="border-t border-slate-100 hover:bg-slate-50/70 transition-colors">
-                                            <td className="py-3 px-4 text-sm text-slate-600 whitespace-nowrap">{formatDate(m.date)}</td>
+                                            <td className="py-3 px-4 text-sm text-slate-600 whitespace-nowrap">{formatUseDate(m.date)}</td>
                                             <td className="py-3 px-4">
                                                 <div className="font-semibold text-slate-800">{m.concept}</div>
                                                 {(m.notes || m.responsible) && (
@@ -452,7 +441,7 @@ export const UseFinanceSection: React.FC<UseFinanceSectionProps> = ({
                                             <td className="py-3 px-4 text-sm text-slate-600 whitespace-nowrap">{m.paymentMethod ? USE_PAYMENT_LABELS[m.paymentMethod] : '—'}</td>
                                             <td className="py-3 px-4 text-sm text-slate-500 whitespace-nowrap">{m.receiptNumber || '—'}</td>
                                             <td className={`py-3 px-4 text-right font-bold whitespace-nowrap ${isIncome ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                                {isIncome ? '+' : '−'}{money(Number(m.amount) || 0)}
+                                                {isIncome ? '+' : '−'}{formatUseMoney(Number(m.amount) || 0)}
                                             </td>
                                             {!readOnly && (
                                                 <td className="py-3 px-4 text-center">
