@@ -7,7 +7,7 @@ Este documento sirve como referencia rápida sobre el estado actual del sistema,
 ## 1. Stack Tecnológico y Arquitectura
 - **Frontend**: React (con TypeScript) montado sobre Vite.
 - **Estilos**: Tailwind CSS con iconos de `lucide-react`.
-- **Manejo de Estado / Persistencia**: Zustand (`useAppStore.ts`) con sincronización offline usando `idb` (IndexedDB).
+- **Manejo de Estado / Persistencia**: Hook propio `hooks/useAppStore.ts` basado en `useState` (no usa Zustand ni IndexedDB), con caché en `localStorage` y cola de acciones offline en `services/api.ts`.
 - **Generación de PDFs**: `jspdf` y `jspdf-autotable` (ver `services/pdfGenerator.ts`).
 - **Backend / API**: Servidor Express en Node.js (`server/server.js`) con conexión a base de datos **MySQL** en Hostinger.
 - **PWA**: La aplicación está configurada para funcionar como una PWA offline-first mediante Workbox (`vite.config.ts`).
@@ -36,7 +36,13 @@ Si necesitas hacer modificaciones, aquí es donde debes buscar:
   - Manejo del estatus de la Cuota Anual (`PAGADO`, `PARCIAL` o `PENDIENTE`) y aportaciones para eventos especiales.
   - Pestaña **USE** (Unidad de Consumo Escolar), visible solo en la vista de dirección, implementada en `components/UseFinanceSection.tsx`.
 - **Unidad de Consumo Escolar (USE)**: `components/UseFinanceSection.tsx`
-  - Libro de ingresos y gastos de la tienda escolar, separado de las cuotas del aula. Indicadores de ingresos, gastos y balance; filtros por periodo y tipo; alta de movimientos (categoría, método de pago, folio, responsable, notas) y exportación a CSV.
+  - Libro de ingresos y gastos de la tienda escolar, separado de las cuotas del aula. Indicadores de ingresos, gastos y balance; filtros por periodo y tipo; alta de movimientos (categoría, método de pago, folio, responsable, notas); exportación a CSV y reporte imprimible en PDF.
+  - Catálogos y cálculos compartidos en `services/useFinance.ts` (los usan la pantalla y el PDF, para que no se desincronicen).
+- **Automatización y Despliegue**: `tools/scripts/`
+  - `build-dist.js`: compila a un directorio temporal y solo reemplaza `dist-app` si la compilación terminó bien (un build fallido antes dejaba el artefacto mutilado).
+  - `deploy.js`: comando único de despliegue (`npm run deploy -- "mensaje"`).
+  - `install-hooks.js`: activa `core.hooksPath=.githooks` en `npm install`.
+  - `.githooks/pre-push`: recompila y bloquea el push si `dist-app` no corresponde al código fuente.
 - **Gestión de Alumnos**: `components/StudentsView.tsx`
   - Expedientes de alumnos, estatus (`INSCRITO`, `BAJA`, `TRASLADO`), conducta e indicadores de riesgo.
 - **Generación de Documentos y Reportes**: `services/pdfGenerator.ts`
@@ -48,7 +54,7 @@ Si necesitas hacer modificaciones, aquí es donde debes buscar:
 
 ---
 
-## 3. Últimas Modificaciones Críticas (Septiembre 2026)
+## 3. Últimas Modificaciones Críticas (Septiembre – Noviembre 2026)
 
 ### 1. Corrección Definitiva del Estatus de Alumnos (Reversión a BAJA)
 - **Diagnóstico:** Al cambiar el estatus de un alumno a `INSCRITO`, al recargar la página o volver a entrar al sistema, el alumno volvía a aparecer como `BAJA`.
@@ -202,7 +208,7 @@ Si necesitas hacer modificaciones, aquí es donde debes buscar:
 
 ---
 
-### 18. Despliegue Verificado y Build Atómico (Septiembre 18, 2026)
+### 18. Despliegue Verificado y Build Atómico (Noviembre 3, 2026)
 - **Diagnóstico:** Hostinger sirve el frontend desde `dist-app` (`server/server.js` → `express.static`), un artefacto compilado que se versiona en el repositorio. El proceso dependía de que una persona recordara ejecutar `vite build` y commitear el resultado antes de cada push, sin ninguna verificación. Ya había provocado un desfase real: el commit `e4f8fae` (corrección de *blurs* en iOS, `LandingView.tsx`) se publicó sin recompilar, por lo que producción no recibió la corrección hasta el build del commit siguiente, 49 minutos después.
 - **Solución implementada:**
   - **Build atómico** (`tools/scripts/build-dist.js`): compila en `dist-app.__staging` y solo reemplaza `dist-app` cuando la compilación terminó correctamente. Antes, un fallo de compilación dejaba `dist-app` mutilado (Vite borra los assets al iniciar), publicando un sitio roto.
@@ -213,7 +219,7 @@ Si necesitas hacer modificaciones, aquí es donde debes buscar:
 
 ---
 
-### 19. Unidad de Consumo Escolar (USE) en Finanzas (Septiembre 18, 2026)
+### 19. Unidad de Consumo Escolar (USE) en Finanzas (Noviembre 3, 2026)
 - **Implementación:** Se añadió a la sección de Finanzas de dirección una pestaña **USE** para llevar el libro de ingresos y gastos de la tienda/cooperativa escolar.
 - **Detalles:**
   - **Modelo (`types.ts`):** nuevo tipo `UseMovement` con `type` (`INCOME` / `EXPENSE`), `category` (ventas, alimentos, cuotas, donativos, insumos, servicios, mantenimiento, equipamiento), `amount`, `paymentMethod`, `receiptNumber`, `responsible`, `notes` y `createdAt`. El monto siempre es positivo; el signo lo determina el tipo.
@@ -225,7 +231,7 @@ Si necesitas hacer modificaciones, aquí es donde debes buscar:
   - **Aislamiento:** la pestaña solo se muestra cuando `FinanceView` recibe `showUSE` (lo hace `DirectorView.tsx`). Los docentes no gestionan la tienda escolar, por lo que no la ven en su vista de Finanzas.
   - **Nota de UX:** el filtro de periodo arranca en "todo el historial" para que un cambio de mes no haga parecer que los movimientos desaparecieron.
 
-### 20. Corrección: la Evaluación Diagnóstica no siempre aparecía en el expediente (Septiembre 18, 2026)
+### 20. Corrección: la Evaluación Diagnóstica no siempre aparecía en el expediente (Noviembre 3, 2026)
 - **Diagnóstico:** En el expediente del alumno (Vista Preliminar) la fila "Diagnóstico" aparecía para unos alumnos y para otros no. De 63 alumnos, 16 tenían evaluación diagnóstica capturada, pero solo 7 la mostraban.
 - **Causa:** En `StudentsView.tsx`, la tabla "Historial de Evaluaciones por Campo Formativo" estaba envuelta en un condicional `grades.length === 0 ? "Sin calificaciones registradas" : (...)`, y la fila del diagnóstico vivía dentro de la rama `else`. Al inicio del ciclo, cuando todavía no hay trimestres capturados, el diagnóstico —el único dato existente— quedaba oculto. Afectaba a 9 de los 16 alumnos. La boleta en PDF sí lo mostraba (`pdfGenerator.ts` agrega la fila sin depender de los trimestres), de modo que papel y pantalla se contradecían.
 - **Solución:**
@@ -248,6 +254,42 @@ Si necesitas hacer modificaciones, aquí es donde debes buscar:
   npm run deploy:check     # recompila y compara dist-app contra el código fuente
   npx tsc --noEmit         # comprobación de tipos
   ```
+- **Comprobar que el despliegue llegó a producción** (Hostinger puede tardar unos minutos, o requerir "Implementar/Pull" en hPanel y purga de caché):
+  ```powershell
+  git show HEAD:dist-app/index.html   # debe coincidir con el hash que sirve el sitio
+  Invoke-WebRequest https://sirila.losdeotayvista.com/ -UseBasicParsing |
+    Select-String 'assets/index-[A-Za-z0-9_\-]+\.js'
+  ```
+- **Credenciales de git**: en este equipo hay dos cuentas guardadas y la genérica (`MRoman8`) no tiene permiso sobre el repositorio (devuelve 403). Por eso el remoto apunta a `https://arturogarcilazo74-lab@github.com/arturogarcilazo74-lab/sirilagestion.git`, que fuerza la credencial correcta. Si se cambia la URL, volverá el error de permisos.
+- **Entorno local**: no existe `server/.env`, así que el backend intenta MySQL en `localhost` y cae al almacenamiento JSON (`server/database.json`, vacío). Para trabajar con datos reales hay que crear el `.env` a partir de `server/.env.production.template`.
+- **Si la compilación falla al limpiar temporales de esbuild** (permisos de `%TEMP%`), apuntar `TEMP` y `TMP` a una carpeta dentro del proyecto antes de compilar.
 
 ---
-*Documento actualizado al 18 de Septiembre de 2026.*
+
+## 5. Estado Actual y Trabajo Pendiente (Noviembre 3, 2026)
+
+### 5.1 Situación del despliegue
+- Rama `main` sincronizada con `origin/main`. Último commit de código al escribir esto: `fa37afb` (regeneración de `dist-app`); este documento se publica en un commit posterior.
+- Producción servía `assets/index-DTeP7lVO.js` al cierre de la sesión (verificado por HTTP). Comprobar el hash actual antes de darlo por bueno.
+- Datos en producción al cierre de esta sesión: **63 alumnos**, **16 con evaluación diagnóstica**, de los cuales **9 aún no tienen trimestres** capturados (antes no se les mostraba el diagnóstico; corregido en el punto 20).
+
+### 5.2 Trabajo pendiente, por prioridad
+
+| # | Tema | Por qué importa |
+|---|---|---|
+| 1 | `useAppStore` es un hook plano, no un contexto | Cada componente que lo llama crea una copia independiente del estado. `FinanceView.tsx` ya instancia una segunda copia (estado duplicado y polling doble). Es la causa de fondo de varias rarezas de sincronización. Convertirlo a Context es el arreglo estructural. |
+| 2 | ~172 MB de PDFs en `dist-app/Libros/6to_2026-2027` | Se versionan y viajan en cada despliegue. Ya existe el precedente de carga bajo demanda del commit `2858518`. |
+| 3 | 26 scripts de diagnóstico de un solo uso en `server/` | Confunden sobre qué es código vivo (`check_*`, `fix_*`, `debug_*`, `recuperar_*`). |
+| 4 | El hook `pre-push` es local | Protege esta máquina, pero se puede saltar con `--no-verify`. Un GitHub Action sería el candado real. |
+| 5 | USE: no se pueden **editar** movimientos | Solo permite crear y eliminar; para corregir un monto hay que borrar y volver a capturar. Falta `PUT` en el servidor y `handleUpdateUseMovement`. |
+| 6 | Portal de padres: el modal de detalle de calificaciones lista solo trimestres | La tarjeta principal sí muestra el diagnóstico; el modal no. |
+| 7 | ~82 `console.error` en componentes y servicios | Ruido en la consola de producción. |
+
+### 5.3 Cómo retomar
+1. `npm install` (activa los hooks de git).
+2. Revisar este documento y `npm run deploy:check` para confirmar que el artefacto está al día.
+3. Implementar sobre `main`, verificando con `npx tsc --noEmit` y una compilación real.
+4. Publicar con `npm run deploy -- "descripción del cambio"`.
+
+---
+*Documento actualizado al 3 de Noviembre de 2026.*
