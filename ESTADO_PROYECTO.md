@@ -225,6 +225,14 @@ Si necesitas hacer modificaciones, aquí es donde debes buscar:
   - **Aislamiento:** la pestaña solo se muestra cuando `FinanceView` recibe `showUSE` (lo hace `DirectorView.tsx`). Los docentes no gestionan la tienda escolar, por lo que no la ven en su vista de Finanzas.
   - **Nota de UX:** el filtro de periodo arranca en "todo el historial" para que un cambio de mes no haga parecer que los movimientos desaparecieron.
 
+### 20. Corrección: la Evaluación Diagnóstica no siempre aparecía en el expediente (Septiembre 18, 2026)
+- **Diagnóstico:** En el expediente del alumno (Vista Preliminar) la fila "Diagnóstico" aparecía para unos alumnos y para otros no. De 63 alumnos, 16 tenían evaluación diagnóstica capturada, pero solo 7 la mostraban.
+- **Causa:** En `StudentsView.tsx`, la tabla "Historial de Evaluaciones por Campo Formativo" estaba envuelta en un condicional `grades.length === 0 ? "Sin calificaciones registradas" : (...)`, y la fila del diagnóstico vivía dentro de la rama `else`. Al inicio del ciclo, cuando todavía no hay trimestres capturados, el diagnóstico —el único dato existente— quedaba oculto. Afectaba a 9 de los 16 alumnos. La boleta en PDF sí lo mostraba (`pdfGenerator.ts` agrega la fila sin depender de los trimestres), de modo que papel y pantalla se contradecían.
+- **Solución:**
+  - La fila del diagnóstico ahora se renderiza de forma independiente; el mensaje "Sin calificaciones registradas" solo aparece cuando no hay ni diagnóstico ni trimestres.
+  - Se aplicó el mismo criterio al expediente de dirección (`DirectorView.tsx`), que además no mostraba el diagnóstico en absoluto (solo listaba las evaluaciones parciales).
+  - Los valores se convierten con `Number()` antes de formatear, para que un dato heredado en texto no rompa la vista con `toFixed`.
+
 ---
 
 ## 4. Guía para Nuevas Modificaciones y Despliegue

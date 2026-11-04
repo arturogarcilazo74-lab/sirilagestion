@@ -7,7 +7,7 @@ import {
     Edit2, Trash2, AlertTriangle, X, User, TrendingUp, Phone, Printer, FileText, FilePlus, Menu, Plus, Shuffle, FileDown, AlertCircle,
     ClipboardList, Gamepad2, Presentation, Award
 } from 'lucide-react';
-import { calculateStudentMetrics, getStudentGlobalAverage } from '../services/gradeUtils';
+import { calculateStudentMetrics, getStudentGlobalAverage, getTrimesterAvg } from '../services/gradeUtils';
 import { StudentsView } from './StudentsView';
 import { FinanceView } from './FinanceView';
 import { SettingsView } from './SettingsView';
@@ -3226,30 +3226,42 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {(!reportStudent.grades || reportStudent.grades.length === 0) ? (
+                                            {/* El diagnóstico se lista aunque no haya trimestres capturados. */}
+                                            {(!reportStudent.grades || reportStudent.grades.length === 0) && !reportStudent.diagnosticGrade && (
                                                 <tr><td colSpan={3} className="p-4 text-center text-slate-400">Sin calificaciones registradas</td></tr>
-                                            ) : (
-                                                reportStudent.grades.map((grade: any, idx: number) => {
-                                                    // Usando función compartida para consistencia
-                                                    const score = calculateStudentMetrics(reportStudent).trimAvgs[idx] || 0;
-
-                                                    return (
-                                                        <tr key={idx}>
-                                                            <td className="border border-slate-200 p-2">Evaluación Parcial {idx + 1}</td>
-                                                            <td className="border border-slate-200 p-2 text-center font-bold">{score.toFixed(1)}</td>
-                                                            <td className="border border-slate-200 p-2 text-center text-xs">
-                                                                {(() => {
-                                                                    const val = Number(score);
-                                                                    if (val >= 9) return 'DESTACADO';
-                                                                    if (val >= 8) return 'SATISFACTORIO';
-                                                                    if (val >= 6) return 'SUFICIENTE';
-                                                                    return 'INSUFICIENTE';
-                                                                })()}
-                                                            </td>
-                                                        </tr>
-                                                    )
-                                                })
                                             )}
+                                            {reportStudent.diagnosticGrade && (() => {
+                                                const val = Number(getTrimesterAvg(reportStudent.diagnosticGrade)) || 0;
+                                                return (
+                                                    <tr className="bg-amber-50">
+                                                        <td className="border border-slate-200 p-2 font-medium text-amber-800">Evaluación Diagnóstica</td>
+                                                        <td className="border border-slate-200 p-2 text-center font-bold text-amber-900">{val > 0 ? val.toFixed(1) : '-'}</td>
+                                                        <td className="border border-slate-200 p-2 text-center text-xs">
+                                                            {val <= 0 ? '-' : val >= 9 ? 'DESTACADO' : val >= 8 ? 'SATISFACTORIO' : val >= 6 ? 'SUFICIENTE' : 'INSUFICIENTE'}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })()}
+                                            {(reportStudent.grades || []).map((grade: any, idx: number) => {
+                                                // Usando función compartida para consistencia
+                                                const score = calculateStudentMetrics(reportStudent).trimAvgs[idx] || 0;
+
+                                                return (
+                                                    <tr key={idx}>
+                                                        <td className="border border-slate-200 p-2">Evaluación Parcial {idx + 1}</td>
+                                                        <td className="border border-slate-200 p-2 text-center font-bold">{score.toFixed(1)}</td>
+                                                        <td className="border border-slate-200 p-2 text-center text-xs">
+                                                            {(() => {
+                                                                const val = Number(score);
+                                                                if (val >= 9) return 'DESTACADO';
+                                                                if (val >= 8) return 'SATISFACTORIO';
+                                                                if (val >= 6) return 'SUFICIENTE';
+                                                                return 'INSUFICIENTE';
+                                                            })()}
+                                                        </td>
+                                                    </tr>
+                                                )
+                                            })}
                                         </tbody>
                                     </table>
                                 </div>

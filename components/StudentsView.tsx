@@ -1898,22 +1898,30 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
                     </tr>
                   </thead>
                   <tbody>
-                    {reportStudent.grades.length === 0 ? (
+                    {/* El diagnóstico se muestra aunque todavía no existan trimestres:
+                        al inicio del ciclo suele ser el único dato capturado. */}
+                    {(!reportStudent.grades || reportStudent.grades.length === 0) && !reportStudent.diagnosticGrade && (
                       <tr><td colSpan={7} className="p-4 text-center text-slate-400">Sin calificaciones registradas</td></tr>
-                    ) : (
-                      <>
-                        {reportStudent.diagnosticGrade && (
-                          <tr className="bg-amber-50">
-                            <td className="border border-slate-200 p-2 font-medium text-amber-800">Diagnóstico</td>
-                            <td className="border border-slate-200 p-2 text-center text-amber-900">{reportStudent.diagnosticGrade.lenguajes > 0 ? reportStudent.diagnosticGrade.lenguajes.toFixed(1) : '-'}</td>
-                            <td className="border border-slate-200 p-2 text-center text-amber-900">{reportStudent.diagnosticGrade.saberes > 0 ? reportStudent.diagnosticGrade.saberes.toFixed(1) : '-'}</td>
-                            <td className="border border-slate-200 p-2 text-center text-amber-900">{reportStudent.diagnosticGrade.etica > 0 ? reportStudent.diagnosticGrade.etica.toFixed(1) : '-'}</td>
-                            <td className="border border-slate-200 p-2 text-center text-amber-900">{reportStudent.diagnosticGrade.humano > 0 ? reportStudent.diagnosticGrade.humano.toFixed(1) : '-'}</td>
-                            <td className="border border-slate-200 p-2 text-center font-bold text-amber-900">-</td>
-                            <td className="border border-slate-200 p-2 text-center text-xs">-</td>
-                          </tr>
-                        )}
-                        {reportStudent.grades.map((grade, idx) => {
+                    )}
+                    {reportStudent.diagnosticGrade && (() => {
+                      const diag = reportStudent.diagnosticGrade as any;
+                      const leng = Number(diag.lenguajes || 0);
+                      const sab = Number(diag.saberes || 0);
+                      const eti = Number(diag.etica || 0);
+                      const hum = Number(diag.humano || 0);
+                      return (
+                        <tr className="bg-amber-50">
+                          <td className="border border-slate-200 p-2 font-medium text-amber-800">Diagnóstico</td>
+                          <td className="border border-slate-200 p-2 text-center text-amber-900">{leng > 0 ? leng.toFixed(1) : '-'}</td>
+                          <td className="border border-slate-200 p-2 text-center text-amber-900">{sab > 0 ? sab.toFixed(1) : '-'}</td>
+                          <td className="border border-slate-200 p-2 text-center text-amber-900">{eti > 0 ? eti.toFixed(1) : '-'}</td>
+                          <td className="border border-slate-200 p-2 text-center text-amber-900">{hum > 0 ? hum.toFixed(1) : '-'}</td>
+                          <td className="border border-slate-200 p-2 text-center font-bold text-amber-900">-</td>
+                          <td className="border border-slate-200 p-2 text-center text-xs">-</td>
+                        </tr>
+                      );
+                    })()}
+                    {(reportStudent.grades || []).map((grade, idx) => {
                           const metrics = calculateStudentMetrics(reportStudent, assignments);
                           const score = metrics.trimAvgs[idx] || 0;
                           const isObj = typeof grade === 'object' && grade !== null;
@@ -1943,8 +1951,6 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
                             </tr>
                           )
                         })}
-                      </>
-                    )}
                   </tbody>
                 </table>
               </div>
