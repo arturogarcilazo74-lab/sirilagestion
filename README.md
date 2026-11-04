@@ -1,64 +1,82 @@
 # 🎓 Sistema de Gestión Escolar SIRILA
 
-Sistema completo de gestión escolar con módulos para directores, maestros, padres de familia y más.
+Plataforma integral de gestión escolar (React + Vite + Express + MySQL) para dirección, docentes, familias y alumnos. Funciona como PWA offline-first y también como aplicación de escritorio (Electron).
 
-## 🚀 Inicio Rápido
+## 🚀 Despliegue en producción
 
-### Para Iniciar en Red Local (WiFi de la escuela)
+> **Regla del proyecto:** Hostinger sirve el frontend desde `dist-app`, el artefacto ya compilado que vive en el repositorio (`server/server.js` → `express.static`). Por eso **el código fuente y `dist-app` deben viajar en el mismo push**. Si se publica sin recompilar, producción sigue mostrando el código anterior.
 
-Haz doble clic en:
+Para desplegar de forma segura, un solo comando:
 
-```batch
-iniciar_sirila.bat
+```bash
+npm run deploy -- "descripción del cambio"
 ```
 
-### Para Compartir por Internet (Acceso desde casa)
+Ese comando:
 
-**¡IMPORTANTE!** El sistema ya está configurado para usar una URL FIJA.
+1. Verifica que estés en `main` y sin merges a medias.
+2. Comprueba los tipos con `tsc`.
+3. Compila el frontend de forma **atómica** hacia `dist-app` (si la compilación falla, `dist-app` queda intacto).
+4. Commitea el código fuente y, por separado, el artefacto regenerado.
+5. Empuja a `origin/main`, que dispara el despliegue de Hostinger.
 
-1. **Personaliza tu URL** (YA CONFIGURADO):
-   - Ya está configurado como: `primaria-jaimenuno-sirila`
-   - Solo edita `INICIAR_SERVIDOR_INTERNET.bat` si necesitas cambiarlo
-   - Línea a buscar: `set "NOMBRE_URL=primaria-jaimenuno-sirila"`
+Además, el hook `pre-push` (versionado en `.githooks/`) recompila antes de cada push y **bloquea** el envío si `dist-app` no corresponde al código fuente, indicando qué ejecutar.
 
-2. **Inicia el servidor**:
-   - Haz doble clic en `INICIAR_SERVIDOR_INTERNET.bat`
-   - Tu URL será: `https://primaria-jaimenuno-sirila.loca.lt`
+### Comandos de despliegue
 
-3. **Comparte la URL** con padres y maestros
-   - La URL NO cambiará mientras uses el mismo nombre
-   - Puedes imprimirla, guardarla, compartirla por WhatsApp
+| Comando | Para qué sirve |
+|---|---|
+| `npm run deploy -- "mensaje"` | Compila, commitea y publica en un paso |
+| `npm run deploy -- "mensaje" --no-push` | Prepara los commits sin publicar |
+| `npm run deploy:check` | Solo verifica si `dist-app` está al día |
+| `npm run deploy -- "mensaje" --dry-run` | Muestra lo que haría, sin tocar git |
 
-📄 **Lee más en**: `COMO_COMPARTIR.md`
+## 💻 Desarrollo local
+
+Requisitos: **Node.js 22.12+** y acceso a MySQL (o dejar que el servidor caiga al almacenamiento JSON local).
+
+```bash
+npm install          # también activa los hooks de git
+npm run dev          # frontend en http://localhost:5173
+npm start            # backend en http://localhost:3001
+```
+
+`npm run dev` hace proxy de `/api` y `/sirila-v1` hacia el backend en el puerto 3001.
+
+Configuración del backend mediante `server/.env` (no versionado; usa `server/.env.production.template` como base). Sin ese archivo, el servidor intenta MySQL en `localhost` y, si no está disponible, arranca con `server/database.json` vacío.
+
+## 🧱 Stack
+
+- **Frontend:** React 18, TypeScript, Vite 5, Tailwind CSS, `lucide-react`, Recharts.
+- **Estado y persistencia:** Zustand con IndexedDB para trabajo offline.
+- **Documentos:** `jspdf` + `jspdf-autotable`.
+- **Backend:** Express 5 (`server/server.js`) con MySQL (`mysql2`) y respaldo automático a JSON.
+- **PWA:** Workbox con estrategia `NetworkFirst` para la API.
+- **Escritorio:** Electron (`npm run electron:dev`).
+
+## 📁 Estructura
+
+```
+components/        Vistas de la interfaz (dirección, docentes, familias, USAER, CTE…)
+services/          API, IA, generación de PDF, calendario escolar, métricas
+hooks/             Estado global (Zustand)
+server/            API Express, esquema MySQL y utilidades de datos
+tools/scripts/     Automatización: build atómico, despliegue, hooks
+dist-app/          Artefacto compilado que se publica (generado, no editar)
+docs/              Guías operativas
+```
 
 ## 📚 Documentación
 
-- **[COMO_COMPARTIR.md](COMO_COMPARTIR.md)** - Guía completa para compartir la app
-- **[GUIA_SERVIDOR_PROPIO.md](GUIA_SERVIDOR_PROPIO.md)** - Detalles técnicos del servidor
-- **[URL_PARA_COMPARTIR.txt](URL_PARA_COMPARTIR.txt)** - Información de tu URL para copiar/pegar
-
-## ✨ Características
-
-- 👨‍💼 **Módulo Director**: Gestión de personal, tareas, estadísticas
-- 👨‍🏫 **Módulo Maestros**: Calificaciones, asistencias, actividades
-- 👨‍👩‍👧 **Portal Padres**: Seguimiento de hijos, tareas, comunicación
-- 📊 **Reportes**: Generación de informes en PDF
-- 🔔 **Notificaciones**: Sistema de mensajería integrado
-- 📱 **Responsive**: Funciona en PC, tablet y móvil
-- 🎯 **QR Tareas**: Sistema de entrega con códigos QR
-- 🚚 **Logística**: Gestión de entregas y rutas (opcional)
-
-## 🛠️ Requisitos Técnicos
-
-- Windows 10/11
-- Node.js (incluido con el sistema)
-- MySQL/XAMPP (para base de datos)
-- Conexión a internet (para compartir externamente)
+- **[ESTADO_PROYECTO.md](ESTADO_PROYECTO.md)** — Arquitectura, módulos clave y bitácora de cambios.
+- **[docs/GUIA_NUBE_Y_RESPALDOS.md](docs/GUIA_NUBE_Y_RESPALDOS.md)** — Despliegue en la nube y respaldos.
+- **[docs/GUIA_CONEXION_MOVIL.md](docs/GUIA_CONEXION_MOVIL.md)** — Acceso desde celulares en la red local.
+- **[docs/RECUPERAR_DATOS.md](docs/RECUPERAR_DATOS.md)** — Recuperación de datos.
 
 ## 📞 Soporte
 
-**Email**: <miguelroman02@gmail.com>  
-**Directora**: Nancy Carolina Jasso Vergara  
+**Email**: <miguelroman02@gmail.com>
+**Directora**: Nancy Carolina Jasso Vergara
 **Teléfonos**: 6873663875 / 6677552026
 
 ---

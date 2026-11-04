@@ -11,7 +11,7 @@ Este documento sirve como referencia rápida sobre el estado actual del sistema,
 - **Generación de PDFs**: `jspdf` y `jspdf-autotable` (ver `services/pdfGenerator.ts`).
 - **Backend / API**: Servidor Express en Node.js (`server/server.js`) con conexión a base de datos **MySQL** en Hostinger.
 - **PWA**: La aplicación está configurada para funcionar como una PWA offline-first mediante Workbox (`vite.config.ts`).
-- **Despliegue Continuo**: Integrado con GitHub (`main`). Al hacer `git push origin main`, Hostinger actualiza automáticamente la aplicación en producción.
+- **Despliegue Continuo**: Integrado con GitHub (`main`). Hostinger actualiza la aplicación al recibir cambios en esa rama. El frontend que se sirve en producción es el artefacto compilado `dist-app` que se versiona en el repositorio, por lo que **debe recompilarse y committearse junto al código fuente**. Usa `npm run deploy -- "mensaje"` (ver sección 4); el hook `pre-push` impide publicar un artefacto desactualizado.
 
 ---
 
@@ -34,6 +34,9 @@ Si necesitas hacer modificaciones, aquí es donde debes buscar:
   - Función canónica `calculateStudentMetrics`: calcula promedios NEM, porcentaje de avance, calificaciones autocalificables y puntaje ponderado de honor roll.
 - **Gestión Financiera**: `components/FinanceView.tsx`
   - Manejo del estatus de la Cuota Anual (`PAGADO`, `PARCIAL` o `PENDIENTE`) y aportaciones para eventos especiales.
+  - Pestaña **USE** (Unidad de Consumo Escolar), visible solo en la vista de dirección, implementada en `components/UseFinanceSection.tsx`.
+- **Unidad de Consumo Escolar (USE)**: `components/UseFinanceSection.tsx`
+  - Libro de ingresos y gastos de la tienda escolar, separado de las cuotas del aula. Indicadores de ingresos, gastos y balance; filtros por periodo y tipo; alta de movimientos (categoría, método de pago, folio, responsable, notas) y exportación a CSV.
 - **Gestión de Alumnos**: `components/StudentsView.tsx`
   - Expedientes de alumnos, estatus (`INSCRITO`, `BAJA`, `TRASLADO`), conducta e indicadores de riesgo.
 - **Generación de Documentos y Reportes**: `services/pdfGenerator.ts`
@@ -199,16 +202,42 @@ Si necesitas hacer modificaciones, aquí es donde debes buscar:
 
 ---
 
+### 18. Despliegue Verificado y Build Atómico (Septiembre 18, 2026)
+- **Diagnóstico:** Hostinger sirve el frontend desde `dist-app` (`server/server.js` → `express.static`), un artefacto compilado que se versiona en el repositorio. El proceso dependía de que una persona recordara ejecutar `vite build` y commitear el resultado antes de cada push, sin ninguna verificación. Ya había provocado un desfase real: el commit `e4f8fae` (corrección de *blurs* en iOS, `LandingView.tsx`) se publicó sin recompilar, por lo que producción no recibió la corrección hasta el build del commit siguiente, 49 minutos después.
+- **Solución implementada:**
+  - **Build atómico** (`tools/scripts/build-dist.js`): compila en `dist-app.__staging` y solo reemplaza `dist-app` cuando la compilación terminó correctamente. Antes, un fallo de compilación dejaba `dist-app` mutilado (Vite borra los assets al iniciar), publicando un sitio roto.
+  - **Despliegue en un comando** (`npm run deploy -- "mensaje"`): verifica rama, comprueba tipos con `tsc`, compila, commitea el código fuente y el artefacto por separado, y empuja a `main`.
+  - **Hook `pre-push` versionado** (`.githooks/pre-push`): recompila antes de publicar y **bloquea** el push si `dist-app` no corresponde al código fuente, indicando el comando a ejecutar. Se activa solo con `npm install` (script `prepare` → `core.hooksPath`). Escape consciente: `git push --no-verify`.
+  - **Reproducibilidad de bytes**: se añadió `.gitattributes` con `dist-app/** -text` (el artefacto no debe sufrir conversión CRLF) y `*.html text eol=lf` (las plantillas HTML se copian literales al build). Sin esto, `core.autocrlf=true` en Windows hacía que cada recompilación difiriera en bytes aunque el contenido fuera idéntico.
+  - **Verificación sin falsos positivos**: la comprobación usa `git diff --ignore-cr-at-eol` contra `HEAD` más detección de archivos no rastreados, en lugar de `git status`, que marca los artefactos como modificados por los finales de línea.
+
+---
+
+### 19. Unidad de Consumo Escolar (USE) en Finanzas (Septiembre 18, 2026)
+- **Implementación:** Se añadió a la sección de Finanzas de dirección una pestaña **USE** para llevar el libro de ingresos y gastos de la tienda/cooperativa escolar.
+- **Detalles:**
+  - **Modelo (`types.ts`):** nuevo tipo `UseMovement` con `type` (`INCOME` / `EXPENSE`), `category` (ventas, alimentos, cuotas, donativos, insumos, servicios, mantenimiento, equipamiento), `amount`, `paymentMethod`, `receiptNumber`, `responsible`, `notes` y `createdAt`. El monto siempre es positivo; el signo lo determina el tipo.
+  - **Persistencia:** tabla `use_movements` en `schema.sql` (se crea automáticamente al iniciar el servidor, porque `db.js` ejecuta el esquema en cada arranque). Endpoints `POST` y `DELETE` en `/sirila-v1/use-movements`, con validación de monto y tipo, y respaldo a almacenamiento JSON cuando MySQL no está disponible. La colección viaja en `/full-state` y en el endpoint de sincronización.
+  - **Estado (`useAppStore.ts`):** `useMovements` con caché propio (`SIRILA_CACHE_USE_MOVEMENTS`), handlers `handleAddUseMovement` / `handleDeleteUseMovement` y envío encolado cuando no hay red.
+  - **Interfaz (`UseFinanceSection.tsx`):** indicadores de ingresos, gastos y balance (con aviso de déficit); filtros por periodo y tipo; formulario de alta; tabla del libro con eliminación confirmada y exportación a CSV con BOM para Excel.
+  - **Aislamiento:** la pestaña solo se muestra cuando `FinanceView` recibe `showUSE` (lo hace `DirectorView.tsx`). Los docentes no gestionan la tienda escolar, por lo que no la ven en su vista de Finanzas.
+  - **Nota de UX:** el filtro de periodo arranca en "todo el historial" para que un cambio de mes no haga parecer que los movimientos desaparecieron.
+
+---
+
 ## 4. Guía para Nuevas Modificaciones y Despliegue
 
 - **Base de Datos**: La base de datos de producción opera en MySQL en Hostinger. Las credenciales se gestionan a través de variables de entorno en el servidor (`server/.env`).
-- **Despliegue Automático**:
-  El repositorio cuenta con integración continua configurada hacia Hostinger. Cualquier cambio que se confirme y envíe a la rama principal (`main`) se despliega de inmediato:
+- **Despliegue (un solo comando)**:
   ```bash
-  git add .
-  git commit -m "Descripción clara de las mejoras"
-  git push origin main
+  npm run deploy -- "Descripción clara de la mejora"
+  ```
+  El comando compila, commitea el código y el artefacto `dist-app`, y empuja a `main`, disparando el despliegue en Hostinger. No publiques con `git push` directo salvo que sepas lo que haces: el hook `pre-push` lo bloqueará si `dist-app` está desactualizado.
+- **Verificar antes de publicar**:
+  ```bash
+  npm run deploy:check     # recompila y compara dist-app contra el código fuente
+  npx tsc --noEmit         # comprobación de tipos
   ```
 
 ---
-*Documento actualizado al 17 de Septiembre de 2026.*
+*Documento actualizado al 18 de Septiembre de 2026.*

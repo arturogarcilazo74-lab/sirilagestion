@@ -43,6 +43,12 @@ linux-unpacked/
 server/.env
 server/.env.production
 
+# Temporales del build atomico (tools/scripts/build-dist.js)
+dist-app.__staging
+dist-app.__backup
+.tmp-build
+SIRILA_LISTO_HOSTINGER.zip
+
 # Scripts de migración (contienen credenciales, uso único)
 tools/scripts/migrar_aiven_a_hostinger.js
 tools/scripts/migrar_directo.js

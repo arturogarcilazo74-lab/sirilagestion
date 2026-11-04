@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Student, FinanceEvent } from '../types';
+import { Student, FinanceEvent, UseMovement } from '../types';
 import { DollarSign, CreditCard, Plus, Trash2, Calendar, TrendingUp, CheckCircle, Circle, AlertCircle, Users, PieChart, Wallet, Printer } from 'lucide-react';
 import { generateFinanceReportPDF } from '../services/pdfGenerator';
 import { useAppStore } from '../hooks/useAppStore';
+import { UseFinanceSection } from './UseFinanceSection';
 
 interface FinanceViewProps {
     students: Student[];
@@ -13,6 +14,12 @@ interface FinanceViewProps {
     onDeleteEvent: (eventId: string) => void;
     onUpdateContribution: (eventId: string, studentId: string, amount: number) => void;
     readOnly?: boolean;
+    // Unidad de Consumo Escolar: solo se muestra cuando el consumidor lo habilita
+    // (la vista de dirección). Los docentes no gestionan la tienda escolar.
+    useMovements?: UseMovement[];
+    onAddUseMovement?: (movement: Omit<UseMovement, 'id' | 'createdAt'>) => void;
+    onDeleteUseMovement?: (id: string) => void;
+    showUSE?: boolean;
 }
 
 export const FinanceView: React.FC<FinanceViewProps> = ({
@@ -23,11 +30,15 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
     onAddEvent,
     onDeleteEvent,
     onUpdateContribution,
-    readOnly
+    readOnly,
+    useMovements = [],
+    onAddUseMovement,
+    onDeleteUseMovement,
+    showUSE = false
 }) => {
     const store = useAppStore();
     const config = store.schoolConfig || { schoolName: 'Jaime Nunó', cct: '', zone: '', sector: '', location: '', teacherName: '' };
-    const [activeTab, setActiveTab] = useState<'ANNUAL' | 'EVENTS' | 'EXAMS'>('ANNUAL');
+    const [activeTab, setActiveTab] = useState<'ANNUAL' | 'EVENTS' | 'EXAMS' | 'USE'>('ANNUAL');
     const [isAddingEvent, setIsAddingEvent] = useState(false);
 
     // New Event Form State
@@ -153,6 +164,14 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                         >
                             Exámenes
                         </button>
+                        {showUSE && (
+                            <button
+                                onClick={() => setActiveTab('USE')}
+                                className={`px-4 md:px-6 py-2 rounded-lg font-bold text-sm whitespace-nowrap transition-all ${activeTab === 'USE' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                            >
+                                USE
+                            </button>
+                        )}
                     </div>
                 </div>
             </header>
@@ -642,6 +661,16 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
                         )}
                     </div>
                 </div>
+            )}
+
+            {/* UNIDAD DE CONSUMO ESCOLAR (USE) */}
+            {showUSE && activeTab === 'USE' && (
+                <UseFinanceSection
+                    movements={useMovements}
+                    onAddMovement={onAddUseMovement}
+                    onDeleteMovement={onDeleteUseMovement}
+                    readOnly={readOnly}
+                />
             )}
         </div>
     );

@@ -2742,6 +2742,10 @@ export const DirectorView: React.FC<DirectorViewProps> = ({ store, onLogout, cur
                                     onDeleteEvent={store.handleDeleteFinanceEvent}
                                     onUpdateContribution={store.handleUpdateContribution}
                                     readOnly={!canEditContent}
+                                    useMovements={store.useMovements}
+                                    onAddUseMovement={store.handleAddUseMovement}
+                                    onDeleteUseMovement={store.handleDeleteUseMovement}
+                                    showUSE
                                 />
                             </div>
                         )

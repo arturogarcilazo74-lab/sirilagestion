@@ -1,0 +1,13 @@
+# Los hooks de git deben conservar finales de linea LF: si se convierten a CRLF,
+# sh falla con "bad interpreter" y el hook deja de proteger el despliegue.
+.githooks/** text eol=lf
+
+# Las plantillas HTML se copian tal cual al artefacto compilado. Si git las
+# entrega con CRLF (core.autocrlf=true en Windows), dist-app cambia de bytes en
+# cada checkout y el artefacto deja de ser reproducible. Se fijan a LF.
+*.html text eol=lf
+
+# dist-app es el artefacto compilado que publica Hostinger (ver server/server.js).
+# Debe guardarse byte a byte, sin conversion CRLF. Esta regla va al final para
+# tener prioridad sobre la anterior en los .html del artefacto.
+dist-app/** -text

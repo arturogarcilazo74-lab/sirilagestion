@@ -188,6 +188,7 @@ async function initStorage() {
                 events: [],
                 behaviorLogs: [],
                 financeEvents: [],
+                useMovements: [],
                 schoolConfig: null,
                 staffTasks: [],
                 books: []
@@ -211,6 +212,7 @@ function readJSON() {
             events: [],
             behaviorLogs: [],
             financeEvents: [],
+            useMovements: [],
             schoolConfig: null,
             staffTasks: [],
             books: []
@@ -333,6 +335,17 @@ app.get('/sirila-v1/full-state', async (req, res) => {
             return { ...d, id: r.id };
         });
 
+        // Unidad de Consumo Escolar (USE): ingresos y gastos
+        let useMovements = [];
+        try {
+            const [useRows] = await pool.query('SELECT * FROM use_movements');
+            useMovements = useRows.map(r => {
+                let d = r.data_json || {};
+                if (typeof d === 'string') { try { d = JSON.parse(d); } catch (e) { } }
+                return { ...d, id: r.id };
+            });
+        } catch (e) { console.log('use_movements table not found, skipping'); }
+
         const [configRows] = await pool.query('SELECT * FROM school_config WHERE config_key = ?', ['main_config']);
         const [taskRows] = await pool.query('SELECT * FROM staff_tasks');
         const [bookRows] = await pool.query('SELECT * FROM books');
@@ -389,6 +402,7 @@ app.get('/sirila-v1/full-state', async (req, res) => {
             events,
             behaviorLogs,
             financeEvents,
+            useMovements,
             schoolConfig,
             staffTasks: taskRows.map(r => {
                 let d = r.data_json || {};
@@ -924,6 +938,19 @@ app.post('/sirila-v1/sync', async (req, res) => {
             }
         }
 
+        // Unidad de Consumo Escolar (USE)
+        if (req.body.useMovements && req.body.useMovements.length > 0) {
+            for (const m of req.body.useMovements) {
+                await connection.query(`
+                INSERT INTO use_movements (id, date, type, concept, category, amount, data_json)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE
+                date=VALUES(date), type=VALUES(type), concept=VALUES(concept),
+                category=VALUES(category), amount=VALUES(amount), data_json=VALUES(data_json)
+            `, [m.id, m.date || null, m.type || 'INCOME', m.concept || '', m.category || 'OTRO', m.amount || 0, JSON.stringify(m)]);
+            }
+        }
+
         // Config
         if (schoolConfig) {
             await connection.query(`
@@ -1288,6 +1315,59 @@ app.delete('/sirila-v1/finance/:id', async (req, res) => {
     try {
         const pool = getPool();
         await pool.query('DELETE FROM finance_events WHERE id = ?', [req.params.id]);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// --- UNIDAD DE CONSUMO ESCOLAR (USE): ingresos y gastos ---
+app.post('/sirila-v1/use-movements', async (req, res) => {
+    const m = req.body || {};
+
+    // Validacion minima: un movimiento sin id, tipo o monto no es registrable.
+    if (!m.id || (m.type !== 'INCOME' && m.type !== 'EXPENSE')) {
+        return res.status(400).json({ error: 'Movimiento invalido: se requiere id y type (INCOME o EXPENSE)' });
+    }
+    if (typeof m.amount !== 'number' || !isFinite(m.amount) || m.amount <= 0) {
+        return res.status(400).json({ error: 'Movimiento invalido: amount debe ser un numero mayor a 0' });
+    }
+
+    if (!useMySQL) {
+        const data = readJSON();
+        data.useMovements = data.useMovements || [];
+        const idx = data.useMovements.findIndex(x => x.id === m.id);
+        if (idx >= 0) data.useMovements[idx] = m;
+        else data.useMovements.push(m);
+        writeJSON(data);
+        return res.json({ success: true });
+    }
+
+    try {
+        const pool = getPool();
+        await pool.query(`
+            INSERT INTO use_movements (id, date, type, concept, category, amount, data_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+            date=VALUES(date), type=VALUES(type), concept=VALUES(concept),
+            category=VALUES(category), amount=VALUES(amount), data_json=VALUES(data_json)
+        `, [m.id, m.date || null, m.type, m.concept || '', m.category || 'OTRO', m.amount, JSON.stringify(m)]);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.delete('/sirila-v1/use-movements/:id', async (req, res) => {
+    if (!useMySQL) {
+        const data = readJSON();
+        data.useMovements = (data.useMovements || []).filter(m => m.id !== req.params.id);
+        writeJSON(data);
+        return res.json({ success: true });
+    }
+    try {
+        const pool = getPool();
+        await pool.query('DELETE FROM use_movements WHERE id = ?', [req.params.id]);
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: error.message });

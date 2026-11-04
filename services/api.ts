@@ -1,4 +1,4 @@
-import { Student, Assignment, SchoolEvent, BehaviorLog, FinanceEvent, SchoolConfig, StaffTask, Book } from '../types';
+import { Student, Assignment, SchoolEvent, BehaviorLog, FinanceEvent, SchoolConfig, StaffTask, Book, UseMovement } from '../types';
 
 // --- CONFIGURATION ---
 const GET_BASE_URL = () => {
@@ -222,6 +222,7 @@ export const api = {
         events: SchoolEvent[],
         behaviorLogs: BehaviorLog[],
         financeEvents: FinanceEvent[],
+        useMovements?: UseMovement[],
         schoolConfig: SchoolConfig,
         books: Book[]
     }) => {
@@ -381,6 +382,26 @@ export const api = {
             await fetch(`${API_URL}/finance/${id}`, { method: 'DELETE' });
         } catch (e) {
             addToQueue(`/finance/${id}`, 'DELETE', null);
+        }
+    },
+
+    // --- Unidad de Consumo Escolar (USE) ---
+    saveUseMovement: async (movement: UseMovement) => {
+        try {
+            const res = await fetch(`${API_URL}/use-movements`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(movement)
+            });
+            if (!res.ok) throw new Error(`Server error: ${res.status}`);
+        } catch (e) {
+            addToQueue(`/use-movements`, 'POST', movement);
+        }
+    },
+
+    deleteUseMovement: async (id: string) => {
+        try {
+            await fetch(`${API_URL}/use-movements/${id}`, { method: 'DELETE' });
+        } catch (e) {
+            addToQueue(`/use-movements/${id}`, 'DELETE', null);
         }
     },
 

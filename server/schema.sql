@@ -135,3 +135,16 @@ CREATE TABLE IF NOT EXISTS books (
     category VARCHAR(50),
     data_json JSON
 );
+
+-- Unidad de Consumo Escolar (USE): libro de ingresos y gastos.
+-- Se guarda el movimiento completo en data_json y se duplican las columnas
+-- consultables para reportes y filtros por fecha.
+CREATE TABLE IF NOT EXISTS use_movements (
+    id VARCHAR(50) PRIMARY KEY,
+    date DATE,
+    type VARCHAR(10) NOT NULL,
+    concept VARCHAR(255),
+    category VARCHAR(30),
+    amount DECIMAL(10, 2) NOT NULL DEFAULT 0,
+    data_json LONGTEXT
+);

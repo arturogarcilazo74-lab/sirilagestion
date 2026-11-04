@@ -1,0 +1,78 @@
+#!/bin/sh
+#
+# pre-push: impide publicar si dist-app no coincide con el codigo fuente.
+#
+# Hostinger sirve el estatico desde dist-app (server/server.js:59-63), asi que
+# un push con dist-app desactualizado deja produccion con codigo viejo aunque
+# el commit diga otra cosa (paso con e4f8fae: el fix de iOS no llego a
+# produccion hasta el build del commit siguiente).
+#
+# Estrategia: recompilar y comprobar si dist-app cambia. Si cambia, el artefacto
+# publicado no correspondia al fuente y se aborta el push.
+#
+# Escape: git push --no-verify   (o SIRILA_SKIP_BUILD_CHECK=1)
+
+if [ "${SIRILA_SKIP_BUILD_CHECK}" = "1" ]; then
+    echo "[pre-push] Comprobacion de build omitida (SIRILA_SKIP_BUILD_CHECK=1)."
+    exit 0
+fi
+
+# Solo aplica a la rama de despliegue.
+branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+if [ "$branch" != "main" ]; then
+    exit 0
+fi
+
+if ! command -v node >/dev/null 2>&1; then
+    echo ""
+    echo "[pre-push] AVISO: no se encontro 'node'. No puedo verificar que dist-app"
+    echo "           corresponda al codigo fuente antes de publicar."
+    echo ""
+    echo "           Si el push es correcto, repite con: git push --no-verify"
+    echo ""
+    exit 1
+fi
+
+if [ ! -d node_modules ] || [ ! -d dist-app ]; then
+    echo ""
+    echo "[pre-push] ERROR: faltan node_modules o dist-app."
+    echo "           Ejecuta: npm install && npm run deploy -- \"mensaje\""
+    echo ""
+    exit 1
+fi
+
+echo "[pre-push] Verificando que dist-app corresponda al codigo fuente..."
+
+if ! node tools/scripts/build-dist.js >/tmp/sirila-prepush-build.log 2>&1; then
+    echo ""
+    echo "[pre-push] ERROR: la compilacion fallo. El push fue bloqueado."
+    echo "           Detalle:"
+    tail -n 20 /tmp/sirila-prepush-build.log | sed 's/^/           /'
+    echo ""
+    exit 1
+fi
+
+# Se compara contenido real (git diff) y no git status, porque core.autocrlf
+# marca los artefactos como modificados aunque sus bytes sean identicos.
+# --ignore-cr-at-eol evita ademas falsos positivos por finales de linea.
+drift=$(git diff --name-status --ignore-cr-at-eol HEAD -- dist-app)
+untracked=$(git ls-files --others --exclude-standard -- dist-app)
+
+if [ -n "$drift" ] || [ -n "$untracked" ]; then
+    echo ""
+    echo "[pre-push] PUSH BLOQUEADO: dist-app se regenero distinto al que esta"
+    echo "           commiteado, es decir, publicarias codigo desactualizado."
+    echo ""
+    echo "           dist-app ya fue recompilado en tu copia de trabajo. Para"
+    echo "           dejar todo sincronizado y publicar en un solo paso:"
+    echo ""
+    echo "             npm run deploy -- \"descripcion del cambio\""
+    echo ""
+    echo "           Archivos afectados:"
+    { printf '%s\n' "$drift"; printf '%s\n' "$untracked"; } | grep -v '^$' | sed 's/^/             /' | head -n 10
+    echo ""
+    exit 1
+fi
+
+echo "[pre-push] OK: dist-app esta sincronizado con el codigo fuente."
+exit 0

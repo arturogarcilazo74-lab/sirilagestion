@@ -9,11 +9,14 @@
   "main": "server/server.js",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "node tools/scripts/build-dist.js",
+    "deploy": "node tools/scripts/deploy.js",
+    "deploy:check": "node tools/scripts/deploy.js --check",
     "electron:dev": "concurrently -k \"vite\" \"wait-on tcp:5173 && electron .\"",
-    "electron:build": "vite build && electron-builder",
+    "electron:build": "node tools/scripts/build-dist.js && electron-builder",
     "start": "node server/server.js",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "prepare": "node tools/scripts/install-hooks.js"
   },
   "build": {
     "appId": "com.sirila.gestion",

@@ -158,6 +158,41 @@ export interface FinanceEvent {
   targetGroup?: string; // NEW: To segregate finances by group
 }
 
+/**
+ * Unidad de Consumo Escolar (USE): ingresos y gastos de la tienda/cooperativa.
+ * Se mantiene separado de FinanceEvent (cuotas y eventos del aula) para que el
+ * balance de la USE no se mezcle con el dinero de las cuotas escolares.
+ */
+export type UseMovementType = 'INCOME' | 'EXPENSE';
+
+export type UseMovementCategory =
+  | 'VENTA'          // Venta de productos de la tienda escolar
+  | 'ALIMENTOS'      // Cooperativa / alimentos preparados
+  | 'CUOTA'          // Cuotas propias de la USE
+  | 'DONATIVO'       // Donativos o apoyos recibidos
+  | 'INSUMOS'        // Compra de mercancía e insumos
+  | 'SERVICIOS'      // Agua, luz, gas, internet
+  | 'MANTENIMIENTO'  // Reparaciones y limpieza
+  | 'EQUIPAMIENTO'   // Compra de equipo o mobiliario
+  | 'OTRO';
+
+export type UsePaymentMethod = 'EFECTIVO' | 'TRANSFERENCIA' | 'TARJETA' | 'OTRO';
+
+export interface UseMovement {
+  id: string;
+  date: string;                    // YYYY-MM-DD
+  type: UseMovementType;
+  concept: string;
+  category: UseMovementCategory;
+  amount: number;                  // Siempre positivo; el signo lo da `type`
+  paymentMethod?: UsePaymentMethod;
+  receiptNumber?: string;          // Folio del comprobante
+  responsible?: string;            // Quién registró o autorizó el movimiento
+  notes?: string;
+  createdAt: string;               // ISO
+  createdBy?: string;
+}
+
 export interface SchoolEvent {
   id: string;
   title: string;

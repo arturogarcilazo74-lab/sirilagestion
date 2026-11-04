@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../services/api';
-import { Student, Assignment, BehaviorLog, SchoolEvent, SchoolConfig, FinanceEvent, AttendanceStatus, StaffTask, Book, StaffAttendanceRecord, CTEGame, CTEPresentation, CTEGameResult } from '../types';
+import { Student, Assignment, BehaviorLog, SchoolEvent, SchoolConfig, FinanceEvent, AttendanceStatus, StaffTask, Book, StaffAttendanceRecord, CTEGame, CTEPresentation, CTEGameResult, UseMovement } from '../types';
 import { MOCK_ASSIGNMENTS, MOCK_EVENTS, MOCK_STUDENTS, DEFAULT_CONFIG } from '../constants';
 import { cleanInvalidAttendance } from '../services/schoolCalendarUtils';
 
@@ -46,6 +46,7 @@ export const useAppStore = () => {
     const [events, setEvents] = useState<SchoolEvent[]>(() => getCache('SIRILA_CACHE_EVENTS', MOCK_EVENTS));
     const [schoolConfig, setSchoolConfig] = useState<SchoolConfig>(() => getCache('SIRILA_CACHE_CONFIG', DEFAULT_CONFIG));
     const [financeEvents, setFinanceEvents] = useState<FinanceEvent[]>(() => getCache('SIRILA_CACHE_FINANCE', []));
+    const [useMovements, setUseMovements] = useState<UseMovement[]>(() => getCache('SIRILA_CACHE_USE_MOVEMENTS', []));
     const [staffTasks, setStaffTasks] = useState<StaffTask[]>(() => getCache('SIRILA_CACHE_TASKS', []));
     const [books, setBooks] = useState<Book[]>(() => getCache('SIRILA_CACHE_BOOKS', []));
     const [staffAttendanceRecords, setStaffAttendanceRecords] = useState<StaffAttendanceRecord[]>(() => getCache('SIRILA_CACHE_STAFF_ATTENDANCE', []));
@@ -195,6 +196,10 @@ export const useAppStore = () => {
     }, [financeEvents]);
 
     useEffect(() => {
+        saveToCache('SIRILA_CACHE_USE_MOVEMENTS', useMovements);
+    }, [useMovements]);
+
+    useEffect(() => {
         saveToCache('SIRILA_CACHE_TASKS', staffTasks);
     }, [staffTasks]);
 
@@ -251,6 +256,7 @@ export const useAppStore = () => {
                         points: log.points !== undefined ? log.points : (log.type === 'POSITIVE' ? 1 : -1)
                     }));
                     const f = result.financeEvents || [];
+                    const um = result.useMovements || [];
                     const t = result.staffTasks || [];
                     const b = result.books || [];
 
@@ -268,6 +274,7 @@ export const useAppStore = () => {
                     setEvents(e);
                     setBehaviorLogs(l);
                     setFinanceEvents(f);
+                    setUseMovements(um);
                     setStaffTasks(t);
                     setBooks(b);
 
@@ -962,6 +969,31 @@ export const useAppStore = () => {
         if (updatedEvent) api.saveFinanceEvent(updatedEvent).catch(() => setPendingActions(api.getQueueLength()));
     };
 
+    // --- Unidad de Consumo Escolar (USE) ---
+    const handleAddUseMovement = (movementData: Omit<UseMovement, 'id' | 'createdAt'>) => {
+        const newMovement: UseMovement = {
+            ...movementData,
+            id: `USE${Date.now()}`,
+            createdAt: new Date().toISOString()
+        };
+        setUseMovements(prev => {
+            // Más reciente primero: el libro se lee de arriba hacia abajo.
+            const next = [newMovement, ...prev];
+            saveToCache('SIRILA_CACHE_USE_MOVEMENTS', next);
+            return next;
+        });
+        api.saveUseMovement(newMovement).catch(() => setPendingActions(api.getQueueLength()));
+    };
+
+    const handleDeleteUseMovement = (id: string) => {
+        setUseMovements(prev => {
+            const next = prev.filter(m => m.id !== id);
+            saveToCache('SIRILA_CACHE_USE_MOVEMENTS', next);
+            return next;
+        });
+        api.deleteUseMovement(id).catch(() => setPendingActions(api.getQueueLength()));
+    };
+
     // Staff Task Logic
     const handleAddStaffTask = (taskData: Omit<StaffTask, 'id' | 'createdAt'>) => {
         const newTask: StaffTask = {
@@ -1159,6 +1191,12 @@ export const useAppStore = () => {
                 try { await api.saveFinanceEvent(item); successCount++; } catch (e) { errores.push(`Finanza ${item.title}: Error`); }
             }
 
+            // 5b. UNIDAD DE CONSUMO ESCOLAR (USE)
+            console.log("Guardando movimientos de USE...");
+            for (const item of useMovements) {
+                try { await api.saveUseMovement(item); successCount++; } catch (e) { errores.push(`USE ${item.concept}: Error`); }
+            }
+
             // 6. STUDENTS (The heavy part)
             console.log("Guardando Estudiantes...");
             for (const [index, student] of students.entries()) {
@@ -1316,6 +1354,7 @@ export const useAppStore = () => {
         schoolConfig,
         setSchoolConfig: handleSetSchoolConfig,
         financeEvents,
+        useMovements,
         unreadCount,
         setUnreadCount,
         handleAddStudent,
@@ -1337,6 +1376,8 @@ export const useAppStore = () => {
         handleAddFinanceEvent,
         handleDeleteFinanceEvent,
         handleUpdateContribution,
+        handleAddUseMovement,
+        handleDeleteUseMovement,
         handleExportData,
         handleImportData,
         handleSyncToDB,
