@@ -138,7 +138,9 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
 
     const detalle = previousScore !== undefined
       ? `Se borrará la entrega y la calificación actual (${previousScore}/10). La nota anterior quedará guardada en el historial del alumno.`
-      : 'Se borrará la entrega para que pueda realizarla de nuevo.';
+      : (student.completedAssignmentIds || []).includes(assignmentId)
+        ? 'Se borrará la entrega para que pueda realizarla de nuevo.'
+        : 'Se reiniciará su progreso para que empiece desde cero.';
 
     if (!confirm(`¿Reabrir "${title}" para ${student.name}?\n\n${detalle}`)) return;
 
@@ -1781,11 +1783,11 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                                     </button>
                                   )}
 
-                                  {isInteractive && isCompleted && (
+                                  {isInteractive && (
                                     <button
                                       onClick={() => handleReopenAssignment(student, assignment.id)}
                                       className="p-1 text-amber-600 hover:bg-amber-100 rounded transition-colors"
-                                      title="Reabrir actividad (dar otra oportunidad)"
+                                      title="Reiniciar actividad para este alumno (en cualquier momento)"
                                     >
                                       <RotateCcw size={14} />
                                     </button>
@@ -1902,11 +1904,11 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                                       <Eye size={14} />
                                     </button>
                                   )}
-                                  {isInteractive && isCompleted && (
+                                  {isInteractive && (
                                     <button
                                       onClick={() => handleReopenAssignment(student, assignment.id)}
                                       className="p-1 text-amber-600 hover:bg-amber-100 rounded"
-                                      title="Reabrir actividad (dar otra oportunidad)"
+                                      title="Reiniciar actividad para este alumno (en cualquier momento)"
                                     >
                                       <RotateCcw size={14} />
                                     </button>
@@ -2053,6 +2055,32 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                 </span>
               </div>
             </div>
+
+            {/* Intentos anteriores (calificaciones archivadas al reabrir) */}
+            {(() => {
+              const history = selectedInteractiveResult.student.assignmentHistory?.[selectedInteractiveResult.assignment.id] || [];
+              if (history.length === 0) return null;
+              return (
+                <div className="bg-amber-50/70 p-4 rounded-2xl border border-amber-100">
+                  <p className="text-[10px] uppercase font-bold tracking-wider text-amber-700 mb-2">Intentos anteriores</p>
+                  <div className="space-y-1.5">
+                    {history.map((entry, index) => (
+                      <div key={index} className="flex items-center justify-between text-xs">
+                        <span className="font-semibold text-slate-600">
+                          Intento {index + 1}
+                          <span className="ml-2 font-normal text-slate-400">
+                            {new Date(entry.date).toLocaleDateString('es-MX')}
+                          </span>
+                        </span>
+                        <span className={`font-black ${entry.score >= 6 ? 'text-emerald-700' : 'text-rose-600'}`}>
+                          {entry.score}/10
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Area Scores Breakdown (If NEM Quiz / Multi-area) */}
             {selectedInteractiveResult.areaScores && Object.keys(selectedInteractiveResult.areaScores).length > 0 && (
