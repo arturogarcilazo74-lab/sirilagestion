@@ -239,6 +239,20 @@ Si necesitas hacer modificaciones, aquí es donde debes buscar:
   - Se aplicó el mismo criterio al expediente de dirección (`DirectorView.tsx`), que además no mostraba el diagnóstico en absoluto (solo listaba las evaluaciones parciales).
   - Los valores se convierten con `Number()` antes de formatear, para que un dato heredado en texto no rompa la vista con `toFixed`.
 
+### 21. Actividades interactivas: reapertura real y campos formativos seleccionables (Noviembre 3, 2026)
+- **Diagnóstico:** para usar una guía de estudio como examen faltaban tres cosas.
+  - El botón "Reiniciar intentos" solo ponía `assignmentAttempts = 0`, pero **no** quitaba la actividad de `completedAssignmentIds`: el alumno seguía marcado como entregado y la actividad nunca se desbloqueaba.
+  - La comprobación del portal era `if (!isCompleted && attempts >= max)`, así que **una vez entregada la actividad se podía repetir sin límite**, reemplazando la calificación anterior sin autorización del docente.
+  - No existía forma de elegir qué campos formativos evalúa una actividad: siempre se asumían los cuatro.
+- **Solución implementada:**
+  - **Reapertura real** (`services/assignmentLifecycle.ts` → `reopenAssignmentForStudent`): al reabrir, la actividad sale de completadas, se quitan las marcas de entrega tardía, se reinician los intentos, se borra la calificación vigente y el desglose por campos, y **la nota anterior se archiva** en `assignmentHistory` (no se pierde). El botón del docente ahora se llama "Reabrir Actividad" y explica qué se borrará.
+  - **Bloqueo tras entregar** (`canStartAssignment`): una actividad entregada ya no se puede reiniciar desde el portal; el alumno ve "Esta actividad ya fue entregada. Si tu maestro la reabre…". El límite de intentos se mantiene para quien aún no entrega.
+  - **Campos formativos seleccionables:** nuevo campo `enabledFields` en `Assignment` y selector de cuatro casillas en el alta. Al abrir el HTML, la plataforma inyecta `window.SIRILA_CONFIG` con los campos habilitados (`services/htmlGameConfig.ts`), de modo que el mismo archivo sirve para una guía de Lenguajes, una de dos campos o el examen completo.
+  - **Seguridad de la calificación:** se eliminó el botón "FORZAR ENTREGA", que enviaba `score: 100` y regalaba un 10/10 a cualquiera.
+  - **Precisión:** la conversión de aciertos a calificación conserva un decimal (42/45 = 9.3, antes 9).
+  - **Coherencia del desglose:** el desglose por campos se guarda como porcentajes desde el primer momento (antes la vista local guardaba `{correct, total}` y mostraba `[object Object]%` hasta recargar).
+- **Verificación:** la lógica se extrajo a módulos puros y se probó sin navegador con 28 comprobaciones, incluida la inyección de configuración sobre el archivo real `examen_interactivo_6_grado_primer_trimestre.html`.
+
 ---
 
 ## 4. Guía para Nuevas Modificaciones y Despliegue

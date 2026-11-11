@@ -5,6 +5,8 @@ import { calculateStudentMetrics, getTrimesterAvg } from '../services/gradeUtils
 import { Student, SchoolEvent, Notification, Assignment, DraggableItem, InteractiveZone, BehaviorLog } from '../types';
 import { Bell, Calendar as CalendarIcon, LogOut, MessageCircle, User, CheckCircle, Smartphone, Send, Play, Trophy, HelpCircle, X, Check, AlertCircle, BookOpen, Circle, Move, Trash2, LayoutDashboard, Medal, Star, Award, Users, ChevronRight, FileText, Download, Clock } from 'lucide-react';
 import { sendWhatsAppMessage } from '../whatsappUtils';
+import { buildGameSrcDoc } from '../services/htmlGameConfig';
+import { canStartAssignment } from '../services/assignmentLifecycle';
 
 const CelebrationCanvas: React.FC = () => {
     const canvasRef = React.useRef<HTMLCanvasElement>(null);
@@ -386,14 +388,15 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
     }, [isLoggedIn, student, loginId, loadAssignments]);
 
     const handleStartQuiz = async (assignment: Assignment) => {
-        // --- ATTEMPT LIMIT CHECK ---
-        const attemptsMade = student?.assignmentAttempts?.[assignment.id] || 0;
-        const maxAllowed = assignment.maxAttempts || 1;
+        // --- COMPLETED / ATTEMPT CHECK ---
+        const permission = canStartAssignment(student, assignment);
 
-        const isCompleted = student?.completedAssignmentIds?.includes(assignment.id);
-
-        if (!isCompleted && attemptsMade >= maxAllowed) {
-            alert(`Has alcanzado el límite de intentos para esta actividad (${maxAllowed}). Contacta a tu maestro si necesitas más oportunidades.`);
+        if (!permission.allowed) {
+            if (permission.reason === 'COMPLETED') {
+                alert('Esta actividad ya fue entregada. Si tu maestro la reabre, podrás realizarla de nuevo.');
+            } else {
+                alert(`Has alcanzado el límite de intentos para esta actividad (${permission.maxAttempts}). Contacta a tu maestro si necesitas más oportunidades.`);
+            }
             return;
         }
 
@@ -484,8 +487,8 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                 const { score, maxScore = 100, areaScores } = event.data;
                 console.log("Game Completed. Score received:", score, "/", maxScore);
 
-                // Mapear a 0-10
-                let finalScore = Math.round((Number(score) / Number(maxScore)) * 10);
+                // Mapear a 0-10 conservando un decimal (42/45 = 9.3, no 9)
+                let finalScore = Math.round((Number(score) / Number(maxScore)) * 100) / 10;
                 if (finalScore > 10) finalScore = 10;
                 if (finalScore < 0) finalScore = 0;
 
@@ -505,7 +508,15 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                     const newCompleted = [...new Set([...(student.completedAssignmentIds || []), activeHtmlGame.id])];
                     const newResults = { ...(student.assignmentResults || {}), [activeHtmlGame.id]: finalScore };
                     const newAttempts = { ...(student.assignmentAttempts || {}), [activeHtmlGame.id]: (student.assignmentAttempts?.[activeHtmlGame.id] || 0) + 1 };
-                    const newAreaResults = areaScores ? { ...(student.assignmentAreaResults || {}), [activeHtmlGame.id]: areaScores } : (student.assignmentAreaResults || {});
+                    const areaPercentages: Record<string, number> = {};
+                    if (areaScores) {
+                        Object.entries(areaScores).forEach(([area, stats]) => {
+                            const correct = Number((stats as any)?.correct) || 0;
+                            const total = Number((stats as any)?.total) || 0;
+                            areaPercentages[area] = Math.round((correct / (total || 1)) * 100);
+                        });
+                    }
+                    const newAreaResults = areaScores ? { ...(student.assignmentAreaResults || {}), [activeHtmlGame.id]: areaPercentages } : (student.assignmentAreaResults || {});
                     const newLateIds = isLate ? [...new Set([...(student.lateAssignmentIds || []), activeHtmlGame.id])] : student.lateAssignmentIds;
 
                     const updatedStudent: Student = {
@@ -2057,12 +2068,9 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                                         </a>
                                                     )}
                                                     {isInteractive && (
-                                                        <button
-                                                            onClick={() => handleStartQuiz(assign)}
-                                                            className="mt-2 w-full py-1.5 bg-white border border-purple-200 text-purple-600 rounded text-[10px] font-bold hover:bg-purple-50 transition-colors"
-                                                        >
-                                                            Volver a ver
-                                                        </button>
+                                                        <div className="mt-2 w-full py-1.5 bg-white border border-slate-200 text-slate-400 rounded text-[10px] font-bold text-center">
+                                                            Entregada · pide a tu maestro reabrirla
+                                                        </div>
                                                     )}
                                                 </div>
                                             );
@@ -2981,12 +2989,6 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                     <div className="w-full h-12 bg-slate-800 flex items-center justify-between px-4 sticky top-0 z-50 shadow-md">
                         <span className="text-white font-bold text-sm tracking-wide truncate pr-4">{activeHtmlGame.title}</span>
                         <div className="flex items-center gap-2">
-                            <button onClick={() => {
-                                // Forzar entrega manual emitiendo el evento global
-                                window.postMessage({ type: 'GAME_COMPLETE', score: 100, maxScore: 100 }, '*');
-                            }} className="text-white bg-emerald-600 hover:bg-emerald-700 px-3 py-1 rounded font-bold text-xs shadow-md transition-colors flex items-center gap-1">
-                                ✅ FORZAR ENTREGA
-                            </button>
                             <button onClick={() => setActiveHtmlGame(null)} className="text-white bg-rose-600 hover:bg-rose-700 px-3 py-1 rounded font-bold text-xs shadow-md transition-colors flex items-center gap-1">
                                 <X size={14} /> CERRAR
                             </button>
@@ -2994,7 +2996,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                     </div>
                     <iframe
                         src={activeHtmlGame.interactiveData.gameUrl}
-                        srcDoc={!activeHtmlGame.interactiveData.gameUrl ? activeHtmlGame.interactiveData.htmlContent : undefined}
+                        srcDoc={!activeHtmlGame.interactiveData.gameUrl ? buildGameSrcDoc(activeHtmlGame) : undefined}
                         className="w-full flex-1 border-none bg-white"
                         title="Juego Educativo"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"

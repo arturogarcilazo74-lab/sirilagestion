@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'; // AI Feature Enabled
-import { Student, Assignment, InteractiveQuestion, DraggableItem, InteractiveZone } from '../types';
+import { Student, Assignment, InteractiveQuestion, DraggableItem, InteractiveZone, CampoFormativo, CAMPOS_FORMATIVOS, CAMPO_FORMATIVO_LABELS } from '../types';
 import { api } from '../services/api';
+import { reopenAssignmentForStudent } from '../services/assignmentLifecycle';
 import { CheckCircle, Circle, Plus, Trash2, Calendar, BarChart3, AlertCircle, X, Save, Trophy, TrendingUp, Sparkles, HelpCircle, Eye, EyeOff, Upload, FileText, Image as ImageIcon, Move, Play, BrainCircuit, Settings, Check, MessageCircle, Gamepad2, ChevronDown, ChevronUp, Users, RotateCcw } from 'lucide-react';
 import { sendWhatsAppMessage, getTaskMessage } from '../whatsappUtils';
 
@@ -36,6 +37,8 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
   const [newDate, setNewDate] = useState(new Date().toISOString().split('T')[0]);
   const [isVisibleInParentsPortal, setIsVisibleInParentsPortal] = useState(true);
   const [targetGroup, setTargetGroup] = useState(defaultTargetGroup); // Default group
+  // Campos formativos que evalúa la actividad (todos por defecto)
+  const [enabledFields, setEnabledFields] = useState<CampoFormativo[]>([...CAMPOS_FORMATIVOS]);
 
   // Interactive Quiz State
   const [activityType, setActivityType] = useState<'TASK' | 'QUIZ' | 'WORKSHEET' | 'PLANNING' | 'HTML_GAME' | 'CLASSWORK'>('TASK');
@@ -117,22 +120,45 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
     });
   };
 
-  const handleResetAttempts = async (student: Student, assignmentId: string) => {
-    if (!confirm(`¿Deseas reiniciar los intentos de "${student.name}" para esta actividad? El alumno podrá realizarla nuevamente desde el portal.`)) return;
+  /**
+   * Reabre una actividad para que el alumno pueda realizarla de nuevo.
+   *
+   * Antes solo se reiniciaban los intentos, pero el alumno seguía marcado como
+   * entregado, así que la actividad nunca se desbloqueaba. Ahora se retira de
+   * completadas, se conserva la calificación anterior en el historial y se
+   * borra la nota vigente para que la nueva cuenta.
+   */
+  const handleReopenAssignment = async (student: Student, assignmentId: string) => {
+    const assignment = assignments.find(a => a.id === assignmentId);
+    const previousScore = student.assignmentResults?.[assignmentId];
+    const title = assignment?.title || 'esta actividad';
+
+    const detalle = previousScore !== undefined
+      ? `Se borrará la entrega y la calificación actual (${previousScore}/10). La nota anterior quedará guardada en el historial del alumno.`
+      : 'Se borrará la entrega para que pueda realizarla de nuevo.';
+
+    if (!confirm(`¿Reabrir "${title}" para ${student.name}?\n\n${detalle}`)) return;
+
     try {
-      const updatedAttempts = { ...(student.assignmentAttempts || {}), [assignmentId]: 0 };
-      const updatedStudent = { ...student, assignmentAttempts: updatedAttempts };
+      const updatedStudent = reopenAssignmentForStudent(student, assignmentId, new Date().toISOString());
       await api.saveStudent(updatedStudent);
-      if (selectedInteractiveResult) {
+
+      if (selectedInteractiveResult
+        && selectedInteractiveResult.student.id === student.id
+        && selectedInteractiveResult.assignment.id === assignmentId) {
         setSelectedInteractiveResult({
           ...selectedInteractiveResult,
-          attempts: 0
+          student: updatedStudent,
+          score: undefined,
+          attempts: 0,
+          areaScores: undefined
         });
       }
-      alert("Intentos reiniciados con éxito.");
+
+      alert('Actividad reabierta. El alumno ya puede realizarla nuevamente desde el portal.');
     } catch (e) {
-      console.error("Error resetting attempts", e);
-      alert("Error al reiniciar intentos.");
+      console.error('Error reopening assignment', e);
+      alert('Error al reabrir la actividad.');
     }
   };
 
@@ -244,6 +270,8 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
           type: (activityType === 'TASK' || activityType === 'CLASSWORK') ? activityType as any : 'INTERACTIVE',
           isVisibleInParentsPortal: isVisibleInParentsPortal,
           targetGroup: targetGroup.trim().toUpperCase() || 'GLOBAL',
+          // Si el docente no marca ninguno, la actividad evalúa los cuatro campos.
+          enabledFields: enabledFields.length > 0 ? enabledFields : [...CAMPOS_FORMATIVOS],
           instructions: (activityType === 'TASK' && newInstructions.trim()) ? newInstructions.trim() : undefined,
           externalLinks: (activityType === 'TASK' && newExternalLinks.length > 0) ? newExternalLinks : undefined,
           attachmentUrl: (activityType === 'TASK' && taskAttachmentUrl) ? taskAttachmentUrl : undefined
@@ -358,6 +386,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
         setIsAdding(false);
         setActivityType('TASK');
         setIsVisibleInParentsPortal(true);
+        setEnabledFields([...CAMPOS_FORMATIVOS]);
         setQuestions([]);
         setVideoUrl('');
         setAiWorksheetTopic('');
@@ -637,6 +666,46 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                         <div className="text-xs text-slate-400">Si desactivas esto, podrás publicarla después.</div>
                       </div>
                     </div>
+
+                    {/* Campos formativos evaluados */}
+                    {(activityType === 'QUIZ' || activityType === 'WORKSHEET' || activityType === 'HTML_GAME' || activityType === 'PLANNING') && (
+                      <div className="md:col-span-2 bg-white p-4 rounded-xl border border-slate-200">
+                        <div className="flex items-start justify-between gap-3 mb-3">
+                          <div>
+                            <div className="font-bold text-slate-700 text-sm">Campos formativos que evalúa</div>
+                            <div className="text-xs text-slate-400">La actividad pedirá y calificará solo los campos marcados.</div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setEnabledFields([...CAMPOS_FORMATIVOS])}
+                            className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 whitespace-nowrap"
+                          >
+                            Marcar todos
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {CAMPOS_FORMATIVOS.map(field => {
+                            const active = enabledFields.includes(field);
+                            return (
+                              <button
+                                key={field}
+                                type="button"
+                                onClick={() => setEnabledFields(prev => prev.includes(field) ? prev.filter(f => f !== field) : [...prev, field])}
+                                className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${active ? 'bg-indigo-50 border-indigo-300' : 'bg-slate-50 border-slate-200'}`}
+                              >
+                                <span className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 ${active ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-slate-300'}`}>
+                                  {active && <Check size={14} />}
+                                </span>
+                                <span className={`text-xs font-bold ${active ? 'text-indigo-900' : 'text-slate-500'}`}>{CAMPO_FORMATIVO_LABELS[field]}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {enabledFields.length === 0 && (
+                          <p className="text-[11px] text-amber-600 font-bold mt-2">Sin campos marcados se evaluarán los cuatro.</p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </section>
 
@@ -1975,11 +2044,11 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
             {/* Actions */}
             <div className="flex flex-col sm:flex-row gap-2 pt-2">
               <button
-                onClick={() => handleResetAttempts(selectedInteractiveResult.student, selectedInteractiveResult.assignment.id)}
+                onClick={() => handleReopenAssignment(selectedInteractiveResult.student, selectedInteractiveResult.assignment.id)}
                 className="flex-1 py-2.5 px-4 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-xl text-xs font-bold border border-amber-200 flex items-center justify-center gap-2 transition-all active:scale-95"
               >
                 <RotateCcw size={14} />
-                Reiniciar Intentos
+                Reabrir Actividad
               </button>
               <button
                 onClick={() => {

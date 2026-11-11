@@ -40,6 +40,7 @@ export interface Student {
   lateAssignmentIds?: string[]; // NEW: IDs of assignments submitted past the due date
   assignmentResults?: Record<string, number>; // assignmentId -> score (0-10)
   assignmentAreaResults?: Record<string, Record<string, number>>; // assignmentId -> { areaName: scorePercentage }
+  assignmentHistory?: Record<string, Array<{ score: number; date: string }>>; // assignmentId -> calificaciones anteriores (al reabrir)
   assignmentAttempts?: Record<string, number>; // assignmentId -> number of attempts made
   totalAssignments: number;
   participationCount: number;
@@ -130,6 +131,22 @@ export type InteractiveData =
   | WorksheetData
   | HtmlGameData;
 
+/**
+ * Campos formativos de la Nueva Escuela Mexicana.
+ * Las claves deben coincidir con las que reportan las actividades interactivas
+ * (sin acento en "Etica") para que el desglose se muestre correctamente.
+ */
+export type CampoFormativo = 'Lenguajes' | 'Saberes' | 'Etica' | 'Humano';
+
+export const CAMPOS_FORMATIVOS: CampoFormativo[] = ['Lenguajes', 'Saberes', 'Etica', 'Humano'];
+
+export const CAMPO_FORMATIVO_LABELS: Record<CampoFormativo, string> = {
+  Lenguajes: 'Lenguajes',
+  Saberes: 'Saberes y Pensamiento Científico',
+  Etica: 'Ética, Naturaleza y Sociedades',
+  Humano: 'De lo Humano y lo Comunitario'
+};
+
 export interface Assignment {
   id: string;
   title: string;
@@ -145,6 +162,7 @@ export interface Assignment {
   externalLinks?: string[]; // NEW: Optional links to videos or other pages
   maxAttempts?: number; // NEW: Maximum number of times a student can take this activity
   attachmentUrl?: string; // NEW: Optional file attachment for simple tasks
+  enabledFields?: CampoFormativo[]; // Campos formativos que evalúa la actividad (vacío = todos)
 }
 
 export interface FinanceEvent {

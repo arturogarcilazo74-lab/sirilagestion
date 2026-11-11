@@ -728,6 +728,7 @@ export const useAppStore = () => {
             instructions: assignmentData.instructions,
             externalLinks: assignmentData.externalLinks,
             maxAttempts: assignmentData.maxAttempts,
+            enabledFields: assignmentData.enabledFields,
             attachmentUrl: assignmentData.attachmentUrl
         };
 
