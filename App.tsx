@@ -340,6 +340,7 @@ const App: React.FC = () => {
               onAddAssignment={handleAddAssignmentWrapper as any}
               onUpdateAssignment={store.handleUpdateAssignment}
               onDeleteAssignment={store.handleDeleteAssignment}
+              onReopenAssignment={store.handleApplyReopenedStudent}
             />
           )}
           {currentView === 'HOMEWORK_QR' && (

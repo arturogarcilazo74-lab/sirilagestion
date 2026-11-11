@@ -995,6 +995,23 @@ export const useAppStore = () => {
         api.deleteUseMovement(id).catch(() => setPendingActions(api.getQueueLength()));
     };
 
+    /**
+     * Aplica en el estado global un alumno al que se le reabrió una actividad.
+     * Se recibe ya transformado para no duplicar la lógica de reapertura.
+     */
+    const handleApplyReopenedStudent = async (updatedStudent: Student) => {
+        setStudents(prev => {
+            const next = prev.map(s => s.id === updatedStudent.id ? updatedStudent : s);
+            saveToCache('SIRILA_CACHE_STUDENTS', next);
+            return next;
+        });
+        try {
+            await api.saveStudent(updatedStudent);
+        } catch (e) {
+            setPendingActions(api.getQueueLength());
+        }
+    };
+
     // Staff Task Logic
     const handleAddStaffTask = (taskData: Omit<StaffTask, 'id' | 'createdAt'>) => {
         const newTask: StaffTask = {
@@ -1379,6 +1396,7 @@ export const useAppStore = () => {
         handleUpdateContribution,
         handleAddUseMovement,
         handleDeleteUseMovement,
+        handleApplyReopenedStudent,
         handleExportData,
         handleImportData,
         handleSyncToDB,

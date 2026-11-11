@@ -261,6 +261,7 @@ Si necesitas hacer modificaciones, aquí es donde debes buscar:
   - **Editar invalida la retroalimentación:** si el alumno cambia una respuesta antes de comprobar, el comentario anterior se oculta.
   - **Al terminar** se bloquean todos los reactivos (la pantalla "Revisar mis respuestas" es solo de lectura) y se ignora cualquier intento de reenviar.
   - **Reapertura limpia:** se añadió `assignmentReopenedAt` al alumno y la marca viaja en `SIRILA_CONFIG.reopenedAt`; el HTML usa esa marca en la clave de autoguardado. Sin esto, al reabrir la actividad el alumno encontraba sus respuestas bloqueadas del intento anterior y no podía volver a empezar.
+  - **Acceso visible a la reapertura:** antes solo existía dentro del modal de resultados (y en móvil quedaba fuera de pantalla). Ahora el docente tiene un botón "Reabrir" en la cabecera del modal y un icono de reapertura directamente en la celda/lista del alumno cuando la actividad está entregada. Además el estado se actualiza al instante en pantalla (`handleApplyReopenedStudent`), sin esperar la sincronización automática.
 - **Verificación:** 16 comprobaciones del bloqueo y 6 de la reapertura, ejecutadas en un DOM real (jsdom) sobre el archivo entregado.
 
 ---

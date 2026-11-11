@@ -21,6 +21,8 @@ interface ActivitiesViewProps {
   onUpdateAssignment: (id: string, updatedData: Partial<Assignment>) => void;
   onDeleteAssignment: (id: string) => void;
   defaultTargetGroup?: string;
+  /** Aplica el alumno reabierto en el estado global (opcional). */
+  onReopenAssignment?: (updatedStudent: Student) => Promise<void> | void;
 }
 
 export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
@@ -30,7 +32,8 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
   onAddAssignment,
   onUpdateAssignment,
   onDeleteAssignment,
-  defaultTargetGroup = '4 A'
+  defaultTargetGroup = '4 A',
+  onReopenAssignment
 }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [newTitle, setNewTitle] = useState('');
@@ -141,7 +144,12 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
 
     try {
       const updatedStudent = reopenAssignmentForStudent(student, assignmentId, new Date().toISOString());
-      await api.saveStudent(updatedStudent);
+
+      if (onReopenAssignment) {
+        await onReopenAssignment(updatedStudent);
+      } else {
+        await api.saveStudent(updatedStudent);
+      }
 
       if (selectedInteractiveResult
         && selectedInteractiveResult.student.id === student.id
@@ -1772,6 +1780,16 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                                       <Eye size={14} />
                                     </button>
                                   )}
+
+                                  {isInteractive && isCompleted && (
+                                    <button
+                                      onClick={() => handleReopenAssignment(student, assignment.id)}
+                                      className="p-1 text-amber-600 hover:bg-amber-100 rounded transition-colors"
+                                      title="Reabrir actividad (dar otra oportunidad)"
+                                    >
+                                      <RotateCcw size={14} />
+                                    </button>
+                                  )}
                                 </div>
 
                                 {score !== undefined && (
@@ -1879,8 +1897,18 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                                     <button
                                       onClick={() => handleOpenInteractiveResult(student, assignment)}
                                       className="p-1 text-indigo-600 hover:bg-indigo-100 rounded text-xs"
+                                      title="Ver resultados e intentos"
                                     >
                                       <Eye size={14} />
+                                    </button>
+                                  )}
+                                  {isInteractive && isCompleted && (
+                                    <button
+                                      onClick={() => handleReopenAssignment(student, assignment.id)}
+                                      className="p-1 text-amber-600 hover:bg-amber-100 rounded"
+                                      title="Reabrir actividad (dar otra oportunidad)"
+                                    >
+                                      <RotateCcw size={14} />
                                     </button>
                                   )}
                                 </div>
@@ -1972,12 +2000,23 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                   <p className="text-xs text-slate-400 font-medium">{selectedInteractiveResult.student.group || 'Grupo'} · {selectedInteractiveResult.assignment.title}</p>
                 </div>
               </div>
-              <button
-                onClick={() => setSelectedInteractiveResult(null)}
-                className="p-2 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600 transition-colors"
-              >
-                <X size={20} />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleReopenAssignment(selectedInteractiveResult.student, selectedInteractiveResult.assignment.id)}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-xl text-xs font-bold border border-amber-200 transition-colors"
+                  title="Dar otra oportunidad al alumno: se borra su entrega y puede volver a responder"
+                >
+                  <RotateCcw size={14} />
+                  Reabrir
+                </button>
+                <button
+                  onClick={() => setSelectedInteractiveResult(null)}
+                  className="p-2 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600 transition-colors"
+                  aria-label="Cerrar"
+                >
+                  <X size={20} />
+                </button>
+              </div>
             </div>
 
             {/* Status and Summary Cards */}
