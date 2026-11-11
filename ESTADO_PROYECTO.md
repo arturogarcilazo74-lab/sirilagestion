@@ -43,6 +43,10 @@ Si necesitas hacer modificaciones, aquí es donde debes buscar:
   - `deploy.js`: comando único de despliegue (`npm run deploy -- "mensaje"`).
   - `install-hooks.js`: activa `core.hooksPath=.githooks` en `npm install`.
   - `.githooks/pre-push`: recompila y bloquea el push si `dist-app` no corresponde al código fuente.
+- **Actividades Interactivas y su ciclo de vida**: `components/ActivitiesView.tsx`, `services/assignmentLifecycle.ts`, `services/htmlGameConfig.ts`
+  - `assignmentLifecycle.ts`: decide si el alumno puede iniciar (`canStartAssignment`) y transforma al alumno al reabrir (`reopenAssignmentForStudent`, con historial y marca de reapertura).
+  - `htmlGameConfig.ts`: inyecta `window.SIRILA_CONFIG` en el HTML antes de montarlo en el iframe (campos habilitados, intentos y marca de reapertura).
+  - La vista docente muestra calificación, intentos, desglose por campos, historial de intentos anteriores y el botón de reinicio.
 - **Gestión de Alumnos**: `components/StudentsView.tsx`
   - Expedientes de alumnos, estatus (`INSCRITO`, `BAJA`, `TRASLADO`), conducta e indicadores de riesgo.
 - **Generación de Documentos y Reportes**: `services/pdfGenerator.ts`
@@ -239,7 +243,7 @@ Si necesitas hacer modificaciones, aquí es donde debes buscar:
   - Se aplicó el mismo criterio al expediente de dirección (`DirectorView.tsx`), que además no mostraba el diagnóstico en absoluto (solo listaba las evaluaciones parciales).
   - Los valores se convierten con `Number()` antes de formatear, para que un dato heredado en texto no rompa la vista con `toFixed`.
 
-### 21. Actividades interactivas: reapertura real y campos formativos seleccionables (Noviembre 3, 2026)
+### 21. Actividades interactivas: reapertura real y campos formativos seleccionables (Noviembre 11, 2026)
 - **Diagnóstico:** para usar una guía de estudio como examen faltaban tres cosas.
   - El botón "Reiniciar intentos" solo ponía `assignmentAttempts = 0`, pero **no** quitaba la actividad de `completedAssignmentIds`: el alumno seguía marcado como entregado y la actividad nunca se desbloqueaba.
   - La comprobación del portal era `if (!isCompleted && attempts >= max)`, así que **una vez entregada la actividad se podía repetir sin límite**, reemplazando la calificación anterior sin autorización del docente.
@@ -253,7 +257,7 @@ Si necesitas hacer modificaciones, aquí es donde debes buscar:
   - **Coherencia del desglose:** el desglose por campos se guarda como porcentajes desde el primer momento (antes la vista local guardaba `{correct, total}` y mostraba `[object Object]%` hasta recargar).
 - **Verificación:** la lógica se extrajo a módulos puros y se probó sin navegador con 28 comprobaciones, incluida la inyección de configuración sobre el archivo real `examen_interactivo_6_grado_primer_trimestre.html`.
 
-### 22. Actividades HTML: reactivo bloqueado al comprobarlo y reinicio real al reabrir (Noviembre 3, 2026)
+### 22. Actividades HTML: reactivo bloqueado al comprobarlo y reinicio real al reabrir (Noviembre 11, 2026)
 - **Diagnóstico:** en la guía de estudio, el alumno podía pulsar "Comprobar" sin responder (veía la respuesta correcta) y, peor, después de comprobar podía **cambiar su respuesta** y volver a comprobar. Con ese ciclo, cualquiera termina con 10.
 - **Solución implementada:**
   - **Sin respuesta no se califica:** "Comprobar" permanece deshabilitado; si se fuerza, muestra un aviso neutro ("Primero responde") sin revelar nada.
@@ -293,30 +297,58 @@ Si necesitas hacer modificaciones, aquí es donde debes buscar:
 
 ---
 
-## 5. Estado Actual y Trabajo Pendiente (Noviembre 3, 2026)
+## 5. Estado Actual y Trabajo Pendiente (Noviembre 11, 2026)
 
 ### 5.1 Situación del despliegue
-- Rama `main` sincronizada con `origin/main`. Último commit de código al escribir esto: `fa37afb` (regeneración de `dist-app`); este documento se publica en un commit posterior.
-- Producción servía `assets/index-DTeP7lVO.js` al cierre de la sesión (verificado por HTTP). Comprobar el hash actual antes de darlo por bueno.
-- Datos en producción al cierre de esta sesión: **63 alumnos**, **16 con evaluación diagnóstica**, de los cuales **9 aún no tienen trimestres** capturados (antes no se les mostraba el diagnóstico; corregido en el punto 20).
+- Rama `main` sincronizada con `origin/main`. Último commit de código: `29fef6a` (regeneración de `dist-app`); este documento se publica en un commit posterior.
+- **El hash del bundle en producción no coincide con el del repositorio.** Hostinger compila su propio artefacto, así que `assets/index-XXXX.js` servido puede diferir del commiteado en `dist-app`. Por eso hay que **verificar por contenido, no por hash**: descargar el bundle servido y buscar una cadena propia del cambio (por ejemplo `Intentos anteriores`).
+- Producción verificada al cierre de esta sesión: el bundle servido contiene `Intentos anteriores`, `Reiniciar actividad`, `handleApplyReopenedStudent` y `reopenedAt`.
+- Datos en producción: **63 alumnos**, **16 con evaluación diagnóstica**, de los cuales **9 aún no tienen trimestres** capturados (ver punto 20).
 
-### 5.2 Trabajo pendiente, por prioridad
+### 5.2 Flujo de actividades interactivas (lo implementado en esta sesión)
+Contrato que debe cumplir cualquier actividad HTML que se suba a la plataforma:
+
+| Pieza | Detalle |
+|---|---|
+| Configuración entrante | La plataforma inyecta `<script>window.SIRILA_CONFIG={assignmentId, title, fields, maxAttempts, reopenedAt}</script>` justo después de `<head>` |
+| Resultado | El HTML debe enviar `window.parent.postMessage({ type: 'GAME_COMPLETE', score, maxScore, areaScores }, '*')` |
+| Claves de área | Exactamente `Lenguajes`, `Saberes`, `Etica` (sin acento), `Humano` |
+| Sin configuración | Si el HTML se abre suelto, debe funcionar con los cuatro campos |
+
+Reglas de ciclo de vida (`services/assignmentLifecycle.ts`):
+- Una actividad **entregada queda bloqueada**: el portal no deja reabrirla aunque queden intentos.
+- **Reabrir** archiva la nota vigente en `assignmentHistory`, borra la entrega, la nota y el desglose, reinicia intentos y sella `assignmentReopenedAt`.
+- El **reinicio está disponible en cualquier momento** para actividades interactivas (icono en la celda del alumno o botón en la cabecera del modal).
+- La marca `reopenedAt` viaja al HTML para que el autoguardado del alumno empiece limpio tras una reapertura.
+
+### 5.3 Guía de estudio (material externo, fuera del repositorio)
+- **Archivo:** `C:\Users\lapomiguel\Documents\6to_grado_26\guia_estudio_6to_primer_trimestre.html` (~178 KB, autocontenido, sin CDN).
+- **Contenido:** 45 reactivos de 6° grado en los cuatro campos formativos, con lecturas, ilustraciones SVG y explicación por reactivo.
+- **Comportamiento:** una pregunta por pantalla, barra de avance, retroalimentación inmediata, bloqueo al comprobar (no se puede corregir después), autoguardado por intento y pantalla de resultado con aciertos por campo.
+- **No vive en el repositorio:** se sube desde *Actividades → Subir archivo HTML*. Si se modifica el archivo, **hay que volver a subirlo**; el cambio no llega solo por desplegar la plataforma.
+- **Regenerarla:** se construyó con un script temporal (Tailwind compilado e incrustado) que no se conservó. Si hay que rehacerla, conviene volver a generarla desde el examen original (`examen_interactivo_6_grado_primer_trimestre.html`) en lugar de editar el HTML a mano.
+
+### 5.4 Trabajo pendiente, por prioridad
 
 | # | Tema | Por qué importa |
 |---|---|---|
-| 1 | `useAppStore` es un hook plano, no un contexto | Cada componente que lo llama crea una copia independiente del estado. `FinanceView.tsx` ya instancia una segunda copia (estado duplicado y polling doble). Es la causa de fondo de varias rarezas de sincronización. Convertirlo a Context es el arreglo estructural. |
+| 1 | `useAppStore` es un hook plano, no un contexto | Cada componente que lo llama crea una copia independiente del estado. `FinanceView.tsx` instancia una segunda copia (estado duplicado y polling doble). Es la causa de fondo de varias rarezas de sincronización. |
 | 2 | ~172 MB de PDFs en `dist-app/Libros/6to_2026-2027` | Se versionan y viajan en cada despliegue. Ya existe el precedente de carga bajo demanda del commit `2858518`. |
-| 3 | 26 scripts de diagnóstico de un solo uso en `server/` | Confunden sobre qué es código vivo (`check_*`, `fix_*`, `debug_*`, `recuperar_*`). |
+| 3 | 26 scripts de diagnóstico de un solo uso en `server/` | Confunden sobre qué es código real (`check_*`, `fix_*`, `debug_*`, `recuperar_*`). |
 | 4 | El hook `pre-push` es local | Protege esta máquina, pero se puede saltar con `--no-verify`. Un GitHub Action sería el candado real. |
 | 5 | USE: no se pueden **editar** movimientos | Solo permite crear y eliminar; para corregir un monto hay que borrar y volver a capturar. Falta `PUT` en el servidor y `handleUpdateUseMovement`. |
-| 6 | Portal de padres: el modal de detalle de calificaciones lista solo trimestres | La tarjeta principal sí muestra el diagnóstico; el modal no. |
-| 7 | ~82 `console.error` en componentes y servicios | Ruido en la consola de producción. |
+| 6 | Portal de padres: el modal de calificaciones lista solo trimestres | La tarjeta principal sí muestra el diagnóstico; el modal no. |
+| 7 | La guía no muestra al alumno sus intentos anteriores | El historial solo lo ve el docente en el modal. Si se quiere motivar al alumno, conviene mostrarlo al entrar. |
+| 8 | ~82 `console.error` en componentes y servicios | Ruido en la consola de producción. |
 
-### 5.3 Cómo retomar
+### 5.5 Cómo retomar
 1. `npm install` (activa los hooks de git).
-2. Revisar este documento y `npm run deploy:check` para confirmar que el artefacto está al día.
-3. Implementar sobre `main`, verificando con `npx tsc --noEmit` y una compilación real.
-4. Publicar con `npm run deploy -- "descripción del cambio"`.
+2. `npm run deploy:check` para confirmar que el artefacto está al día.
+3. Leer la sección 5.2 antes de tocar actividades interactivas; el contrato con el HTML es fácil de romper.
+4. Implementar sobre `main`, verificar con `npx tsc --noEmit` y una compilación real.
+5. Publicar con `npm run deploy -- "descripción del cambio"`.
+6. Si el cambio toca la guía de estudio, **volver a subir el HTML** desde la plataforma.
 
 ---
-*Documento actualizado al 3 de Noviembre de 2026.*
+
+*Documento actualizado al 11 de Noviembre de 2026.*
