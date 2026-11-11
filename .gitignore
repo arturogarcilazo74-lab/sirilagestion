@@ -49,6 +49,10 @@ dist-app.__backup
 .tmp-build
 SIRILA_LISTO_HOSTINGER.zip
 
+# Carpetas de trabajo temporales (pruebas, generadores de un solo uso)
+.tmp-*
+.tmp
+
 # Scripts de migración (contienen credenciales, uso único)
 tools/scripts/migrar_aiven_a_hostinger.js
 tools/scripts/migrar_directo.js
