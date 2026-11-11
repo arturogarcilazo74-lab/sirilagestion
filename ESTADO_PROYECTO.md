@@ -253,6 +253,16 @@ Si necesitas hacer modificaciones, aquí es donde debes buscar:
   - **Coherencia del desglose:** el desglose por campos se guarda como porcentajes desde el primer momento (antes la vista local guardaba `{correct, total}` y mostraba `[object Object]%` hasta recargar).
 - **Verificación:** la lógica se extrajo a módulos puros y se probó sin navegador con 28 comprobaciones, incluida la inyección de configuración sobre el archivo real `examen_interactivo_6_grado_primer_trimestre.html`.
 
+### 22. Actividades HTML: reactivo bloqueado al comprobarlo y reinicio real al reabrir (Noviembre 3, 2026)
+- **Diagnóstico:** en la guía de estudio, el alumno podía pulsar "Comprobar" sin responder (veía la respuesta correcta) y, peor, después de comprobar podía **cambiar su respuesta** y volver a comprobar. Con ese ciclo, cualquiera termina con 10.
+- **Solución implementada:**
+  - **Sin respuesta no se califica:** "Comprobar" permanece deshabilitado; si se fuerza, muestra un aviso neutro ("Primero responde") sin revelar nada.
+  - **Bloqueo al comprobar:** al calificar, el reactivo se marca como `data-locked`, se deshabilitan todos sus campos y el botón pasa a "Respondida" (deshabilitado). La calificación ya no se puede alterar. El bloqueo y la retroalimentación se guardan, así que **sobreviven a una recarga**.
+  - **Editar invalida la retroalimentación:** si el alumno cambia una respuesta antes de comprobar, el comentario anterior se oculta.
+  - **Al terminar** se bloquean todos los reactivos (la pantalla "Revisar mis respuestas" es solo de lectura) y se ignora cualquier intento de reenviar.
+  - **Reapertura limpia:** se añadió `assignmentReopenedAt` al alumno y la marca viaja en `SIRILA_CONFIG.reopenedAt`; el HTML usa esa marca en la clave de autoguardado. Sin esto, al reabrir la actividad el alumno encontraba sus respuestas bloqueadas del intento anterior y no podía volver a empezar.
+- **Verificación:** 16 comprobaciones del bloqueo y 6 de la reapertura, ejecutadas en un DOM real (jsdom) sobre el archivo entregado.
+
 ---
 
 ## 4. Guía para Nuevas Modificaciones y Despliegue

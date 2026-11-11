@@ -2996,7 +2996,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                     </div>
                     <iframe
                         src={activeHtmlGame.interactiveData.gameUrl}
-                        srcDoc={!activeHtmlGame.interactiveData.gameUrl ? buildGameSrcDoc(activeHtmlGame) : undefined}
+                        srcDoc={!activeHtmlGame.interactiveData.gameUrl ? buildGameSrcDoc(activeHtmlGame, student?.assignmentReopenedAt?.[activeHtmlGame.id] || null) : undefined}
                         className="w-full flex-1 border-none bg-white"
                         title="Juego Educativo"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"

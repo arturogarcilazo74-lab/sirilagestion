@@ -76,6 +76,8 @@ export const reopenAssignmentForStudent = (
         assignmentResults,
         assignmentHistory,
         assignmentAreaResults,
+        // Marca de reapertura: el HTML la usa para empezar limpio.
+        assignmentReopenedAt: { ...(student.assignmentReopenedAt || {}), [assignmentId]: reopenedAt },
         assignmentAttempts: { ...(student.assignmentAttempts || {}), [assignmentId]: 0 },
         assignmentsCompleted: new Set(completedAssignmentIds).size
     };

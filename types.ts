@@ -41,6 +41,7 @@ export interface Student {
   assignmentResults?: Record<string, number>; // assignmentId -> score (0-10)
   assignmentAreaResults?: Record<string, Record<string, number>>; // assignmentId -> { areaName: scorePercentage }
   assignmentHistory?: Record<string, Array<{ score: number; date: string }>>; // assignmentId -> calificaciones anteriores (al reabrir)
+  assignmentReopenedAt?: Record<string, string>; // assignmentId -> fecha de la última reapertura
   assignmentAttempts?: Record<string, number>; // assignmentId -> number of attempts made
   totalAssignments: number;
   participationCount: number;
