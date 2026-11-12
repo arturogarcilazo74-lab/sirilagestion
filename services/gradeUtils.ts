@@ -71,9 +71,15 @@ export const calculateStudentMetrics = (
     : 0;
 
   // Porcentaje de tareas completadas
-  const studentAssignments = finalAssignments.filter(a =>
-    !a.targetGroup || a.targetGroup === student.group
-  );
+  // Una actividad cuenta si es para todos (sin grupo, GLOBAL o TODOS) o si
+  // corresponde al grupo del alumno. La comparación ignora espacios y mayúsculas
+  // porque conviven valores como "6 A", "6A" y "6a".
+  const normalizeGroup = (value?: string) => (value || '').trim().toUpperCase().replace(/\s+/g, '');
+  const studentGroupName = normalizeGroup(student.group);
+  const studentAssignments = finalAssignments.filter(a => {
+    const tg = normalizeGroup(a.targetGroup);
+    return !tg || tg === 'GLOBAL' || tg === 'TODOS' || tg === studentGroupName;
+  });
   const completedCount = studentAssignments.filter(a =>
     (student.completedAssignmentIds || []).includes(a.id)
   ).length;

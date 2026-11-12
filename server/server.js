@@ -626,11 +626,14 @@ app.get('/sirila-v1/honor-roll', async (req, res) => {
         } else {
             const pool = getPool();
             const [rows] = await pool.query('SELECT id, name, avatar, behavior_points, status, data_json FROM students');
-            const [aRows] = await pool.query('SELECT id, title, type, target_group, data_json FROM assignments');
+            const [aRows] = await pool.query('SELECT * FROM assignments');
             assignments = aRows.map(r => {
                 let base = {};
                 try { base = typeof r.data_json === 'string' ? JSON.parse(r.data_json) : (r.data_json || {}); } catch(e){}
-                return { ...base, id: r.id, title: r.title, type: r.type, targetGroup: r.target_group };
+                // La tabla solo tiene id, title, due_date y data_json: el tipo y el
+                // grupo destino viven dentro de data_json (pedirlos como columna
+                // provocaba un error 500 en este endpoint).
+                return { ...base, id: r.id, title: r.title || base.title };
             });
 
             const [configRows] = await pool.query('SELECT * FROM school_config WHERE config_key = ?', ['main_config']);
@@ -685,16 +688,18 @@ app.get('/sirila-v1/honor-roll', async (req, res) => {
                 const academicAvg = calculateNEMAvg(s);
 
                 // Tareas y avance del alumno
-                const studentGroup = (s.group || '').trim().toLowerCase();
+                const normalizeGroup = (value) => String(value || '').trim().toUpperCase().replace(/\s+/g, '');
+                const studentGroup = normalizeGroup(s.group);
                 const relevantAssignments = assignments.filter(a => {
-                    if (!a.targetGroup) return true;
-                    const tg = a.targetGroup.trim().toLowerCase();
-                    return tg === 'global' || tg === 'todos' || tg === studentGroup;
+                    const tg = normalizeGroup(a.targetGroup);
+                    return !tg || tg === 'GLOBAL' || tg === 'TODOS' || tg === studentGroup;
                 });
 
                 const totalAssignments = relevantAssignments.length;
                 const completedIds = Array.isArray(s.completedAssignmentIds) ? s.completedAssignmentIds : [];
-                const completedCount = completedIds.length;
+                // Solo cuentan las entregas de actividades del grupo: contar todo
+                // inflaba el avance con tareas de otros grupos o ya eliminadas.
+                const completedCount = relevantAssignments.filter(a => completedIds.includes(a.id)).length;
                 const progressPercentage = totalAssignments > 0
                     ? Math.min(100, Math.round((completedCount / totalAssignments) * 100))
                     : (completedCount > 0 ? 100 : 0);
@@ -769,7 +774,9 @@ app.get('/sirila-v1/honor-roll', async (req, res) => {
                 if (b.behaviorPoints !== a.behaviorPoints) return b.behaviorPoints - a.behaviorPoints;
                 return a.name.localeCompare(b.name);
             })
-            .slice(0, 10);
+            // Posición real dentro del grupo y lista completa: el portal toma las
+            // primeras posiciones y el docente necesita el lugar exacto de cada alumno.
+            .map((item, index) => ({ ...item, position: index + 1 }));
 
         res.json(honorRoll);
     } catch (error) {

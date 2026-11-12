@@ -80,8 +80,13 @@ export const DashboardView: React.FC<DashboardProps> = ({
   const sortedStudents = [...students].sort((a, b) => a.name.localeCompare(b.name));
 
   // Calculate students' metrics and averages
+  const normalizeGroup = (value?: string) => (value || '').trim().toUpperCase().replace(/\s+/g, '');
   const studentsWithMetrics = sortedStudents.map(student => {
-    const studentAssignments = assignments.filter(a => !a.targetGroup || a.targetGroup === student.group);
+    const studentGroupName = normalizeGroup(student.group);
+    const studentAssignments = assignments.filter(a => {
+      const tg = normalizeGroup(a.targetGroup);
+      return !tg || tg === 'GLOBAL' || tg === 'TODOS' || tg === studentGroupName;
+    });
     const metrics = calculateStudentMetrics(student, studentAssignments, config || store?.schoolConfig);
     const globalAvg = metrics.finalAvg === '-' ? 0 : parseFloat(metrics.finalAvg);
     return {
@@ -97,17 +102,20 @@ export const DashboardView: React.FC<DashboardProps> = ({
     ? activeStudentsWithGrades.reduce((sum, s) => sum + s.globalAvg, 0) / activeStudentsWithGrades.length
     : 0;
 
-  // Filter lists (Cuadro de honor ponderado: académico, avance y autocalificables)
-  const honorRollStudents = [...studentsWithMetrics]
-    .filter(s => {
-      const score = (s.metrics as any).honorScore ?? s.globalAvg;
-      return score >= 8.0 || s.globalAvg >= 9.0;
-    })
-    .sort((a, b) => {
-      const scoreB = (b.metrics as any).honorScore ?? b.globalAvg;
-      const scoreA = (a.metrics as any).honorScore ?? a.globalAvg;
-      return scoreB - scoreA;
-    });
+  // Ranking completo: se ordena a TODOS los alumnos para que el lugar sea real,
+  // no el índice dentro de la lista filtrada.
+  const rankedStudents = [...studentsWithMetrics].sort((a, b) => {
+    const scoreB = (b.metrics as any).honorScore ?? b.globalAvg;
+    const scoreA = (a.metrics as any).honorScore ?? a.globalAvg;
+    if (scoreB !== scoreA) return scoreB - scoreA;
+    if (b.metrics.behaviorPoints !== a.metrics.behaviorPoints) return b.metrics.behaviorPoints - a.metrics.behaviorPoints;
+    return a.student.name.localeCompare(b.student.name);
+  });
+
+  // Cuadro de Honor: solo los destacados, conservando su posición en el grupo.
+  const honorRollStudents = rankedStudents
+    .map((entry, index) => ({ ...entry, position: index + 1 }))
+    .filter(entry => ((entry.metrics as any).honorScore ?? entry.globalAvg) >= 8.0);
 
   const interventionStudents = studentsWithMetrics.filter(s => {
     const avg = s.globalAvg;
@@ -1098,7 +1106,7 @@ export const DashboardView: React.FC<DashboardProps> = ({
             <div className="flex items-center justify-between mb-4">
               <h4 className="font-bold text-slate-800 text-sm flex items-center gap-2">
                 <Award className="text-yellow-500" size={18} />
-                Cuadro de Honor (Promedio &ge; 9.0)
+                Cuadro de Honor (puntaje &ge; 8.0)
               </h4>
               <span className="bg-yellow-100 text-yellow-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
                 {honorRollStudents.length} Alumnos
@@ -1123,11 +1131,14 @@ export const DashboardView: React.FC<DashboardProps> = ({
                   Aún no hay alumnos con puntaje destacado
                 </div>
               ) : (
-                honorRollStudents.map(({ student, metrics, globalAvg }) => {
+                honorRollStudents.map(({ student, metrics, globalAvg, position }) => {
                   const honorScore = (metrics as any).honorScore || globalAvg;
                   return (
                     <div key={student.id} className="bg-white border border-slate-100 p-2.5 rounded-lg flex items-center justify-between shadow-sm hover:shadow-md transition-shadow">
                       <div className="flex items-center gap-2 truncate">
+                        <span className="w-5 h-5 shrink-0 rounded-full bg-amber-100 text-amber-700 text-[10px] font-black flex items-center justify-center" title={`Lugar ${position} del grupo`}>
+                          {position}
+                        </span>
                         <img
                           src={student.avatar === "PENDING_LOAD" ? `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random` : (student.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random`)}
                           alt={student.name}
