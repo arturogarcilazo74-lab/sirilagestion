@@ -270,6 +270,21 @@ Si necesitas hacer modificaciones, aquí es donde debes buscar:
   - **Intentos anteriores a la vista:** el modal del docente muestra las calificaciones archivadas de cada reapertura (puntaje y fecha), de modo que la nota anterior no se pierde al reiniciar.
 - **Verificación:** 16 comprobaciones del bloqueo y 6 de la reapertura, ejecutadas en un DOM real (jsdom) sobre el archivo entregado.
 
+### 23. Cuadro de Honor: endpoint caído y lugares inconsistentes (Noviembre 11, 2026)
+- **Diagnóstico:** el portal de padres mostraba el Cuadro de Honor vacío. El endpoint `/sirila-v1/honor-roll` devolvía **HTTP 500**.
+- **Causa raíz:** la consulta pedía `SELECT id, title, type, target_group, data_json FROM assignments`, pero la tabla `assignments` solo tiene `id`, `title`, `due_date` y `data_json`. El tipo y el grupo destino viven **dentro de `data_json`**, así que MySQL rechazaba la consulta y el endpoint entero fallaba. El panel del docente no lo notaba porque calcula el ranking en el navegador.
+- **Problemas adicionales encontrados:**
+  - El servidor contaba como avance **todas** las entregas del alumno (`completedIds.length`), incluidas actividades de otros grupos o ya eliminadas.
+  - El cliente no consideraba las actividades `GLOBAL`/`TODOS` como propias del grupo, y comparaba los grupos de forma literal: conviven valores `"6 A"`, `"6A"`.
+  - El servidor devolvía solo 10 alumnos y sin posición; el panel filtraba por puntaje y numeraba por índice del filtro, así que "lugar 1" podía ser en realidad el 7 del grupo.
+  - El portal marcaba "estás en el Cuadro de Honor" a cualquiera que apareciera en la lista.
+- **Solución implementada:**
+  - Consulta corregida (`SELECT *`) tomando tipo y grupo desde `data_json`.
+  - Criterio único de relevancia: sin grupo, `GLOBAL`, `TODOS` o el grupo del alumno, ignorando espacios y mayúsculas. Aplicado en `gradeUtils.ts`, `DashboardView.tsx` y el servidor.
+  - El avance cuenta solo entregas de actividades relevantes.
+  - El endpoint devuelve el **ranking completo con `position`**; el portal usa la posición real y exige **puntaje ≥ 8** para el reconocimiento; el panel docente muestra la insignia de lugar y rotula el criterio correcto.
+- **Verificación:** tras el despliegue, `/honor-roll?group=6 A` responde 200 con 15 alumnos y posiciones 1..15; el top 5 coincide exactamente con el cálculo del panel (9.6, 9.4, 9.0, 8.4, 8.3).
+
 ---
 
 ## 4. Guía para Nuevas Modificaciones y Despliegue
