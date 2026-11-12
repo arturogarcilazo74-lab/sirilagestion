@@ -1495,8 +1495,15 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                         {/* HONOR ROLL SECTION - ALWAYS RENDERED FIRST */}
                         {(() => {
                             if (!student) return null;
-                            const studentRank = honorRoll.findIndex(h => h.id === student.id) + 1;
-                            const isInHonorRoll = studentRank > 0;
+                            // El servidor devuelve el ranking completo del grupo: la
+                            // posición es real, pero pertenecer al Cuadro de Honor
+                            // depende del puntaje (mismo criterio que el panel docente).
+                            const myEntry = honorRoll.find(h => h.id === student.id);
+                            const studentRank = myEntry
+                                ? (myEntry.position || honorRoll.indexOf(myEntry) + 1)
+                                : 0;
+                            const myHonorScore = myEntry ? Number(myEntry.honorScore ?? myEntry.average ?? 0) : 0;
+                            const isInHonorRoll = !!myEntry && myHonorScore >= 8;
 
                             const cachedConfig = localStorage.getItem('SIRILA_CACHE_CONFIG');
                             const config = cachedConfig ? JSON.parse(cachedConfig) : {};
