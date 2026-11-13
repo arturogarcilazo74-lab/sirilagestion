@@ -40,6 +40,7 @@ export interface Student {
   lateAssignmentIds?: string[]; // NEW: IDs of assignments submitted past the due date
   assignmentResults?: Record<string, number>; // assignmentId -> score (0-10)
   assignmentAreaResults?: Record<string, Record<string, number>>; // assignmentId -> { areaName: scorePercentage }
+  assignmentItemResults?: Record<string, Record<string, number>>; // assignmentId -> { reactivo: 1 (correcto) | 0 (incorrecto) }
   assignmentHistory?: Record<string, Array<{ score: number; date: string }>>; // assignmentId -> calificaciones anteriores (al reabrir)
   assignmentReopenedAt?: Record<string, string>; // assignmentId -> fecha de la última reapertura
   assignmentAttempts?: Record<string, number>; // assignmentId -> number of attempts made

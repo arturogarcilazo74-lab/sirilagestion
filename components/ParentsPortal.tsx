@@ -484,7 +484,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
     useEffect(() => {
         const handleGameMessage = async (event: MessageEvent) => {
             if (event.data && event.data.type === 'GAME_COMPLETE' && activeHtmlGame && student) {
-                const { score, maxScore = 100, areaScores } = event.data;
+                const { score, maxScore = 100, areaScores, items } = event.data;
                 console.log("Game Completed. Score received:", score, "/", maxScore);
 
                 // Mapear a 0-10 conservando un decimal (42/45 = 9.3, no 9)
@@ -517,6 +517,9 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                         });
                     }
                     const newAreaResults = areaScores ? { ...(student.assignmentAreaResults || {}), [activeHtmlGame.id]: areaPercentages } : (student.assignmentAreaResults || {});
+                    const newItemResults = items && typeof items === 'object'
+                        ? { ...(student.assignmentItemResults || {}), [activeHtmlGame.id]: items }
+                        : (student.assignmentItemResults || {});
                     const newLateIds = isLate ? [...new Set([...(student.lateAssignmentIds || []), activeHtmlGame.id])] : student.lateAssignmentIds;
 
                     const updatedStudent: Student = {
@@ -526,6 +529,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                         assignmentResults: newResults,
                         assignmentAttempts: newAttempts,
                         assignmentAreaResults: newAreaResults,
+                        assignmentItemResults: newItemResults,
                         assignmentsCompleted: newCompleted.length
                     };
 
@@ -563,6 +567,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                         score: finalScore,
                         type: 'HTML_GAME',
                         areaScores: areaScores,
+                        itemResults: items,
                         isLate: isLate
                     }, student).then(() => {
                         api.processQueue().catch(console.error);

@@ -669,7 +669,7 @@ export const api = {
         return await res.json();
     },
 
-    submitAssignment: async (studentId: string, assignmentId: string, result: { score: number, type: string, isLate?: boolean, areaScores?: Record<string, { correct: number, total: number }> }, fallbackStudent?: Student) => {
+    submitAssignment: async (studentId: string, assignmentId: string, result: { score: number, type: string, isLate?: boolean, areaScores?: Record<string, { correct: number, total: number }>, itemResults?: Record<string, number> }, fallbackStudent?: Student) => {
         // 1. Fetch current full state
         let studentToUpdate = fallbackStudent ? { ...fallbackStudent } : null;
         try {
@@ -693,6 +693,7 @@ export const api = {
         updatedStudent.assignmentResults = (studentToUpdate.assignmentResults && typeof studentToUpdate.assignmentResults === 'object') ? { ...studentToUpdate.assignmentResults } : {};
         updatedStudent.assignmentAttempts = (studentToUpdate.assignmentAttempts && typeof studentToUpdate.assignmentAttempts === 'object') ? { ...studentToUpdate.assignmentAttempts } : {};
         updatedStudent.assignmentAreaResults = (studentToUpdate.assignmentAreaResults && typeof studentToUpdate.assignmentAreaResults === 'object') ? { ...studentToUpdate.assignmentAreaResults } : {};
+        updatedStudent.assignmentItemResults = (studentToUpdate.assignmentItemResults && typeof studentToUpdate.assignmentItemResults === 'object') ? { ...studentToUpdate.assignmentItemResults } : {};
 
         // 3. Mark as complete if not already
         if (!updatedStudent.completedAssignmentIds.includes(assignmentId)) {
@@ -718,6 +719,11 @@ export const api = {
                 areaPercentages[area] = Math.round((stats.correct / (stats.total || 1)) * 100);
             });
             updatedStudent.assignmentAreaResults[assignmentId] = areaPercentages;
+        }
+
+        // 5b. Detalle por reactivo (1 = correcto, 0 = incorrecto)
+        if (result.itemResults) {
+            updatedStudent.assignmentItemResults[assignmentId] = result.itemResults;
         }
 
         // 6. Save back
