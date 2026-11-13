@@ -9,6 +9,7 @@ Uso:
 Sin argumentos exporta la guía de estudio del primer periodo de 6° A.
 """
 import json
+import os
 import sys
 import urllib.request
 from datetime import datetime
@@ -166,9 +167,20 @@ def main():
     for index in range(2, 2 + len([f for f in enabled if f in FIELD_PREFIX])):
         summary.column_dimensions[get_column_letter(index)].width = 16
 
-    wb.save(out)
+    # Si el archivo está abierto en Excel, Windows no deja sobrescribirlo:
+    # se guarda con otro nombre para no perder el corte.
+    destino = out
+    try:
+        wb.save(destino)
+    except PermissionError:
+        marca = datetime.now().strftime("%Y%m%d_%H%M")
+        base, ext = os.path.splitext(out)
+        destino = f"{base}_{marca}{ext}"
+        wb.save(destino)
+        print("El archivo original estaba abierto en Excel; se guardó una copia nueva.")
+
     entregados = sum(1 for s in students if (s.get("assignmentResults") or {}).get(assignment_id) is not None)
-    print(f"Excel generado: {out}")
+    print(f"Excel generado: {destino}")
     print(f"alumnos: {len(students)} | reactivos: {len(questions)} | entregados: {entregados}")
 
 
