@@ -285,6 +285,45 @@ Si necesitas hacer modificaciones, aquí es donde debes buscar:
   - El endpoint devuelve el **ranking completo con `position`**; el portal usa la posición real y exige **puntaje ≥ 8** para el reconocimiento; el panel docente muestra la insignia de lugar y rotula el criterio correcto.
 - **Verificación:** tras el despliegue, `/honor-roll?group=6 A` responde 200 con 15 alumnos y posiciones 1..15; el top 5 coincide exactamente con el cálculo del panel (9.6, 9.4, 9.0, 8.4, 8.3).
 
+### 24. Guía de estudio: opciones en el orden del examen (Noviembre 17, 2026)
+- La guía **mezclaba las opciones** en cada intento (semilla aleatoria guardada en el estado), así que las letras A-D no coincidían con el examen impreso y el alumno no podía trasladar su respuesta a la hoja.
+- Se desactivó el mezclado con `MEZCLAR_OPCIONES = false` en `guia_estudio_6to_primer_trimestre.html`: ya no se sortea semilla, la guardada se ignora y la clave de autoguardado lleva el sufijo `_orden` para descartar intentos viejos con letras revueltas.
+- Se alinearon al texto del examen cinco reactivos: **L4-D** ("Narrativo"), **L5-C**, **E8-A** (decía "divisibles" donde el examen dice "indivisibles", cambiando el sentido), **E9** (los cuatro distractivos) y **H2-C**.
+- La guía es material externo: hay que **volver a subir el HTML** desde *Actividades → Nueva Actividad → Actividad HTML*. Un PDF no sirve como actividad interactiva.
+
+### 25. Examen del primer trimestre 6° A: captura y carga de resultados (Noviembre 17-18, 2026)
+- Fuentes: hojas de respuesta escaneadas (dos escaneos completos más un escaneo limpio de 7 hojas) y el examen impreso `primer evaluacion.pdf`.
+- **41 reactivos calificables en la hoja** (L1-L14, S1-S10, E1-E10, H1-H7). Los 4 restantes (L15, SN1, SN2, SN3) se contestan en el cuadernillo y quedan fuera de la calificación.
+- Captura verificada celda por celda ampliando el escaneo: 43 celdas en desacuerdo entre la captura previa y un escaneo limpio; 8 se corrigieron a favor del escaneo, 35 se confirmaron. El escaneo nuevo confirmó las 15 hojas.
+- Entregables en `Documents\6to_grado_26`:
+  - `resultados_primer_trimestre_6A.xlsx` — hojas *Resultados* (1/0 por reactivo), *Respuestas marcadas* (letras + clave + verificada/doble lectura), *Resumen por reactivo* y *Por campo*.
+  - `cargar_resultados_guia.js` — registra las 15 entregas en la plataforma.
+  - `cargar_examen_trimestre.js` — escribe la calificación del examen como trimestre (sustituye el botón de la plataforma).
+- **Cargado en producción:** 15 entregas con `assignmentResults`, `assignmentAreaResults`, `assignmentItemResults` y `assignmentAttempts = 1`; después, las 15 calificaciones del **Primer Trimestre** (`grades[0]`), verificado por API.
+- Observaciones del examen: varios alumnos marcaron los renglones **H8 y H9** de la plantilla, que **no corresponden a ningún reactivo** (se ignoran). **E9 es ambigua** (10 de 15 eligieron la opción A). **Iran Lugo** obtuvo 7/41; conviene revisar su hoja con él.
+
+### 26. Detalle por reactivo en el modal del docente (Noviembre 17, 2026)
+- `ActivitiesView.tsx`: nueva sección **"Detalle por reactivo"** con chips por campo formativo (✓ acierto / ✗ error / · sin dato) y el contador "N de 41 correctos", leyendo `student.assignmentItemResults`.
+- Se muestra solo cuando la entrega trae `items`; el HTML de la guía todavía **no** los envía en `GAME_COMPLETE`, así que un intento en línea no tendrá detalle hasta que se ajuste el HTML.
+
+### 27. Portal de Padres: resultados del examen en Inicio (Noviembre 18, 2026)
+- Nueva tarjeta **"Examen del trimestre"** en Inicio, a lo ancho y debajo de las tarjetas de promedio, asistencias, tareas y conducta. Al tocarla abre un **modal** con nota, aciertos, porcentajes por campo y el desglose por reactivo (componente reutilizable `ExamBreakdown` en `ParentsPortal.tsx`).
+- Se **retiró de la pestaña Tareas**; se conserva en **Perfil** junto a las calificaciones trimestrales.
+- **Aprendizaje:** la primera versión armaba el bloque desde la lista de actividades que el portal filtra por grupo y visibilidad; si la actividad no pasaba el filtro, no se dibujaba aunque el alumno tuviera los resultados. Ahora los datos se leen del alumno (`assignmentItemResults` / `assignmentAreaResults`).
+- La fila "Primer Trimestre" se alimenta del examen cuando no hay captura manual (se etiqueta "(examen)").
+
+### 28. Promedio final ponderado real (Noviembre 18, 2026)
+- **Bug detectado:** la boleta mostraba el desglose con los porcentajes configurados, pero el total impreso era el **promedio académico**: la suma ponderada se calculaba y se descartaba. En una boleta real el desglose sumaba 3.09 y el total mostraba 7.3 (el diagnóstico).
+- `services/gradeUtils.ts` ahora devuelve `breakdown` (valores, pesos, total y origen del componente académico) y `finalAvg` es la **suma ponderada** cuando `includeHomeworkInAverage` está activo:
+  `Final = (académico × %A + tareas × %T + conducta × %C + asistencia × %As) / 100`
+- Base académica: promedio de los trimestres capturados; si no hay, la **evaluación diagnóstica** (el desglose lo etiqueta como "(diagnóstico)").
+- `StudentsView.tsx` y los dos bloques de `ParentsPortal.tsx` consumen `metrics.breakdown`, de modo que el desglose y el total siempre coinciden. Los porcentajes se editan en *Configuración → Porcentajes de valoración*.
+- **Consecuencia:** con 60 % académico, un examen bajo baja el promedio respecto al diagnóstico. Es el comportamiento correcto, pero conviene avisar a las familias.
+
+### 29. Botón para cargar la calificación de una actividad al trimestre (Noviembre 18, 2026)
+- En el modal de resultados de una actividad (*Actividades* → celda del alumno) hay un selector de trimestre y el botón **"Cargar al grupo"**: escribe `grades[trimestre]` de todos los alumnos con resultados, tomando el porcentaje por campo (86 % → 8.6).
+- **Motivo:** los scripts de consola fallaban en silencio porque `prompt()` y `confirm()` **se bloquean** en esta app; el botón usa el `confirm` propio de la interfaz. Cuando se carga, sobrescribe el trimestre elegido (no hay historial de calificaciones, a diferencia de las actividades).
+
 ---
 
 ## 4. Guía para Nuevas Modificaciones y Despliegue
@@ -312,7 +351,7 @@ Si necesitas hacer modificaciones, aquí es donde debes buscar:
 
 ---
 
-## 5. Estado Actual y Trabajo Pendiente (Noviembre 11, 2026)
+## 5. Estado Actual y Trabajo Pendiente (Noviembre 18, 2026)
 
 ### 5.1 Situación del despliegue
 - Rama `main` sincronizada con `origin/main`. Último commit de código: `29fef6a` (regeneración de `dist-app`); este documento se publica en un commit posterior.
@@ -358,6 +397,9 @@ Reglas de ciclo de vida (`services/assignmentLifecycle.ts`):
 | 6 | Portal de padres: el modal de calificaciones lista solo trimestres | La tarjeta principal sí muestra el diagnóstico; el modal no. |
 | 7 | La guía no muestra al alumno sus intentos anteriores | El historial solo lo ve el docente en el modal. Si se quiere motivar al alumno, conviene mostrarlo al entrar. |
 | 8 | ~82 `console.error` en componentes y servicios | Ruido en la consola de producción. |
+| 9 | La guía en línea no envía `items` en `GAME_COMPLETE` | Un intento hecho en la plataforma no muestra desglose por reactivo; solo las entregas cargadas desde las hojas escritas lo tienen. |
+| 10 | Las calificaciones trimestrales no tienen historial | El botón "Cargar al grupo" sobrescribe el trimestre; no queda respaldo del valor anterior como sí ocurre al reabrir una actividad. |
+| 11 | Reactivo **E9** ambiguo en el examen | Dos opciones defendibles; 10 de 15 alumnos eligieron la que no es clave. Definir si se anula o se recalifica. |
 
 ### 5.5 Cómo retomar
 1. `npm install` (activa los hooks de git).
@@ -366,7 +408,20 @@ Reglas de ciclo de vida (`services/assignmentLifecycle.ts`):
 4. Implementar sobre `main`, verificar con `npx tsc --noEmit` y una compilación real.
 5. Publicar con `npm run deploy -- "descripción del cambio"`.
 6. Si el cambio toca la guía de estudio, **volver a subir el HTML** desde la plataforma.
+7. Para el examen: revisar la sección **5.6** antes de tocar calificaciones. Si hay que volver a cargar el trimestre, usar el botón **"Cargar al grupo"** del detalle de la actividad (no scripts de consola: los diálogos se bloquean).
+8. Los scripts y capturas de trabajo de esta sesión quedaron en `.tmp-trabajo/` (ignorada por git) y los entregables del docente en `C:\Users\lapomiguel\Documents\6to_grado_26`.
+
+### 5.6 Examen del primer trimestre 6° A (datos cargados)
+- **Actividad en la plataforma:** *Examen primer periodo* (`id A1794983723513`), tipo Actividad HTML, 15 alumnos con entrega.
+- **Entregas cargadas:** nota por actividad, aciertos por campo y detalle por reactivo de los 41 reactivos.
+- **Calificaciones del Primer Trimestre cargadas:** los 15 alumnos tienen `grades[0]` con Lenguajes, Saberes, Ética y De lo Humano derivados del examen (verificado por API el 18/11/2026). No se tocó el diagnóstico ni los trimestres 2 y 3.
+- **Pendiente de decisión del docente:**
+  - **E9** es ambigua (la opción A del examen también es defendible): 10 de 15 la eligieron. Valorar si se anula o se re-califica.
+  - **Iran Lugo** obtuvo 7/41; revisar la hoja con el alumno antes de asentarlo.
+  - Los reactivos abiertos **L15, SN1, SN2 y SN3** no están calificados en ningún lado.
+  - La guía en línea todavía no envía `items`, así que un intento nuevo no tendrá desglose por reactivo.
+  - No existe historial de calificaciones: si se vuelve a cargar un trimestre, se pierde el valor anterior.
 
 ---
 
-*Documento actualizado al 11 de Noviembre de 2026.*
+*Documento actualizado al 18 de Noviembre de 2026.*
