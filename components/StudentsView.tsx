@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Student, SchoolConfig, BehaviorLog, Assignment } from '../types';
 import { generateReportCard, generateBehaviorReport, generateStudentCredentials, generateCompleteStudentReport, generateMonthlyAttendanceReport } from '../services/pdfGenerator';
 import { generateStudentAnalysis } from '../services/ai';
-import { calculateStudentMetrics } from '../services/gradeUtils';
+import { calculateStudentMetrics, MAX_SUPPORT_POINTS_PER_TRIMESTER } from '../services/gradeUtils';
 import { sendWhatsAppMessage, getCompleteReportMessage } from '../whatsappUtils';
 import { Plus, Search, Edit2, Trash2, X, Save, User, Phone, Image as ImageIcon, QrCode, Download, FileText, Printer, Building2, Calendar, MapPin, Hash, GraduationCap, AlertCircle, Upload, FileSpreadsheet, Cake, CheckCircle, FileDown, Users, RectangleHorizontal, PieChart, CheckCircle2, Circle, RotateCcw, MessageCircle } from 'lucide-react';
 import { GroupAnalysisModal } from './GroupAnalysisModal';
@@ -37,6 +37,7 @@ const INITIAL_FORM_DATA: Omit<Student, 'id' | 'attendance' | 'behaviorPoints' | 
   guardianPhone: '',
   annualFeePaid: false,
   grades: [],
+  supportPoints: {},
   address: '',
   guardianOccupation: ''
 };
@@ -57,6 +58,9 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
 
   // Form State
   const [formData, setFormData] = useState(INITIAL_FORM_DATA);
+
+  // Editor de puntos de apoyo (bonus) por trimestre
+  const [nuevoApoyo, setNuevoApoyo] = useState({ tri: 0, puntos: '', motivo: '' });
 
   const [selectedGroupFilter, setSelectedGroupFilter] = useState<string>('ALL');
 
@@ -173,6 +177,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
         annualFeePaid: student.annualFeePaid || false,
         grades: student.grades || [],
         diagnosticGrade: student.diagnosticGrade,
+        supportPoints: student.supportPoints || {},
         group: student.group || '',
         address: student.address || '',
         guardianOccupation: student.guardianOccupation || ''
@@ -187,6 +192,43 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
     }
     setIsModalOpen(true);
     window.scrollTo({ top: 0, behavior: 'instant' });
+  };
+
+  /** Agrega un punto de apoyo al trimestre seleccionado (tope 1.0 por trimestre). */
+  const agregarApoyo = () => {
+    const puntos = Math.round(parseFloat(String(nuevoApoyo.puntos).replace(',', '.')) * 100) / 100;
+    if (!puntos || puntos <= 0 || puntos > MAX_SUPPORT_POINTS_PER_TRIMESTER) {
+      alert(`Escribe una cantidad entre 0.1 y ${MAX_SUPPORT_POINTS_PER_TRIMESTER}.`);
+      return;
+    }
+    const lista = (formData.supportPoints || {})[String(nuevoApoyo.tri)] || [];
+    const total = lista.reduce((acc, e) => acc + Number(e.points || 0), 0);
+    if (total + puntos > MAX_SUPPORT_POINTS_PER_TRIMESTER + 0.001) {
+      alert(`El Trimestre ${nuevoApoyo.tri + 1} ya tiene ${total.toFixed(2)} de ${MAX_SUPPORT_POINTS_PER_TRIMESTER}. No se puede pasar del tope.`);
+      return;
+    }
+    const entrada = {
+      date: new Date().toISOString().split('T')[0],
+      points: puntos,
+      reason: nuevoApoyo.motivo.trim() || 'Punto de apoyo'
+    };
+    setFormData({
+      ...formData,
+      supportPoints: {
+        ...(formData.supportPoints || {}),
+        [String(nuevoApoyo.tri)]: [...lista, entrada]
+      }
+    });
+    setNuevoApoyo({ ...nuevoApoyo, puntos: '', motivo: '' });
+  };
+
+  const quitarApoyo = (tri: number, index: number) => {
+    const lista = [...((formData.supportPoints || {})[String(tri)] || [])];
+    lista.splice(index, 1);
+    const resto: Record<string, any> = { ...(formData.supportPoints || {}) };
+    if (lista.length) resto[String(tri)] = lista;
+    else delete resto[String(tri)];
+    setFormData({ ...formData, supportPoints: resto });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -606,7 +648,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
             <tbody className="divide-y divide-slate-100">
               {filteredStudents.length > 0 ? (
                 filteredStudents.map((student) => {
-                  const { trimAvgs, finalAvg } = calculateStudentMetrics(student, assignments);
+                  const { trimAvgs, finalAvg, supportPoints } = calculateStudentMetrics(student, assignments);
                   const t1Avg = trimAvgs[0] || 0;
                   const t2Avg = trimAvgs[1] || 0;
                   const t3Avg = trimAvgs[2] || 0;
@@ -653,19 +695,28 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
                         </div>
                       </td>
                       <td className="p-4 text-center">
-                        <span className={`text-sm font-mono ${t1Avg > 0 ? (t1Avg < 6 ? 'text-red-500 font-bold' : 'text-slate-600') : 'text-slate-300'}`}>
-                          {t1Avg > 0 ? t1Avg.toFixed(1) : '-'}
-                        </span>
+                        <div className="flex flex-col items-center">
+                          <span className={`text-sm font-mono ${t1Avg > 0 ? (t1Avg < 6 ? 'text-red-500 font-bold' : 'text-slate-600') : 'text-slate-300'}`}>
+                            {t1Avg > 0 ? t1Avg.toFixed(1) : '-'}
+                          </span>
+                          {supportPoints[0] > 0 && <span className="text-[9px] font-bold text-amber-600" title="Puntos de apoyo">+{supportPoints[0].toFixed(1)}</span>}
+                        </div>
                       </td>
                       <td className="p-4 text-center">
-                        <span className={`text-sm font-mono ${t2Avg > 0 ? (t2Avg < 6 ? 'text-red-500 font-bold' : 'text-slate-600') : 'text-slate-300'}`}>
-                          {t2Avg > 0 ? t2Avg.toFixed(1) : '-'}
-                        </span>
+                        <div className="flex flex-col items-center">
+                          <span className={`text-sm font-mono ${t2Avg > 0 ? (t2Avg < 6 ? 'text-red-500 font-bold' : 'text-slate-600') : 'text-slate-300'}`}>
+                            {t2Avg > 0 ? t2Avg.toFixed(1) : '-'}
+                          </span>
+                          {supportPoints[1] > 0 && <span className="text-[9px] font-bold text-amber-600" title="Puntos de apoyo">+{supportPoints[1].toFixed(1)}</span>}
+                        </div>
                       </td>
                       <td className="p-4 text-center">
-                        <span className={`text-sm font-mono ${t3Avg > 0 ? (t3Avg < 6 ? 'text-red-500 font-bold' : 'text-slate-600') : 'text-slate-300'}`}>
-                          {t3Avg > 0 ? t3Avg.toFixed(1) : '-'}
-                        </span>
+                        <div className="flex flex-col items-center">
+                          <span className={`text-sm font-mono ${t3Avg > 0 ? (t3Avg < 6 ? 'text-red-500 font-bold' : 'text-slate-600') : 'text-slate-300'}`}>
+                            {t3Avg > 0 ? t3Avg.toFixed(1) : '-'}
+                          </span>
+                          {supportPoints[2] > 0 && <span className="text-[9px] font-bold text-amber-600" title="Puntos de apoyo">+{supportPoints[2].toFixed(1)}</span>}
+                        </div>
                       </td>
                       <td className="p-4 text-center">
                         <div className="flex flex-col items-center justify-center">
@@ -1059,6 +1110,72 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
                           />
                           <label htmlFor="usaer" className="text-sm font-medium text-slate-700">Recibe apoyo USAER</label>
                         </div>
+                      </div>
+
+                      <div className="bg-amber-50 p-3 rounded-lg border border-amber-200 mt-2">
+                        <label className="block text-xs font-bold text-amber-700 mb-1">
+                          Puntos de apoyo (máx. {MAX_SUPPORT_POINTS_PER_TRIMESTER} por trimestre)
+                        </label>
+                        <div className="flex flex-wrap items-center gap-1">
+                          <select
+                            value={nuevoApoyo.tri}
+                            onChange={e => setNuevoApoyo({ ...nuevoApoyo, tri: Number(e.target.value) })}
+                            className="p-1.5 border border-amber-300 rounded bg-white text-xs text-slate-900"
+                          >
+                            <option value={0}>1er trim.</option>
+                            <option value={1}>2do trim.</option>
+                            <option value={2}>3er trim.</option>
+                          </select>
+                          <input
+                            type="number" step="0.1" min="0" max={MAX_SUPPORT_POINTS_PER_TRIMESTER}
+                            value={nuevoApoyo.puntos}
+                            onChange={e => setNuevoApoyo({ ...nuevoApoyo, puntos: e.target.value })}
+                            placeholder="0.2"
+                            className="w-16 p-1.5 border border-amber-300 rounded bg-white text-xs text-slate-900"
+                          />
+                          <input
+                            type="text"
+                            value={nuevoApoyo.motivo}
+                            onChange={e => setNuevoApoyo({ ...nuevoApoyo, motivo: e.target.value })}
+                            placeholder="Motivo (punto sorpresa, participación...)"
+                            className="flex-1 min-w-[140px] p-1.5 border border-amber-300 rounded bg-white text-xs text-slate-900"
+                          />
+                          <button
+                            type="button"
+                            onClick={agregarApoyo}
+                            className="px-2.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded font-bold text-xs"
+                          >
+                            Agregar
+                          </button>
+                        </div>
+                        <div className="mt-2 space-y-1">
+                          {[0, 1, 2].map(t => {
+                            const lista = (formData.supportPoints || {})[String(t)] || [];
+                            if (!lista.length) return null;
+                            const total = Math.min(MAX_SUPPORT_POINTS_PER_TRIMESTER, lista.reduce((a, e) => a + Number(e.points || 0), 0));
+                            return (
+                              <div key={t} className="text-[11px] text-slate-600">
+                                <span className="font-bold">Trimestre {t + 1}: +{total.toFixed(2)}</span>
+                                {lista.map((e, i) => (
+                                  <div key={i} className="flex items-center justify-between gap-2 pl-2 text-slate-500">
+                                    <span className="truncate">{e.date} · {Number(e.points).toFixed(2)} · {e.reason}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => quitarApoyo(t, i)}
+                                      className="text-red-500 font-bold hover:text-red-700"
+                                      title="Quitar"
+                                    >
+                                      ✕
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <p className="text-[10px] text-amber-700/80 mt-1">
+                          Se suman al promedio del trimestre (sin pasar de 10) y se ven en la tabla y en la boleta.
+                        </p>
                       </div>
                     </div>
 

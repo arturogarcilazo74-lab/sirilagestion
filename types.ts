@@ -44,6 +44,8 @@ export interface Student {
   assignmentHistory?: Record<string, Array<{ score: number; date: string }>>; // assignmentId -> calificaciones anteriores (al reabrir)
   assignmentReopenedAt?: Record<string, string>; // assignmentId -> fecha de la última reapertura
   assignmentAttempts?: Record<string, number>; // assignmentId -> number of attempts made
+  /** Puntos de apoyo manuales por trimestre: "0" | "1" | "2" -> entradas otorgadas */
+  supportPoints?: Record<string, Array<{ date: string; points: number; reason: string }>>;
   totalAssignments: number;
   participationCount: number;
   grades: TrimesterGrade[]; // Array of exactly 3 trimesters (indices 0, 1, 2)

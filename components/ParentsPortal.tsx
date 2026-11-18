@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
 import { OFFICIAL_CALENDAR_EVENTS_2026_2027 } from '../services/schoolCalendarUtils';
-import { calculateStudentMetrics, getTrimesterAvg } from '../services/gradeUtils';
+import { calculateStudentMetrics, getTrimesterAvg, getSupportPoints } from '../services/gradeUtils';
 import { Student, SchoolEvent, Notification, Assignment, DraggableItem, InteractiveZone, BehaviorLog } from '../types';
 import { Bell, Calendar as CalendarIcon, LogOut, MessageCircle, User, CheckCircle, Smartphone, Send, Play, Trophy, HelpCircle, X, Check, AlertCircle, BookOpen, Circle, Move, Trash2, LayoutDashboard, Medal, Star, Award, Users, ChevronRight, FileText, Download, Clock } from 'lucide-react';
 import { sendWhatsAppMessage } from '../whatsappUtils';
@@ -2417,8 +2417,8 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                         <div key={idx} className={`pb-3 ${idx < 3 ? 'border-b border-slate-50' : ''}`}>
                                             <div className="flex justify-between items-center mb-1">
                                                 <span className="text-xs font-bold text-slate-400 uppercase tracking-tighter">{evalItem.title}</span>
-                                                <span className={`text-sm font-bold ${(evalItem.gradeObj ? getTrimesterAvg(evalItem.gradeObj) : 0) >= 6 ? 'text-emerald-600' : (evalItem.gradeObj ? 'text-red-500' : 'text-slate-800')}`}>
-                                                    {evalItem.gradeObj ? getTrimesterAvg(evalItem.gradeObj).toFixed(1) : '-'}
+                                                <span className={`text-sm font-bold ${(evalItem.gradeObj ? Math.min(10, getTrimesterAvg(evalItem.gradeObj) + (idx >= 1 ? getSupportPoints(student, idx - 1) : 0)) : 0) >= 6 ? 'text-emerald-600' : (evalItem.gradeObj ? 'text-red-500' : 'text-slate-800')}`}>
+                                                    {evalItem.gradeObj ? Math.min(10, getTrimesterAvg(evalItem.gradeObj) + (idx >= 1 ? getSupportPoints(student, idx - 1) : 0)).toFixed(1) : '-'}
                                                 </span>
                                             </div>
                                             {evalItem.gradeObj && (
@@ -3039,7 +3039,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                     ) : (
                                         student.grades.map((g: any, i: number) => {
                                             // Usando función compartida para consistencia
-                                            const val = getTrimesterAvg(g);
+                                            const val = Math.min(10, getTrimesterAvg(g) + getSupportPoints(student, i));
                                             return (
                                                 <tr key={i} className="border-b border-slate-100 last:border-0">
                                                     <td className="py-3 font-medium text-slate-700">Parcial {i + 1}</td>

@@ -39,6 +39,19 @@ export const getTrimesterAvg = (g: any): number => {
 };
 
 /**
+ * Puntos de apoyo que el docente otorga a mano ("punto sorpresa", participación,
+ * etc.). Se acumulan por trimestre y tienen tope de 1.0 punto.
+ */
+export const MAX_SUPPORT_POINTS_PER_TRIMESTER = 1;
+
+export const getSupportPoints = (student: any, trimesterIndex: number): number => {
+  const raw = (student?.supportPoints || {})[String(trimesterIndex)];
+  const lista = Array.isArray(raw) ? raw : [];
+  const suma = lista.reduce((acc: number, e: any) => acc + (Number(e?.points) || 0), 0);
+  return Math.min(MAX_SUPPORT_POINTS_PER_TRIMESTER, Number(suma.toFixed(2)));
+};
+
+/**
  * Calcula el promedio académico de un alumno (solo calificaciones NEM).
  * Retorna el promedio simple de los trimestres con calificación > 0.
  */
@@ -61,8 +74,14 @@ export const calculateStudentMetrics = (
   const finalAssignments = assignments || getCachedAssignments();
   const finalConfig = config || getCachedConfig();
 
-  // Calcular promedios por trimestre
-  const trimAvgs = (student.grades || []).map(getTrimesterAvg);
+  // Calcular promedios por trimestre, sumando los puntos de apoyo del trimestre
+  // (tope 1.0 por trimestre y sin pasar de 10).
+  const supportByTrimester = [0, 1, 2].map(i => getSupportPoints(student, i));
+  const trimAvgs = (student.grades || []).map((g, i) => {
+    const base = getTrimesterAvg(g);
+    if (base <= 0) return 0;
+    return Math.min(10, Number((base + supportByTrimester[i]).toFixed(2)));
+  });
 
   // Promedio académico (solo calificaciones NEM > 0)
   const activeTrims = trimAvgs.filter(a => a > 0);
@@ -189,6 +208,7 @@ export const calculateStudentMetrics = (
     attendanceRate,
     academicBase,
     breakdown,
+    supportPoints: supportByTrimester,
     finalAvg: finalAvgStr
   };
 };
