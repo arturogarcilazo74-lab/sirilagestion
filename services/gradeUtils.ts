@@ -74,19 +74,25 @@ export const calculateStudentMetrics = (
   const finalAssignments = assignments || getCachedAssignments();
   const finalConfig = config || getCachedConfig();
 
-  // Calcular promedios por trimestre, sumando los puntos de apoyo del trimestre
-  // (tope 1.0 por trimestre y sin pasar de 10).
+  // Promedios por trimestre. `rawTrimAvgs` es la calificación capturada y
+  // `trimAvgs` la que se muestra (con el apoyo sumado, sin pasar de 10).
+  // El apoyo se suma AL FINAL del cálculo, después de ponderar.
+  const rawTrimAvgs = (student.grades || []).map(getTrimesterAvg);
   const supportByTrimester = [0, 1, 2].map(i => getSupportPoints(student, i));
-  const trimAvgs = (student.grades || []).map((g, i) => {
-    const base = getTrimesterAvg(g);
-    if (base <= 0) return 0;
-    return Math.min(10, Number((base + supportByTrimester[i]).toFixed(2)));
-  });
+  const trimAvgs = rawTrimAvgs.map((base, i) =>
+    base > 0 ? Math.min(10, Number((base + supportByTrimester[i]).toFixed(2))) : 0);
 
-  // Promedio académico (solo calificaciones NEM > 0)
-  const activeTrims = trimAvgs.filter(a => a > 0);
+  // Promedio académico (solo calificaciones NEM > 0, sin apoyo)
+  const activeTrims = rawTrimAvgs.filter(a => a > 0);
   const academicAvg = activeTrims.length > 0
     ? activeTrims.reduce((a, b) => a + b, 0) / activeTrims.length
+    : 0;
+
+  // Apoyo que se aplica al final: el promedio de los apoyos de los trimestres
+  // que ya tienen calificación.
+  const apoyosActivos = supportByTrimester.filter((_, i) => (rawTrimAvgs[i] || 0) > 0);
+  const supportApplied = apoyosActivos.length > 0
+    ? apoyosActivos.reduce((a, b) => a + b, 0) / apoyosActivos.length
     : 0;
 
   // Porcentaje de tareas completadas
@@ -185,15 +191,17 @@ export const calculateStudentMetrics = (
     attendance: Number(attendanceScore.toFixed(2)),
     wAcademic, wHomework, wConduct, wAttendance,
     academicSource,
-    total: Number((weighted ? weightedTotal : academicBase).toFixed(2))
+    support: Number(supportApplied.toFixed(2)),
+    total: Number(Math.min(10, (weighted ? weightedTotal : academicBase) + supportApplied).toFixed(2))
   };
 
   // Promedio final: ponderado si está activado; si no, solo académico.
+  // Los puntos de apoyo se suman al final (después de ponderar) y el total no pasa de 10.
   let finalAvgStr = '-';
   if (weighted) {
-    if (academicSource !== 'sin-datos') finalAvgStr = weightedTotal.toFixed(1);
+    if (academicSource !== 'sin-datos') finalAvgStr = Math.min(10, weightedTotal + supportApplied).toFixed(1);
   } else if (academicAvg > 0) {
-    finalAvgStr = academicAvg.toFixed(1);
+    finalAvgStr = Math.min(10, academicAvg + supportApplied).toFixed(1);
   } else if (diagnosticAvg > 0) {
     finalAvgStr = diagnosticAvg.toFixed(1);
   }

@@ -2009,7 +2009,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                             </div>
 
                                             <div className="text-[10px] text-slate-400 bg-slate-50 px-3 py-2.5 rounded-xl border border-slate-100 font-mono text-center">
-                                                Cálculo: {academicW > 0 && `(${academicVal.toFixed(1)} × ${academicW}%)`}{homeworkW > 0 && ` + (${hwVal.toFixed(1)} × ${homeworkW}%)`}{conductW > 0 && ` + (${conductVal.toFixed(1)} × ${conductW}%)`}{attendanceW > 0 && ` + (${attendanceVal.toFixed(1)} × ${attendanceW}%)`} = <strong className="text-indigo-600">{metrics.finalAvg}</strong>
+                                                Cálculo: {academicW > 0 && `(${academicVal.toFixed(1)} × ${academicW}%)`}{homeworkW > 0 && ` + (${hwVal.toFixed(1)} × ${homeworkW}%)`}{conductW > 0 && ` + (${conductVal.toFixed(1)} × ${conductW}%)`}{attendanceW > 0 && ` + (${attendanceVal.toFixed(1)} × ${attendanceW}%)`}{bd.support > 0 && ` + (${bd.support.toFixed(1)} apoyo)`} = <strong className="text-indigo-600">{metrics.finalAvg}</strong>
                                             </div>
                                         </div>
                                     ) : (

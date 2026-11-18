@@ -1984,7 +1984,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
                           )}
                         </div>
                         <div className="text-[10px] text-slate-400 bg-white px-3 py-1.5 rounded border border-slate-100 italic mt-2">
-                          Cálculo: {academicW > 0 && `(${academicVal.toFixed(1)} × ${academicW}%)`}{homeworkW > 0 && ` + (${hwVal.toFixed(1)} × ${homeworkW}%)`}{conductW > 0 && ` + (${conductVal.toFixed(1)} × ${conductW}%)`}{attendanceW > 0 && ` + (${attendanceVal.toFixed(1)} × ${attendanceW}%)`} = {metrics.finalAvg}
+                          Cálculo: {academicW > 0 && `(${academicVal.toFixed(1)} × ${academicW}%)`}{homeworkW > 0 && ` + (${hwVal.toFixed(1)} × ${homeworkW}%)`}{conductW > 0 && ` + (${conductVal.toFixed(1)} × ${conductW}%)`}{attendanceW > 0 && ` + (${attendanceVal.toFixed(1)} × ${attendanceW}%)`}{bd.support > 0 && ` + (${bd.support.toFixed(1)} apoyo)`} = {metrics.finalAvg}
                         </div>
                       </div>
                     ) : (
