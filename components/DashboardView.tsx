@@ -25,6 +25,34 @@ interface DashboardProps {
   store?: any;
 }
 
+/**
+ * Últimas evaluaciones del alumno y su promedio "de lo evaluado":
+ * solo cuenta los trimestres con calificación y suma el punto de apoyo.
+ */
+const getHistorialAlumno = (student: any) => {
+  const grades = student?.grades || [];
+  const valorDe = (g: any) => {
+    if (typeof g === 'number') return g;
+    if (typeof g === 'string' && !isNaN(parseFloat(g))) return parseFloat(g);
+    if (typeof g === 'object' && g !== null) {
+      const campos = [g.lenguajes, g.saberes, g.etica, g.humano].map(v => Number(v) || 0).filter(v => v > 0);
+      return campos.length > 0 ? campos.reduce((a, b) => a + b, 0) / campos.length : 0;
+    }
+    return 0;
+  };
+  const chips = grades.slice(-5).map(valorDe);
+  const evaluadas = grades
+    .map((g: any, i: number) => {
+      const base = valorDe(g);
+      return base > 0 ? Math.min(10, base + getSupportPoints(student, i)) : 0;
+    })
+    .filter((v: number) => v > 0);
+  const avg = evaluadas.length > 0
+    ? Math.min(10, evaluadas.reduce((a: number, b: number) => a + b, 0) / evaluadas.length)
+    : 0;
+  return { chips, total: grades.length, avg };
+};
+
 const EVENT_COLORS: Record<string, string> = {
   EXAM: 'bg-red-100 text-red-700 border-red-200',
   MEETING: 'bg-blue-100 text-blue-700 border-blue-200',
@@ -816,7 +844,7 @@ export const DashboardView: React.FC<DashboardProps> = ({
       </div>
 
       {/* KPI Cards - Navigation Enabled */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
         <div
           onClick={() => onNavigate('ATTENDANCE')}
           className="glass-card p-5 rounded-2xl cursor-pointer group relative overflow-hidden"
@@ -976,7 +1004,7 @@ export const DashboardView: React.FC<DashboardProps> = ({
             <h3 className="font-semibold text-slate-700">Historial de Calificaciones (Últimas 5)</h3>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-slate-100 text-slate-500 text-xs uppercase tracking-wider">
@@ -987,41 +1015,7 @@ export const DashboardView: React.FC<DashboardProps> = ({
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {sortedStudents.map((student) => {
-                  const grades = student.grades || [];
-                  const lastGrades = grades.slice(-5); // Get last 5
-
-                  const getGradeValue = (g: any) => {
-                    if (typeof g === 'number') return g;
-                    if (typeof g === 'string' && !isNaN(parseFloat(g))) return parseFloat(g);
-                    if (typeof g === 'object' && g !== null) {
-                      const fields = [g.lenguajes, g.saberes, g.etica, g.humano].map(v => Number(v) || 0);
-                      const validFields = fields.filter(v => v > 0);
-                      return validFields.length > 0 ? validFields.reduce((a, b) => a + b, 0) / validFields.length : 0;
-                    }
-                    return 0;
-                  };
-
-                  // Promedio de lo evaluado hasta ahora: solo cuenta los trimestres
-                  // con calificación (antes dividía entre 3 y salía 2.6 con un 7.7).
-                  const evaluadas = grades
-                    .map((g, i) => {
-                      const base = getGradeValue(g);
-                      if (base <= 0) return 0;
-                      return Math.min(10, base + getSupportPoints(student, i));
-                    })
-                    .filter(v => v > 0);
-                  const academicAvg = evaluadas.length > 0
-                    ? Math.min(10, evaluadas.reduce((acc, v) => acc + v, 0) / evaluadas.length)
-                    : 0;
-
-                  const studentAssignments = assignments.filter(a => 
-                    !a.targetGroup || a.targetGroup === student.group
-                  );
-                  const completedCount = studentAssignments.filter(a => (student.completedAssignmentIds || []).includes(a.id)).length;
-                  const actualTotalAssignments = studentAssignments.length;
-
-                  // El promedio final es SOLO el académico (calificaciones NEM)
-                  const avg = academicAvg > 0 ? academicAvg : 0;
+                  const { chips, total, avg } = getHistorialAlumno(student);
 
                   return (
                     <tr
@@ -1041,8 +1035,7 @@ export const DashboardView: React.FC<DashboardProps> = ({
                       </td>
                       <td className="py-3">
                         <div className="flex items-center gap-2">
-                          {lastGrades.map((grade, idx) => {
-                            const val = getGradeValue(grade);
+                          {chips.map((val: number, idx: number) => {
                             if (val === 0) {
                               return <div key={`grade-${idx}`} className="w-8 h-8 rounded-md bg-slate-50 border border-slate-100" title="Sin evaluar" />
                             }
@@ -1054,13 +1047,13 @@ export const DashboardView: React.FC<DashboardProps> = ({
                                     val >= 6 ? 'bg-yellow-50 text-yellow-700 border-yellow-100' :
                                       'bg-red-50 text-red-700 border-red-100'
                                   } `}
-                                title={`Evaluación ${student.grades.length - lastGrades.length + idx + 1} `}
+                                title={`Evaluación ${total - chips.length + idx + 1} `}
                               >
                                 {val.toFixed(0)}
                               </div>
                             )
                           })}
-                          {lastGrades.length < 5 && Array.from({ length: 5 - lastGrades.length }).map((_, i) => (
+                          {chips.length < 5 && Array.from({ length: 5 - chips.length }).map((_, i) => (
                             <div key={`empty-${i}`} className="w-8 h-8 rounded-md bg-slate-50 border border-slate-100" />
                           ))}
                         </div>
@@ -1084,6 +1077,51 @@ export const DashboardView: React.FC<DashboardProps> = ({
               </tbody>
             </table>
           </div>
+
+          {/* Versión móvil: tarjetas en lugar de la tabla */}
+          <div className="md:hidden space-y-2">
+            {sortedStudents.map(student => {
+              const { chips, avg } = getHistorialAlumno(student);
+              return (
+                <button
+                  key={student.id}
+                  onClick={() => setSelectedStudent(student)}
+                  className="w-full text-left bg-slate-50/70 rounded-xl p-3 flex items-center gap-3 active:bg-slate-100"
+                >
+                  <img
+                    src={student.avatar === "PENDING_LOAD" ? `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random` : (student.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random`)}
+                    alt={student.name}
+                    className="w-9 h-9 rounded-full object-cover border border-slate-200 shrink-0"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[13px] font-bold text-slate-700 truncate">{student.name}</p>
+                    <div className="flex gap-1 mt-1">
+                      {chips.map((val: number, i: number) => (
+                        <span
+                          key={i}
+                          className={`w-6 h-6 flex items-center justify-center rounded text-[10px] font-bold border ${val === 0 ? 'bg-white text-slate-300 border-slate-100' :
+                            val >= 9 ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                              val >= 8 ? 'bg-blue-50 text-blue-700 border-blue-100' :
+                                val >= 6 ? 'bg-yellow-50 text-yellow-700 border-yellow-100' :
+                                  'bg-red-50 text-red-700 border-red-100'}`}
+                        >
+                          {val === 0 ? '-' : val.toFixed(0)}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <span className={`shrink-0 font-bold text-sm px-2 py-1 rounded-full ${avg === 0 ? 'text-slate-400' :
+                    avg >= 9 ? 'bg-emerald-100 text-emerald-800' :
+                      avg >= 8 ? 'bg-blue-100 text-blue-800' :
+                        avg >= 6 ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-red-100 text-red-800'}`}>
+                    {avg > 0 ? avg.toFixed(1) : '-'}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
           <p className="text-xs text-slate-400 mt-4 text-center">Haz clic en un estudiante para ver el reporte detallado.</p>
         </div>
       </div>
