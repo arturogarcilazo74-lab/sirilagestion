@@ -394,7 +394,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
 
     // New Detail State
     const [behaviorLogs, setBehaviorLogs] = useState<BehaviorLog[]>([]);
-    const [activeDetail, setActiveDetail] = useState<'GRADES' | 'ATTENDANCE' | 'BEHAVIOR' | null>(null);
+    const [activeDetail, setActiveDetail] = useState<'GRADES' | 'ATTENDANCE' | 'BEHAVIOR' | 'EXAM' | null>(null);
     const [honorRoll, setHonorRoll] = useState<any[]>([]);
     
     // UI State for pending WhatsApp notifications (bypasses popup blocker)
@@ -1816,6 +1816,39 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                 </span>
                                 <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">Conducta</span>
                             </div>
+
+                            {/* Exam Card (ancho completo): abre el desglose en un modal */}
+                            {(() => {
+                                const examenId = Object.keys(student?.assignmentItemResults || {})[0];
+                                if (!examenId) return null;
+                                const nota = student?.assignmentResults?.[examenId];
+                                const items = student?.assignmentItemResults?.[examenId] || {};
+                                const total = EXAMEN_CAMPOS.reduce((n, c) => n + c.total, 0);
+                                const aciertos = Object.keys(items).filter(k => Number(items[k]) === 1).length;
+                                const aprobado = nota !== undefined && Number(nota) >= 6;
+                                return (
+                                    <div
+                                        onClick={() => setActiveDetail('EXAM')}
+                                        className="col-span-2 bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between cursor-pointer hover:shadow-md transition-all active:scale-[0.99]"
+                                    >
+                                        <div className="flex items-center gap-3 min-w-0">
+                                            <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                                                <Award size={20} />
+                                            </div>
+                                            <div className="text-left min-w-0">
+                                                <p className="text-sm font-bold text-slate-700 truncate">Examen del trimestre</p>
+                                                <p className="text-[11px] text-slate-400">{aciertos} de {total} correctas · toca para ver el desglose</p>
+                                            </div>
+                                        </div>
+                                        <div className="text-right shrink-0 pl-2">
+                                            <span className={`text-2xl font-black ${aprobado ? 'text-emerald-600' : 'text-red-500'}`}>
+                                                {nota !== undefined ? Number(nota).toFixed(1) : '-'}
+                                            </span>
+                                            <span className="text-[10px] font-bold text-slate-400"> /10</span>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
                         </div>
 
                         {/* Behavior Summary Section (New) */}
@@ -2002,35 +2035,6 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                             <BookOpen size={24} className="text-indigo-500" />
                             Tareas y Actividades
                         </h3>
-
-                        {/* Resultados del examen: se leen del alumno, así aparecen
-                            aunque la actividad no pase el filtro por grupo. */}
-                        {(() => {
-                            const ids = Object.keys(student?.assignmentItemResults || {});
-                            if (!ids.length) return null;
-                            return (
-                                <div className="bg-white rounded-3xl p-5 mb-6 shadow-sm border border-slate-100">
-                                    <h4 className="text-xs font-black uppercase tracking-widest text-indigo-600 mb-4 flex items-center gap-2">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-600"></div>
-                                        Resultados del Examen
-                                    </h4>
-                                    <div className="space-y-5">
-                                        {ids.map(id => {
-                                            const asig = (assignments || []).find(a => a.id === id);
-                                            return (
-                                                <ExamBreakdown
-                                                    key={id}
-                                                    title={asig?.title || 'Examen del trimestre'}
-                                                    nota={student?.assignmentResults?.[id]}
-                                                    areas={student?.assignmentAreaResults?.[id]}
-                                                    items={student?.assignmentItemResults?.[id]}
-                                                />
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            );
-                        })()}
 
                         <div className="space-y-8">
                             {/* PENDING SECTION */}
@@ -2991,6 +2995,33 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
 
 
             {/* DETAIL MODALS */}
+            {activeDetail === 'EXAM' && (
+                <div className="fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn" onClick={() => setActiveDetail(null)}>
+                    <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+                        <div className="bg-emerald-600 p-4 text-white flex justify-between items-center">
+                            <h3 className="font-bold flex items-center gap-2">
+                                <Award size={20} /> Resultados del Examen
+                            </h3>
+                            <button onClick={() => setActiveDetail(null)} className="p-1 hover:bg-white/20 rounded-full transition-colors"><X size={20} /></button>
+                        </div>
+                        <div className="p-4 max-h-[70vh] overflow-y-auto space-y-5">
+                            {Object.keys(student?.assignmentItemResults || {}).map(id => {
+                                const asig = (assignments || []).find(a => a.id === id);
+                                return (
+                                    <ExamBreakdown
+                                        key={id}
+                                        title={asig?.title || 'Examen del trimestre'}
+                                        nota={student?.assignmentResults?.[id]}
+                                        areas={student?.assignmentAreaResults?.[id]}
+                                        items={student?.assignmentItemResults?.[id]}
+                                    />
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {activeDetail === 'GRADES' && (
                 <div className="fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn" onClick={() => setActiveDetail(null)}>
                     <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
