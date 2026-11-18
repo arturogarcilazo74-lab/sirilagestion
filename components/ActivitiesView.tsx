@@ -108,18 +108,21 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
     score?: number;
     attempts: number;
     areaScores?: Record<string, number>;
+    itemResults?: Record<string, number>;
   } | null>(null);
 
   const handleOpenInteractiveResult = (student: Student, assignment: Assignment) => {
     const score = student.assignmentResults?.[assignment.id];
     const attempts = student.assignmentAttempts?.[assignment.id] || 0;
     const areaScores = student.assignmentAreaResults?.[assignment.id];
+    const itemResults = student.assignmentItemResults?.[assignment.id];
     setSelectedInteractiveResult({
       student,
       assignment,
       score,
       attempts,
-      areaScores
+      areaScores,
+      itemResults
     });
   };
 
@@ -161,7 +164,8 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
           student: updatedStudent,
           score: undefined,
           attempts: 0,
-          areaScores: undefined
+          areaScores: undefined,
+          itemResults: undefined
         });
       }
 
@@ -2107,6 +2111,67 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                 </div>
               </div>
             )}
+
+            {/* Detalle reactivo por reactivo (1 = acierto, 0 = error) */}
+            {selectedInteractiveResult.itemResults && Object.keys(selectedInteractiveResult.itemResults).length > 0 && (() => {
+              const items = selectedInteractiveResult.itemResults as Record<string, number>;
+              const grupos = [
+                { nombre: 'Lenguajes', pre: 'L', total: 14 },
+                { nombre: 'Saberes', pre: 'S', total: 10 },
+                { nombre: 'Ética y Sociedades', pre: 'E', total: 10 },
+                { nombre: 'De lo Humano', pre: 'H', total: 7 }
+              ];
+              const claves = grupos.reduce<string[]>((acc, g) => {
+                for (let i = 1; i <= g.total; i++) acc.push(`${g.pre}${i}`);
+                return acc;
+              }, []);
+              const presentes = claves.filter(k => items[k] !== undefined && items[k] !== null);
+              const aciertos = presentes.filter(k => Number(items[k]) === 1).length;
+              const chip = (estado: 'ok' | 'no' | 'na') =>
+                estado === 'ok'
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  : estado === 'no'
+                    ? 'bg-red-50 text-red-600 border-red-200'
+                    : 'bg-slate-50 text-slate-300 border-slate-200';
+              return (
+                <div className="bg-white p-4 rounded-2xl border border-slate-200 space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                      <BarChart3 size={14} className="text-slate-500" />
+                      Detalle por reactivo
+                    </h4>
+                    <span className="text-[11px] font-black text-slate-600">
+                      {aciertos} de {presentes.length} correctos
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    {grupos.map(g => (
+                      <div key={g.pre} className="flex items-start gap-2">
+                        <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400 w-24 shrink-0 pt-1">{g.nombre}</span>
+                        <div className="flex flex-wrap gap-1">
+                          {Array.from({ length: g.total }, (_, i) => {
+                            const k = `${g.pre}${i + 1}`;
+                            const v = items[k];
+                            const estado: 'ok' | 'no' | 'na' = v === undefined || v === null ? 'na' : Number(v) === 1 ? 'ok' : 'no';
+                            return (
+                              <span
+                                key={k}
+                                title={`${k}: ${estado === 'ok' ? 'correcto' : estado === 'no' ? 'incorrecto' : 'sin dato'}`}
+                                className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md border text-[10px] font-bold ${chip(estado)}`}
+                              >
+                                {estado === 'ok' ? <Check size={9} /> : estado === 'no' ? <X size={9} /> : '·'}
+                                {k}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-slate-400">✓ correcto · ✗ incorrecto · · sin dato. Los reactivos abiertos del cuadernillo no aparecen aquí.</p>
+                </div>
+              );
+            })()}
 
             {/* Actions */}
             <div className="flex flex-col sm:flex-row gap-2 pt-2">
