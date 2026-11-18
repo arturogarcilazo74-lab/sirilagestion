@@ -1143,13 +1143,16 @@ export const generateGroupList = (
             const hasBehaviorRisk = s.behaviorPoints < 0;
             const hasRepeaterRisk = s.repeater;
             let avg = 0;
-            if (s.grades && s.grades.length > 0) {
-                let sum = 0;
-                s.grades.forEach((g: any) => {
-                    if (typeof g === 'object') sum += (Number(g.lenguajes || 0) + Number(g.saberes || 0) + Number(g.etica || 0) + Number(g.humano || 0)) / 4;
-                    else sum += Number(g);
+            {
+                // Solo los trimestres con calificación (no dividir entre 3 vacíos)
+                const valores: number[] = [];
+                (s.grades || []).forEach((g: any) => {
+                    const v = typeof g === 'object'
+                        ? (Number(g.lenguajes || 0) + Number(g.saberes || 0) + Number(g.etica || 0) + Number(g.humano || 0)) / 4
+                        : (Number(g) || 0);
+                    if (v > 0) valores.push(v);
                 });
-                avg = sum / s.grades.length;
+                avg = valores.length > 0 ? valores.reduce((a, b) => a + b, 0) / valores.length : 0;
             }
             const hasGradeRisk = avg > 0 && avg < 7;
 
@@ -1319,7 +1322,10 @@ export const generateCompleteStudentReport = async (
         return 0;
     };
     const sum = grades.reduce((acc, g) => acc + getGradeValue(g), 0);
-    const overallAvg = grades.length > 0 ? (sum / grades.length).toFixed(1) : '-';
+    const evaluadasReporte = grades.map(getGradeValue).filter(v => v > 0);
+    const overallAvg = evaluadasReporte.length > 0
+        ? (evaluadasReporte.reduce((a, b) => a + b, 0) / evaluadasReporte.length).toFixed(1)
+        : '-';
 
     autoTable(doc, {
         startY: y + 2,

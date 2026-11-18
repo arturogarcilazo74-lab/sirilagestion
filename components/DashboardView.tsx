@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { Student, BehaviorLog, SchoolEvent, Assignment, ViewState, StaffTask, StaffMember, SchoolConfig } from '../types';
 import { generateRiskPlan, analyzeClassPerformance } from '../services/ai';
 import { api } from '../services/api';
-import { getTrimesterAvg, getStudentGlobalAverage, calculateStudentMetrics } from '../services/gradeUtils';
+import { getTrimesterAvg, getStudentGlobalAverage, calculateStudentMetrics, getSupportPoints } from '../services/gradeUtils';
 import { generateDashboardReportPDF } from '../services/pdfGenerator';
 import { Sparkles, TrendingUp, Users, AlertCircle, History, X, Phone, User, CheckCircle, Calendar as CalendarIcon, BookOpen, Clock, Download, ClipboardList, ThumbsUp, ThumbsDown, ChevronLeft, ChevronRight, Plus, Edit2, Trash2, Save, MoreHorizontal, ArrowRight, Send, Megaphone, AlertTriangle, CheckSquare, MessageCircle, Award } from 'lucide-react';
 import { sendWhatsAppMessage, getEventMessage } from '../whatsappUtils';
@@ -1001,8 +1001,17 @@ export const DashboardView: React.FC<DashboardProps> = ({
                     return 0;
                   };
 
-                  const academicAvg = grades.length > 0
-                    ? Math.min(10, grades.reduce((acc, g) => acc + getGradeValue(g), 0) / grades.length)
+                  // Promedio de lo evaluado hasta ahora: solo cuenta los trimestres
+                  // con calificación (antes dividía entre 3 y salía 2.6 con un 7.7).
+                  const evaluadas = grades
+                    .map((g, i) => {
+                      const base = getGradeValue(g);
+                      if (base <= 0) return 0;
+                      return Math.min(10, base + getSupportPoints(student, i));
+                    })
+                    .filter(v => v > 0);
+                  const academicAvg = evaluadas.length > 0
+                    ? Math.min(10, evaluadas.reduce((acc, v) => acc + v, 0) / evaluadas.length)
                     : 0;
 
                   const studentAssignments = assignments.filter(a => 
