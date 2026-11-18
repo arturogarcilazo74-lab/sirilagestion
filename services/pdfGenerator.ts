@@ -3,7 +3,7 @@ import autoTable from 'jspdf-autotable';
 import { Student, SchoolConfig, BehaviorLog, Assignment, AttendanceStatus, UseMovement } from '../types';
 import QRCode from 'qrcode';
 import { SCHOOL_PERIODS, isSchoolDay, getSchoolPeriod } from './schoolCalendarUtils';
-import { getStudentGlobalAverage, calculateStudentMetrics, getTrimesterAvg } from './gradeUtils';
+import { getStudentGlobalAverage, calculateStudentMetrics, getTrimesterAvg, getSupportPoints } from './gradeUtils';
 import { USE_CATEGORY_LABELS, USE_PAYMENT_LABELS, formatUseDate, formatUseMoney, summarizeUseMovements } from './useFinance';
 
 
@@ -275,7 +275,8 @@ export const generateReportCard = async (student: Student, config: SchoolConfig)
                 const eti = Number(grade.etica || 0);
                 const hum = Number(grade.humano || 0);
                 const validFields = [leng, sab, eti, hum].filter(v => v > 0);
-                const avg = validFields.length > 0 ? (validFields.reduce((a, b) => a + b, 0) / validFields.length) : 0;
+                const avgBase = validFields.length > 0 ? (validFields.reduce((a, b) => a + b, 0) / validFields.length) : 0;
+                const avg = avgBase > 0 ? Math.min(10, avgBase + getSupportPoints(student, index)) : 0;
                 gradesData.push([
                     `Evaluación ${index + 1}`,
                     leng > 0 ? leng.toFixed(1) : '-',
@@ -308,13 +309,24 @@ export const generateReportCard = async (student: Student, config: SchoolConfig)
             }
             return 0;
         };
-        const sum = grades.reduce((acc, grade) => acc + getGradeValue(grade), 0);
-        const average = grades.length > 0 ? (sum / grades.length).toFixed(1) : '-';
+        // Promedio de lo evaluado hasta ahora: solo promedia las evaluaciones que
+        // ya tienen calificación (antes dividía entre los 3 trimestres, así que un
+        // alumno con un solo trimestre de 7.7 aparecía con 2.6).
+        const evaluadas = grades
+            .map((grade, index) => {
+                const base = getGradeValue(grade);
+                if (base <= 0) return 0;
+                return Math.min(10, base + getSupportPoints(student, index));
+            })
+            .filter(v => v > 0);
+        const average = evaluadas.length > 0
+            ? (evaluadas.reduce((a, b) => a + b, 0) / evaluadas.length).toFixed(1)
+            : '-';
 
         autoTable(doc, {
             startY: 85,
             head: [['Periodo', 'Lenguajes', 'Saberes y P.C.', 'Ética Nat. y Soc.', 'De lo Humano', 'Promedio']],
-            body: [...gradesData, ['PROMEDIO FINAL', '', '', '', '', average]],
+            body: [...gradesData, ['PROMEDIO ACTUAL', '', '', '', '', average]],
             theme: 'grid',
             headStyles: { fillColor: COLORS.primary },
             footStyles: { fillColor: [240, 240, 240], textColor: COLORS.text, fontStyle: 'bold' },
@@ -364,28 +376,41 @@ export const generateReportCard = async (student: Student, config: SchoolConfig)
         // --- Observations and Suggestions Section ---
         const obsY = (doc as any).lastAutoTable.finalY + 12;
 
-        // Generate academic suggestions based on grades
+        // Generate academic suggestions based on grades — una por campo formativo
         const generateAcademicSuggestion = () => {
-            const suggestions: string[] = [];
-            grades.forEach((grade, idx) => {
-                if (typeof grade === 'object' && grade !== null) {
-                    const fields = {
-                        'Lenguajes': Number(grade.lenguajes || 0),
-                        'Saberes y P.C.': Number(grade.saberes || 0),
-                        'Ética, Nat. y Soc.': Number(grade.etica || 0),
-                        'De lo Humano': Number(grade.humano || 0)
-                    };
-                    Object.entries(fields).forEach(([name, val]) => {
-                        if (val > 0 && val < 7) {
-                            suggestions.push(`- Reforzar ${name} (T${idx + 1}: ${val.toFixed(1)})`);
-                        }
-                    });
+            const campos = [
+                { nombre: 'Lenguajes', clave: 'lenguajes', foco: 'comprensión lectora y escritura' },
+                { nombre: 'Saberes y P.C.', clave: 'saberes', foco: 'resolución de problemas y cálculo' },
+                { nombre: 'Ética, Nat. y Soc.', clave: 'etica', foco: 'convivencia y cuidado del entorno' },
+                { nombre: 'De lo Humano', clave: 'humano', foco: 'autonomía y trabajo en equipo' }
+            ];
+
+            return campos.map(c => {
+                const valores: number[] = [];
+                grades.forEach(g => {
+                    if (g && typeof g === 'object') {
+                        const v = Number((g as any)[c.clave] || 0);
+                        if (v > 0) valores.push(v);
+                    }
+                });
+
+                if (!valores.length) {
+                    return `${c.nombre}: sin evaluación registrada todavía.`;
                 }
-            });
-            if (suggestions.length === 0) {
-                return '- El alumno muestra un desempeño académico adecuado en todas las áreas.';
-            }
-            return suggestions.join('\n');
+
+                const prom = valores.reduce((a, b) => a + b, 0) / valores.length;
+                const estado = prom >= 8 ? 'Consolidado' : prom >= 6 ? 'En desarrollo' : 'Requiere apoyo';
+                let sugerencia: string;
+                if (prom >= 8) {
+                    sugerencia = 'Ampliar con retos de mayor complejidad.';
+                } else if (prom >= 6) {
+                    sugerencia = 'Practicar con regularidad y revisar las tareas.';
+                } else {
+                    sugerencia = `Reforzar ${c.foco} con práctica guiada y seguimiento en casa.`;
+                }
+
+                return `${c.nombre} ${prom.toFixed(1)} (${estado}): ${sugerencia}`;
+            }).join('\n');
         };
 
         // Generate conduct suggestions
@@ -406,7 +431,7 @@ export const generateReportCard = async (student: Student, config: SchoolConfig)
         // Academic observations
         doc.setFontSize(9);
         doc.setFont('helvetica', 'bold');
-        doc.text('Áreas Académicas:', 20, obsY + 8);
+        doc.text('Por campo formativo:', 20, obsY + 8);
         doc.setFont('helvetica', 'normal');
         const acadSuggLines = doc.splitTextToSize(generateAcademicSuggestion(), pageWidth - 40);
         doc.text(acadSuggLines, 20, obsY + 13);
