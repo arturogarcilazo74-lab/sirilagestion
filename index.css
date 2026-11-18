@@ -129,3 +129,30 @@ body {
         display: none;
     }
 }
+
+/* ============================================================
+   Ajustes para uso en el teléfono (portal docente)
+   ============================================================ */
+@media (max-width: 767px) {
+    /* Evita que iOS haga zoom automático al enfocar un campo */
+    input, select, textarea {
+        font-size: 16px !important;
+    }
+
+    /* Toque más cómodo: sin destello azul al tocar botones */
+    button, a, [role=button] {
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Que el desplazamiento no rebote en toda la página */
+    html, body {
+        overscroll-behavior-y: contain;
+    }
+}
+
+/* Los modales no deben desbordar la pantalla del teléfono */
+@media (max-width: 767px) {
+    .fixed.inset-0 > div {
+        max-width: calc(100vw - 1.5rem) !important;
+    }
+}
