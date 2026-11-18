@@ -1601,20 +1601,17 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
 
                             // Calculate metrics
                             const metrics = calculateStudentMetrics(student, assignments, config);
-                            const isWeighted = !!config.includeHomeworkInAverage;
-                            const academicW = config.academicWeight ?? 70;
-                            const homeworkW = config.homeworkWeight ?? 30;
-                            const conductW = config.conductWeight ?? 0;
-                            const attendanceW = config.attendanceWeight ?? 0;
+                            const bd = metrics.breakdown;
+                            const isWeighted = bd.weighted;
+                            const academicW = bd.wAcademic;
+                            const homeworkW = bd.wHomework;
+                            const conductW = bd.wConduct;
+                            const attendanceW = bd.wAttendance;
 
-                            const hwScore = metrics.hwPercentage / 10;
-                            const conductScore = Math.max(5, Math.min(10, 8 + (metrics.behaviorPoints * 0.1)));
-                            const attendanceScore = metrics.attendanceRate / 10;
-
-                            const academicVal = metrics.academicAvg;
-                            const hwVal = hwScore;
-                            const conductVal = conductScore;
-                            const attendanceVal = attendanceScore;
+                            const academicVal = bd.academic;
+                            const hwVal = bd.homework;
+                            const conductVal = bd.conduct;
+                            const attendanceVal = bd.attendance;
 
                             const academicContrib = (academicVal * academicW) / 100;
                             const hwContrib = (hwVal * homeworkW) / 100;
@@ -1930,20 +1927,17 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                             const cachedConfig = localStorage.getItem('SIRILA_CACHE_CONFIG');
                             const config = cachedConfig ? JSON.parse(cachedConfig) : {};
                             const metrics = calculateStudentMetrics(student, assignments, config);
-                            const isWeighted = !!config.includeHomeworkInAverage;
-                            const academicW = config.academicWeight ?? 70;
-                            const homeworkW = config.homeworkWeight ?? 30;
-                            const conductW = config.conductWeight ?? 0;
-                            const attendanceW = config.attendanceWeight ?? 0;
+                            const bd = metrics.breakdown;
+                            const isWeighted = bd.weighted;
+                            const academicW = bd.wAcademic;
+                            const homeworkW = bd.wHomework;
+                            const conductW = bd.wConduct;
+                            const attendanceW = bd.wAttendance;
 
-                            const hwScore = metrics.hwPercentage / 10;
-                            const conductScore = Math.max(5, Math.min(10, 8 + (metrics.behaviorPoints * 0.1)));
-                            const attendanceScore = metrics.attendanceRate / 10;
-
-                            const academicVal = metrics.academicAvg;
-                            const hwVal = hwScore;
-                            const conductVal = conductScore;
-                            const attendanceVal = attendanceScore;
+                            const academicVal = bd.academic;
+                            const hwVal = bd.homework;
+                            const conductVal = bd.conduct;
+                            const attendanceVal = bd.attendance;
 
                             const academicContrib = (academicVal * academicW) / 100;
                             const hwContrib = (hwVal * homeworkW) / 100;
@@ -1972,7 +1966,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                                 {academicW > 0 && (
                                                     <div className="bg-slate-50/70 p-3 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
                                                         <div>
-                                                            <span className="font-black text-slate-700 block text-[10px] uppercase tracking-wider mb-1">Académico (NEM)</span>
+                                                            <span className="font-black text-slate-700 block text-[10px] uppercase tracking-wider mb-1">Académico {bd.academicSource === 'diagnostico' ? '(diagnóstico)' : '(NEM)'}</span>
                                                             <span className="block text-slate-500">Nota: <strong className="text-slate-700">{academicVal.toFixed(1)}</strong></span>
                                                             <span className="block text-slate-500">Peso: {academicW}%</span>
                                                         </div>

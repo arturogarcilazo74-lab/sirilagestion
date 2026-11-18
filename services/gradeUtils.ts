@@ -134,9 +134,46 @@ export const calculateStudentMetrics = (
   }
   const finalHonorScore = Number(honorScore.toFixed(1));
 
-  // Promedio final (siempre es el promedio académico basado estrictamente en las calificaciones, o diagnóstico si no hay)
+  // ---------------------------------------------------------------------
+  // Ponderación configurable (Configuración > Porcentajes de valoración).
+  // Antes la boleta mostraba los pesos pero el promedio final NO los aplicaba.
+  // Ahora el promedio final es la suma ponderada: académico + tareas +
+  // conducta + asistencia, con los porcentajes que el docente configure.
+  // ---------------------------------------------------------------------
+  const weighted = !!finalConfig?.includeHomeworkInAverage;
+  const wAcademic = Number(finalConfig?.academicWeight ?? 70);
+  const wHomework = Number(finalConfig?.homeworkWeight ?? 30);
+  const wConduct = Number(finalConfig?.conductWeight ?? 0);
+  const wAttendance = Number(finalConfig?.attendanceWeight ?? 0);
+
+  // Base académica: los trimestres capturados; si no hay, la evaluación diagnóstica.
+  const academicBase = academicAvg > 0 ? academicAvg : diagnosticAvg;
+  const academicSource: 'trimestres' | 'diagnostico' | 'sin-datos' =
+    academicAvg > 0 ? 'trimestres' : (diagnosticAvg > 0 ? 'diagnostico' : 'sin-datos');
+
+  const homeworkScore = hwPercentage / 10;
+  const conductScore = Math.max(5, Math.min(10, 8 + behaviorPoints * 0.1));
+  const attendanceScore = attendanceRate / 10;
+
+  const weightedTotal = (academicBase * wAcademic + homeworkScore * wHomework +
+    conductScore * wConduct + attendanceScore * wAttendance) / 100;
+
+  const breakdown = {
+    weighted,
+    academic: Number(academicBase.toFixed(2)),
+    homework: Number(homeworkScore.toFixed(2)),
+    conduct: Number(conductScore.toFixed(2)),
+    attendance: Number(attendanceScore.toFixed(2)),
+    wAcademic, wHomework, wConduct, wAttendance,
+    academicSource,
+    total: Number((weighted ? weightedTotal : academicBase).toFixed(2))
+  };
+
+  // Promedio final: ponderado si está activado; si no, solo académico.
   let finalAvgStr = '-';
-  if (academicAvg > 0) {
+  if (weighted) {
+    if (academicSource !== 'sin-datos') finalAvgStr = weightedTotal.toFixed(1);
+  } else if (academicAvg > 0) {
     finalAvgStr = academicAvg.toFixed(1);
   } else if (diagnosticAvg > 0) {
     finalAvgStr = diagnosticAvg.toFixed(1);
@@ -150,6 +187,8 @@ export const calculateStudentMetrics = (
     hwPercentage,
     behaviorPoints,
     attendanceRate,
+    academicBase,
+    breakdown,
     finalAvg: finalAvgStr
   };
 };

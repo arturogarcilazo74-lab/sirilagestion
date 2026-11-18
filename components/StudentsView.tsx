@@ -1805,20 +1805,17 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
               {/* Desglose de Ponderación del Promedio */}
               {(() => {
                 const metrics = calculateStudentMetrics(reportStudent, assignments, config);
-                const isWeighted = !!config.includeHomeworkInAverage;
-                const academicW = config.academicWeight ?? 70;
-                const homeworkW = config.homeworkWeight ?? 30;
-                const conductW = config.conductWeight ?? 0;
-                const attendanceW = config.attendanceWeight ?? 0;
+                const bd = metrics.breakdown;
+                const isWeighted = bd.weighted;
+                const academicW = bd.wAcademic;
+                const homeworkW = bd.wHomework;
+                const conductW = bd.wConduct;
+                const attendanceW = bd.wAttendance;
 
-                const hwScore = metrics.hwPercentage / 10;
-                const conductScore = Math.max(5, Math.min(10, 8 + (metrics.behaviorPoints * 0.1)));
-                const attendanceScore = metrics.attendanceRate / 10;
-
-                const academicVal = metrics.academicAvg;
-                const hwVal = hwScore;
-                const conductVal = conductScore;
-                const attendanceVal = attendanceScore;
+                const academicVal = bd.academic;
+                const hwVal = bd.homework;
+                const conductVal = bd.conduct;
+                const attendanceVal = bd.attendance;
 
                 const academicContrib = (academicVal * academicW) / 100;
                 const hwContrib = (hwVal * homeworkW) / 100;
@@ -1838,7 +1835,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
                         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 text-xs">
                           {academicW > 0 && (
                             <div className="bg-white p-2.5 rounded border border-slate-200 shadow-sm">
-                              <span className="font-bold block text-slate-700">Académico (NEM)</span>
+                              <span className="font-bold block text-slate-700">Académico {bd.academicSource === 'diagnostico' ? '(diagnóstico)' : '(NEM)'}</span>
                               <span className="block text-slate-500">Nota: {academicVal.toFixed(1)}</span>
                               <span className="block text-slate-500">Peso: {academicW}%</span>
                               <span className="font-bold block text-indigo-600 mt-1">Suma: +{academicContrib.toFixed(2)}</span>
