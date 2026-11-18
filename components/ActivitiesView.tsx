@@ -111,6 +111,66 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
     itemResults?: Record<string, number>;
   } | null>(null);
 
+  // Registro de la calificación de una actividad como trimestre
+  const [trimestreDestino, setTrimestreDestino] = useState(0);
+  const [guardandoTrimestre, setGuardandoTrimestre] = useState(false);
+
+  /**
+   * Toma los aciertos por campo de la actividad y los escribe como
+   * calificación del trimestre elegido para todos los alumnos con resultados.
+   */
+  const handleCargarTrimestre = async (assignment: Assignment, trimestre: number) => {
+    const campos = [
+      { clave: 'lenguajes', area: 'Lenguajes', pre: 'L', total: 14 },
+      { clave: 'saberes', area: 'Saberes', pre: 'S', total: 10 },
+      { clave: 'etica', area: 'Etica', pre: 'E', total: 10 },
+      { clave: 'humano', area: 'Humano', pre: 'H', total: 7 }
+    ];
+    const conResultados = students.filter(s =>
+      s.assignmentItemResults?.[assignment.id] || s.assignmentAreaResults?.[assignment.id]);
+    if (!conResultados.length) {
+      alert('Ningún alumno tiene resultados de esta actividad.');
+      return;
+    }
+    if (!confirm(`Se escribirá la calificación del Trimestre ${trimestre + 1} para ${conResultados.length} alumno(s), tomada de "${assignment.title}".\n\nSi algún alumno ya tenía calificación de ese trimestre, se sobrescribe.\n\n¿Continuar?`)) return;
+
+    setGuardandoTrimestre(true);
+    let ok = 0, err = 0;
+    for (const s of conResultados) {
+      try {
+        const areas = s.assignmentAreaResults?.[assignment.id] || {};
+        const items = s.assignmentItemResults?.[assignment.id] || {};
+        const nuevo: Record<string, number> = {};
+        campos.forEach(c => {
+          if (areas[c.area] !== undefined) {
+            nuevo[c.clave] = Math.round((Number(areas[c.area]) / 10) * 10) / 10;
+            return;
+          }
+          const claves: string[] = [];
+          for (let i = 1; i <= c.total; i++) claves.push(`${c.pre}${i}`);
+          const hechos = claves.filter(k => items[k] !== undefined);
+          const aciertos = hechos.filter(k => Number(items[k]) === 1).length;
+          nuevo[c.clave] = hechos.length ? Math.round((aciertos / hechos.length) * 100) / 10 : 0;
+        });
+
+        const grades = [...(s.grades || [])] as any[];
+        while (grades.length < 3) grades.push({ lenguajes: 0, saberes: 0, etica: 0, humano: 0 });
+        grades[trimestre] = { ...(grades[trimestre] || {}), ...nuevo };
+
+        const actualizado = { ...s, grades } as Student;
+        await api.saveStudent(actualizado);
+        if (onReopenAssignment) await onReopenAssignment(actualizado);
+        ok++;
+        console.log('[trimestre]', s.name, '->', grades[trimestre]);
+      } catch (e) {
+        console.error('[trimestre] error con', s.name, e);
+        err++;
+      }
+    }
+    setGuardandoTrimestre(false);
+    alert(`Listo: ${ok} alumno(s) con calificación del Trimestre ${trimestre + 1}${err ? `, ${err} con error` : ''}.\n\nRecarga la página con Ctrl+Shift+R para ver la boleta actualizada.`);
+  };
+
   const handleOpenInteractiveResult = (student: Student, assignment: Assignment) => {
     const score = student.assignmentResults?.[assignment.id];
     const attempts = student.assignmentAttempts?.[assignment.id] || 0;
@@ -2172,6 +2232,36 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                 </div>
               );
             })()}
+
+            {/* Cargar al trimestre */}
+            <div className="bg-indigo-50/60 border border-indigo-100 rounded-2xl p-3 space-y-2">
+              <p className="text-[11px] font-bold text-indigo-900 flex items-center gap-1.5">
+                <Trophy size={13} className="text-indigo-600" />
+                Registrar esta calificación en el trimestre
+              </p>
+              <div className="flex gap-2">
+                <select
+                  value={trimestreDestino}
+                  onChange={e => setTrimestreDestino(Number(e.target.value))}
+                  className="flex-1 text-xs p-2 rounded-xl border border-indigo-200 bg-white text-slate-700 font-semibold"
+                >
+                  <option value={0}>Primer trimestre</option>
+                  <option value={1}>Segundo trimestre</option>
+                  <option value={2}>Tercer trimestre</option>
+                </select>
+                <button
+                  onClick={() => handleCargarTrimestre(selectedInteractiveResult.assignment, trimestreDestino)}
+                  disabled={guardandoTrimestre}
+                  className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  <Save size={13} />
+                  {guardandoTrimestre ? 'Guardando…' : 'Cargar al grupo'}
+                </button>
+              </div>
+              <p className="text-[10px] text-indigo-700/70 leading-snug">
+                Escribe la calificación por campo de esta actividad como calificación del trimestre de cada alumno con resultados.
+              </p>
+            </div>
 
             {/* Actions */}
             <div className="flex flex-col sm:flex-row gap-2 pt-2">
