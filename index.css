@@ -149,10 +149,3 @@ body {
         overscroll-behavior-y: contain;
     }
 }
-
-/* Los modales no deben desbordar la pantalla del teléfono */
-@media (max-width: 767px) {
-    .fixed.inset-0 > div {
-        max-width: calc(100vw - 1.5rem) !important;
-    }
-}
