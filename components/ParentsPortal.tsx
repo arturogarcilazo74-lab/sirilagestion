@@ -229,6 +229,92 @@ const CelebrationCanvas: React.FC = () => {
     return <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none w-full h-full z-0" />;
 };
 
+/* --- Desglose de resultados de una actividad tipo examen (HTML) --- */
+const EXAMEN_CAMPOS = [
+    { nombre: 'Lenguajes', clave: 'Lenguajes', pre: 'L', total: 14 },
+    { nombre: 'Saberes', clave: 'Saberes', pre: 'S', total: 10 },
+    { nombre: 'Ética, Nat. y Soc.', clave: 'Etica', pre: 'E', total: 10 },
+    { nombre: 'De lo Humano', clave: 'Humano', pre: 'H', total: 7 }
+];
+
+const ExamBreakdown: React.FC<{
+    title: string;
+    nota?: number;
+    areas?: Record<string, number>;
+    items?: Record<string, number>;
+    compacto?: boolean;
+}> = ({ title, nota, areas, items, compacto = false }) => {
+    const a = areas || {};
+    const it = items || {};
+    const claves: string[] = [];
+    EXAMEN_CAMPOS.forEach(c => { for (let i = 1; i <= c.total; i++) claves.push(`${c.pre}${i}`); });
+    const presentes = claves.filter(k => it[k] !== undefined && it[k] !== null);
+    const aciertos = presentes.filter(k => Number(it[k]) === 1).length;
+    const aprobado = nota !== undefined && Number(nota) >= 6;
+
+    return (
+        <div className="space-y-3">
+            <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                    <p className="text-sm font-bold text-slate-700 leading-snug">{title}</p>
+                    <p className="text-[10px] text-slate-400 font-medium">{aciertos} de {presentes.length} respuestas correctas</p>
+                </div>
+                <div className="text-right shrink-0">
+                    <span className={`text-2xl font-black ${aprobado ? 'text-emerald-600' : 'text-red-500'}`}>
+                        {nota !== undefined ? Number(nota).toFixed(1) : '-'}
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-400"> /10</span>
+                </div>
+            </div>
+
+            {Object.keys(a).length > 0 && (
+                <div className="grid grid-cols-2 gap-2 bg-slate-50/60 p-2.5 rounded-xl border border-slate-100">
+                    {EXAMEN_CAMPOS.map(c => {
+                        const pct = Number(a[c.clave] ?? 0);
+                        return (
+                            <div key={c.clave} className="flex justify-between items-center">
+                                <span className="text-[10px] font-bold text-slate-500">{c.nombre}</span>
+                                <span className={`text-[11px] font-black ${pct >= 60 ? 'text-slate-700' : 'text-red-500'}`}>{pct}%</span>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+
+            <div className="space-y-2">
+                {EXAMEN_CAMPOS.map(c => (
+                    <div key={c.pre} className="flex items-start gap-2">
+                        <span className="text-[9px] font-bold uppercase tracking-wide text-slate-400 w-20 shrink-0 pt-1">{c.nombre}</span>
+                        <div className="flex flex-wrap gap-1">
+                            {Array.from({ length: c.total }, (_, i) => {
+                                const k = `${c.pre}${i + 1}`;
+                                const v = it[k];
+                                const estado = v === undefined || v === null ? 'na' : Number(v) === 1 ? 'ok' : 'no';
+                                return (
+                                    <span
+                                        key={k}
+                                        title={`${k}: ${estado === 'ok' ? 'correcto' : estado === 'no' ? 'incorrecto' : 'sin dato'}`}
+                                        className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md border text-[9px] font-bold ${estado === 'ok' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : estado === 'no' ? 'bg-red-50 text-red-600 border-red-200' : 'bg-slate-50 text-slate-300 border-slate-200'}`}
+                                    >
+                                        {estado === 'ok' ? <Check size={8} /> : estado === 'no' ? <X size={8} /> : '·'}
+                                        {k}
+                                    </span>
+                                );
+                            })}
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {!compacto && (
+                <p className="text-[9px] text-slate-400 leading-relaxed">
+                    ✓ correcto · ✗ incorrecto · · sin dato. Los 4 reactivos que se contestan en el cuadernillo se califican aparte.
+                </p>
+            )}
+        </div>
+    );
+};
+
 interface ParentsPortalProps {
     onBack: () => void;
     standalone?: boolean;
@@ -1917,6 +2003,35 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                             Tareas y Actividades
                         </h3>
 
+                        {/* Resultados del examen: se leen del alumno, así aparecen
+                            aunque la actividad no pase el filtro por grupo. */}
+                        {(() => {
+                            const ids = Object.keys(student?.assignmentItemResults || {});
+                            if (!ids.length) return null;
+                            return (
+                                <div className="bg-white rounded-3xl p-5 mb-6 shadow-sm border border-slate-100">
+                                    <h4 className="text-xs font-black uppercase tracking-widest text-indigo-600 mb-4 flex items-center gap-2">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-600"></div>
+                                        Resultados del Examen
+                                    </h4>
+                                    <div className="space-y-5">
+                                        {ids.map(id => {
+                                            const asig = (assignments || []).find(a => a.id === id);
+                                            return (
+                                                <ExamBreakdown
+                                                    key={id}
+                                                    title={asig?.title || 'Examen del trimestre'}
+                                                    nota={student?.assignmentResults?.[id]}
+                                                    areas={student?.assignmentAreaResults?.[id]}
+                                                    items={student?.assignmentItemResults?.[id]}
+                                                />
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            );
+                        })()}
+
                         <div className="space-y-8">
                             {/* PENDING SECTION */}
                             <div>
@@ -2285,8 +2400,8 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                             const tieneCaptura = !!capturado && [capturado.lenguajes, capturado.saberes, capturado.etica, capturado.humano]
                                                 .some(v => Number(v) > 0);
                                             if (tieneCaptura) return { title: 'Primer Trimestre', gradeObj: capturado };
-                                            const examen = (assignments || []).find(a => student?.assignmentItemResults?.[a.id]);
-                                            const areas = examen ? (student?.assignmentAreaResults?.[examen.id] || {}) : {};
+                                            const examenId = Object.keys(student?.assignmentItemResults || {})[0];
+                                            const areas = examenId ? (student?.assignmentAreaResults?.[examenId] || {}) : {};
                                             if (!Object.keys(areas).length) return { title: 'Primer Trimestre', gradeObj: undefined };
                                             return {
                                                 title: 'Primer Trimestre (examen)',
@@ -2343,14 +2458,8 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
 
                             {/* Resultados del examen con desglose por reactivo */}
                             {(() => {
-                                const examenes = (assignments || []).filter(a => student?.assignmentItemResults?.[a.id]);
-                                if (!examenes.length) return null;
-                                const campos = [
-                                    { nombre: 'Lenguajes', clave: 'Lenguajes', pre: 'L', total: 14 },
-                                    { nombre: 'Saberes', clave: 'Saberes', pre: 'S', total: 10 },
-                                    { nombre: 'Ética, Nat. y Soc.', clave: 'Etica', pre: 'E', total: 10 },
-                                    { nombre: 'De lo Humano', clave: 'Humano', pre: 'H', total: 7 }
-                                ];
+                                const ids = Object.keys(student?.assignmentItemResults || {});
+                                if (!ids.length) return null;
                                 return (
                                     <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
                                         <h4 className="text-xs font-black uppercase tracking-widest text-indigo-600 mb-4 flex items-center gap-2">
@@ -2358,74 +2467,16 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                             Examen del Trimestre
                                         </h4>
                                         <div className="space-y-5">
-                                            {examenes.map(exam => {
-                                                const nota = student?.assignmentResults?.[exam.id];
-                                                const areas = student?.assignmentAreaResults?.[exam.id] || {};
-                                                const items = student?.assignmentItemResults?.[exam.id] || {};
-                                                const claves: string[] = [];
-                                                campos.forEach(c => { for (let i = 1; i <= c.total; i++) claves.push(`${c.pre}${i}`); });
-                                                const presentes = claves.filter(k => items[k] !== undefined && items[k] !== null);
-                                                const aciertos = presentes.filter(k => Number(items[k]) === 1).length;
-                                                const aprobado = nota !== undefined && Number(nota) >= 6;
+                                            {ids.map(id => {
+                                                const asig = (assignments || []).find(a => a.id === id);
                                                 return (
-                                                    <div key={exam.id} className="space-y-3">
-                                                        <div className="flex items-start justify-between gap-3">
-                                                            <div className="min-w-0">
-                                                                <p className="text-sm font-bold text-slate-700 leading-snug">{exam.title}</p>
-                                                                <p className="text-[10px] text-slate-400 font-medium">
-                                                                    {aciertos} de {presentes.length} respuestas correctas
-                                                                </p>
-                                                            </div>
-                                                            <div className="text-right shrink-0">
-                                                                <span className={`text-2xl font-black ${aprobado ? 'text-emerald-600' : 'text-red-500'}`}>
-                                                                    {nota !== undefined ? Number(nota).toFixed(1) : '-'}
-                                                                </span>
-                                                                <span className="text-[10px] font-bold text-slate-400"> /10</span>
-                                                            </div>
-                                                        </div>
-
-                                                        {Object.keys(areas).length > 0 && (
-                                                            <div className="grid grid-cols-2 gap-2 bg-slate-50/60 p-2.5 rounded-xl border border-slate-100">
-                                                                {campos.map(c => {
-                                                                    const pct = Number(areas[c.clave] ?? 0);
-                                                                    return (
-                                                                        <div key={c.clave} className="flex justify-between items-center">
-                                                                            <span className="text-[10px] font-bold text-slate-500">{c.nombre}</span>
-                                                                            <span className={`text-[11px] font-black ${pct >= 60 ? 'text-slate-700' : 'text-red-500'}`}>{pct}%</span>
-                                                                        </div>
-                                                                    );
-                                                                })}
-                                                            </div>
-                                                        )}
-
-                                                        <div className="space-y-2">
-                                                            {campos.map(c => (
-                                                                <div key={c.pre} className="flex items-start gap-2">
-                                                                    <span className="text-[9px] font-bold uppercase tracking-wide text-slate-400 w-20 shrink-0 pt-1">{c.nombre}</span>
-                                                                    <div className="flex flex-wrap gap-1">
-                                                                        {Array.from({ length: c.total }, (_, i) => {
-                                                                            const k = `${c.pre}${i + 1}`;
-                                                                            const v = items[k];
-                                                                            const estado = v === undefined || v === null ? 'na' : Number(v) === 1 ? 'ok' : 'no';
-                                                                            return (
-                                                                                <span
-                                                                                    key={k}
-                                                                                    title={`${k}: ${estado === 'ok' ? 'correcto' : estado === 'no' ? 'incorrecto' : 'sin dato'}`}
-                                                                                    className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md border text-[9px] font-bold ${estado === 'ok' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : estado === 'no' ? 'bg-red-50 text-red-600 border-red-200' : 'bg-slate-50 text-slate-300 border-slate-200'}`}
-                                                                                >
-                                                                                    {estado === 'ok' ? <Check size={8} /> : estado === 'no' ? <X size={8} /> : '·'}
-                                                                                    {k}
-                                                                                </span>
-                                                                            );
-                                                                        })}
-                                                                    </div>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                        <p className="text-[9px] text-slate-400 leading-relaxed">
-                                                            ✓ correcto · ✗ incorrecto · · sin dato. Los 4 reactivos que se contestan en el cuadernillo se califican aparte.
-                                                        </p>
-                                                    </div>
+                                                    <ExamBreakdown
+                                                        key={id}
+                                                        title={asig?.title || 'Examen del trimestre'}
+                                                        nota={student?.assignmentResults?.[id]}
+                                                        areas={student?.assignmentAreaResults?.[id]}
+                                                        items={student?.assignmentItemResults?.[id]}
+                                                    />
                                                 );
                                             })}
                                         </div>
