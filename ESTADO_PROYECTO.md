@@ -432,7 +432,7 @@ Reglas de ciclo de vida (`services/assignmentLifecycle.ts`):
 | 8 | ~82 `console.error` en componentes y servicios | Ruido en la consola de producción. |
 | 9 | La guía en línea no envía `items` en `GAME_COMPLETE` | Un intento hecho en la plataforma no muestra desglose por reactivo; solo las entregas cargadas desde las hojas escritas lo tienen. |
 | 10 | Las calificaciones trimestrales no tienen historial | El botón "Cargar al grupo" sobrescribe el trimestre; no queda respaldo del valor anterior como sí ocurre al reabrir una actividad. |
-| 11 | Reactivo **E9** ambiguo en el examen | Dos opciones defendibles; 10 de 15 alumnos eligieron la que no es clave. Definir si se anula o se recalifica. |
+| 11 | Reactivo **E9**: **resuelto** | El docente decidió el 19/11/2026 mantener la clave en **C** (10 alumnos marcaron A). Sin cambios en las calificaciones. |
 
 ### 5.5 Cómo retomar
 1. `npm install` (activa los hooks de git).
@@ -449,7 +449,7 @@ Reglas de ciclo de vida (`services/assignmentLifecycle.ts`):
 - **Entregas cargadas:** nota por actividad, aciertos por campo y detalle de los **45 reactivos** (H8, H9, L15 narrativa y H10 reflexión).
 - **Calificaciones del Primer Trimestre cargadas:** los 15 alumnos tienen `grades[0]` con Lenguajes, Saberes, Ética y De lo Humano derivados del examen (Lenguajes sobre 15 y De lo Humano sobre 10). Verificado por API.
 - **Pendiente de decisión del docente:**
-  - **E9** es ambigua (la opción A del examen también es defendible): 10 de 15 la eligieron. Valorar si se anula o se re-califica.
+  - **E9**: resuelto el 19/11/2026 — la clave se queda en **C**; los 10 alumnos que marcaron A no acreditan ese reactivo.
   - **Iran Lugo** obtuvo 8/45; revisar la hoja con el alumno antes de asentarlo.
   - Los **3 reactivos de respuesta construida** de Saberes (rubrica de 7 puntos) siguen fuera de nuestro cálculo; Dirección los pondera como quinto bloque.
   - La guía en línea todavía no envía `items`, así que un intento nuevo no tendrá desglose por reactivo.
