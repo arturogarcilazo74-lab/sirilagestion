@@ -231,10 +231,10 @@ const CelebrationCanvas: React.FC = () => {
 
 /* --- Desglose de resultados de una actividad tipo examen (HTML) --- */
 const EXAMEN_CAMPOS = [
-    { nombre: 'Lenguajes', clave: 'Lenguajes', pre: 'L', total: 14 },
+    { nombre: 'Lenguajes', clave: 'Lenguajes', pre: 'L', total: 15 },
     { nombre: 'Saberes', clave: 'Saberes', pre: 'S', total: 10 },
     { nombre: 'Ética, Nat. y Soc.', clave: 'Etica', pre: 'E', total: 10 },
-    { nombre: 'De lo Humano', clave: 'Humano', pre: 'H', total: 9 }
+    { nombre: 'De lo Humano', clave: 'Humano', pre: 'H', total: 10 }
 ];
 
 const ExamBreakdown: React.FC<{
@@ -308,7 +308,7 @@ const ExamBreakdown: React.FC<{
 
             {!compacto && (
                 <p className="text-[9px] text-slate-400 leading-relaxed">
-                    ✓ correcto · ✗ incorrecto · · sin dato. Los 4 reactivos que se contestan en el cuadernillo se califican aparte.
+                    ✓ correcto · ✗ incorrecto · · sin dato. Incluye los reactivos abiertos: L15 (narrativa) y H10 (reflexión).
                 </p>
             )}
         </div>
