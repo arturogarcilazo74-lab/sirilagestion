@@ -1994,8 +1994,8 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
       {/* GRADING MODAL FOR NEM EVALUATIONS */}
       {
         gradingAssignment && gradingStudentId && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
-            <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl p-6 animate-slideUp">
+          <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+            <div className="bg-white rounded-t-3xl md:rounded-2xl w-full max-w-lg shadow-2xl p-4 md:p-6 animate-slideUp max-h-[92vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
                 <div>
                   <h3 className="font-bold text-slate-800 text-lg">Evaluación Docente</h3>
