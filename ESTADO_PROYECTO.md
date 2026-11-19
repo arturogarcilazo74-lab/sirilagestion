@@ -339,6 +339,13 @@ Si necesitas hacer modificaciones, aquí es donde debes buscar:
 - **Fase 3 — Actividades:** tarjetas de estadísticas en una fila, detalle del alumno como **hoja inferior** con encabezado y pie fijos, botones de 40 px en la lista y el modal de *Evaluación Docente* también como hoja inferior.
 - **Estilos globales:** en pantallas menores a 768 px los campos usan 16 px (evita el zoom automático de iOS), sin destello al tocar y con desplazamiento contenido.
 
+### 32. Captura de Dirección: clave oficial y 45 reactivos (Noviembre 19, 2026)
+- Llegó `FUNDAMENTACIÓN 6° GRADO PRIMER PERIODO.xlsx` (Dirección) con tres hojas: `6°` (captura de los 15 alumnos), `CLAVE` y `NARRATIVA` (rúbricas).
+- **Cotejo:** **0 diferencias** entre su captura y la nuestra en los 43 reactivos de opción múltiple. La clave oficial coincide en Lenguajes, Saberes, Ética y De lo Humano, incluidos **H8 = B** y **H9 = C**; L15 y H10 aparecen como “ABIERTA”.
+- **Lo que faltaba:** los dos abiertos **L15 (narrativa)** y **H10 (reflexión)**, que Dirección ya calificó 1/0. Se incorporaron → **45 reactivos**; nota = aciertos × 10 / 45; Lenguajes y De lo Humano pasan a 15 y 10 reactivos.
+- Casos: Lian no logró L15; Dayanna, Lian, Irán, Miguel, Roy y Victoria tienen H10 = 0. En la hoja de Dirección la celda de Victoria está vacía pero la contaron como error (su total marca 9/10), así que se registró 0.
+- **Pendiente:** los **3 reactivos de respuesta construida** de Saberes (columnas 34-53, con rúbrica de 7 puntos cada uno en la hoja `NARRATIVA`). Dirección los califica como un **quinto bloque** y su promedio general es el promedio de 5 bloques (Lenguajes, Saberes, reactivos, Ética, De lo Humano), distinto de nuestro promedio sobre 45 reactivos. Falta decidir si se incorporan y con qué peso.
+
 ---
 
 ## 4. Guía para Nuevas Modificaciones y Despliegue
@@ -428,12 +435,12 @@ Reglas de ciclo de vida (`services/assignmentLifecycle.ts`):
 
 ### 5.6 Examen del primer trimestre 6° A (datos cargados)
 - **Actividad en la plataforma:** *Examen primer periodo* (`id A1794983723513`), tipo Actividad HTML, 15 alumnos con entrega.
-- **Entregas cargadas:** nota por actividad, aciertos por campo y detalle de los **43 reactivos** (H8 y H9 incluidos desde el 18/11/2026).
-- **Calificaciones del Primer Trimestre cargadas:** los 15 alumnos tienen `grades[0]` con Lenguajes, Saberes, Ética y De lo Humano derivados del examen (Humano sobre 9 reactivos). Verificado por API.
+- **Entregas cargadas:** nota por actividad, aciertos por campo y detalle de los **45 reactivos** (H8, H9, L15 narrativa y H10 reflexión).
+- **Calificaciones del Primer Trimestre cargadas:** los 15 alumnos tienen `grades[0]` con Lenguajes, Saberes, Ética y De lo Humano derivados del examen (Lenguajes sobre 15 y De lo Humano sobre 10). Verificado por API.
 - **Pendiente de decisión del docente:**
   - **E9** es ambigua (la opción A del examen también es defendible): 10 de 15 la eligieron. Valorar si se anula o se re-califica.
-  - **Iran Lugo** obtuvo 7/43; revisar la hoja con el alumno antes de asentarlo.
-  - Los reactivos abiertos **L15 y H10** (además de SN1-SN3 del cuadernillo) no están calificados en ningún lado.
+  - **Iran Lugo** obtuvo 8/45; revisar la hoja con el alumno antes de asentarlo.
+  - Los **3 reactivos de respuesta construida** de Saberes (rubrica de 7 puntos) siguen fuera de nuestro cálculo; Dirección los pondera como quinto bloque.
   - La guía en línea todavía no envía `items`, así que un intento nuevo no tendrá desglose por reactivo.
   - No existe historial de calificaciones: si se vuelve a cargar un trimestre, se pierde el valor anterior.
 
