@@ -234,7 +234,7 @@ const EXAMEN_CAMPOS = [
     { nombre: 'Lenguajes', clave: 'Lenguajes', pre: 'L', total: 14 },
     { nombre: 'Saberes', clave: 'Saberes', pre: 'S', total: 10 },
     { nombre: 'Ética, Nat. y Soc.', clave: 'Etica', pre: 'E', total: 10 },
-    { nombre: 'De lo Humano', clave: 'Humano', pre: 'H', total: 7 }
+    { nombre: 'De lo Humano', clave: 'Humano', pre: 'H', total: 9 }
 ];
 
 const ExamBreakdown: React.FC<{

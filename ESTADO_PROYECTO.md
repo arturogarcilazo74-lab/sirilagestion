@@ -324,6 +324,21 @@ Si necesitas hacer modificaciones, aquí es donde debes buscar:
 - En el modal de resultados de una actividad (*Actividades* → celda del alumno) hay un selector de trimestre y el botón **"Cargar al grupo"**: escribe `grades[trimestre]` de todos los alumnos con resultados, tomando el porcentaje por campo (86 % → 8.6).
 - **Motivo:** los scripts de consola fallaban en silencio porque `prompt()` y `confirm()` **se bloquean** en esta app; el botón usa el `confirm` propio de la interfaz. Cuando se carga, sobrescribe el trimestre elegido (no hay historial de calificaciones, a diferencia de las actividades).
 
+### 30. Examen: faltaba la página 12 y con ella dos reactivos (Noviembre 18, 2026)
+- **Hallazgo:** el PDF del examen impreso (`primer evaluacion.pdf`) tenía 11 páginas; el docente envió la **página 12**, que cierra la sección *De lo Humano y lo Comunitario* con los reactivos **8, 9 y 10** (el 10 es abierto: “menciona tres situaciones…”).
+- **Consecuencia:** la hoja de respuestas tiene **nueve renglones calificables** en esa sección (el 10 dice “CONTESTAR EN EL EXAMEN”). Los renglones **H8 y H9** se habían descartado por error como sobrantes, así que se calificaba sobre **41** reactivos cuando son **43**.
+- **Clave confirmada por el docente:** H8 = **B** (grasas trans / sobrepeso / desnutrición), H9 = **C** (sándwich, agua y manzana).
+- **Relectura:** se leyeron H8 y H9 de las 15 hojas (montajes por alumno en `.tmp-trabajo/montaje`). Doce alumnos marcaron B y C; **Lian** C y A; **Irán** C y B; **Miguel** B y D; **Roy** dejó H7, H8 y H9 en blanco.
+- **Recalculado todo:** nota = aciertos × 10 / 43; porcentaje por campo con Humano sobre 9. Promedio del grupo **6.47** (antes 6.42).
+- **Actualizado en producción:** las 15 entregas (nota, porcentajes y 43 reactivos) y la calificación del Primer Trimestre de cada alumno, verificadas por API.
+- **UI:** los grupos de reactivos del modal docente y del portal de padres ahora esperan **9** reactivos de *De lo Humano* (antes 7), así que el contador muestra “N de 43”.
+
+### 31. Rediseño móvil del portal docente (Noviembre 18, 2026)
+- **Fase 1 — navegación:** `MobileLayout.tsx` reescrito. Barra inferior fija (Inicio · Alumnos · Tareas · Asistencia · Más), menú completo agrupado en *Trabajo diario*, *Materiales y apoyo*, *Gestión y familias* y *Sistema*, botones de 48 px, punto rojo de mensajes sin leer y área segura para iPhone. El contenido reserva espacio inferior.
+- **Fase 2 — Panel General:** tarjetas de métricas en 2 × 2 y el *Historial de Calificaciones* como lista de tarjetas (antes tabla con desplazamiento horizontal). La lógica se extrajo a `getHistorialAlumno`, que además aplica el “promedio de lo evaluado”.
+- **Fase 3 — Actividades:** tarjetas de estadísticas en una fila, detalle del alumno como **hoja inferior** con encabezado y pie fijos, botones de 40 px en la lista y el modal de *Evaluación Docente* también como hoja inferior.
+- **Estilos globales:** en pantallas menores a 768 px los campos usan 16 px (evita el zoom automático de iOS), sin destello al tocar y con desplazamiento contenido.
+
 ---
 
 ## 4. Guía para Nuevas Modificaciones y Despliegue
@@ -413,12 +428,12 @@ Reglas de ciclo de vida (`services/assignmentLifecycle.ts`):
 
 ### 5.6 Examen del primer trimestre 6° A (datos cargados)
 - **Actividad en la plataforma:** *Examen primer periodo* (`id A1794983723513`), tipo Actividad HTML, 15 alumnos con entrega.
-- **Entregas cargadas:** nota por actividad, aciertos por campo y detalle por reactivo de los 41 reactivos.
-- **Calificaciones del Primer Trimestre cargadas:** los 15 alumnos tienen `grades[0]` con Lenguajes, Saberes, Ética y De lo Humano derivados del examen (verificado por API el 18/11/2026). No se tocó el diagnóstico ni los trimestres 2 y 3.
+- **Entregas cargadas:** nota por actividad, aciertos por campo y detalle de los **43 reactivos** (H8 y H9 incluidos desde el 18/11/2026).
+- **Calificaciones del Primer Trimestre cargadas:** los 15 alumnos tienen `grades[0]` con Lenguajes, Saberes, Ética y De lo Humano derivados del examen (Humano sobre 9 reactivos). Verificado por API.
 - **Pendiente de decisión del docente:**
   - **E9** es ambigua (la opción A del examen también es defendible): 10 de 15 la eligieron. Valorar si se anula o se re-califica.
-  - **Iran Lugo** obtuvo 7/41; revisar la hoja con el alumno antes de asentarlo.
-  - Los reactivos abiertos **L15, SN1, SN2 y SN3** no están calificados en ningún lado.
+  - **Iran Lugo** obtuvo 7/43; revisar la hoja con el alumno antes de asentarlo.
+  - Los reactivos abiertos **L15 y H10** (además de SN1-SN3 del cuadernillo) no están calificados en ningún lado.
   - La guía en línea todavía no envía `items`, así que un intento nuevo no tendrá desglose por reactivo.
   - No existe historial de calificaciones: si se vuelve a cargar un trimestre, se pierde el valor anterior.
 

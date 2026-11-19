@@ -124,7 +124,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
       { clave: 'lenguajes', area: 'Lenguajes', pre: 'L', total: 14 },
       { clave: 'saberes', area: 'Saberes', pre: 'S', total: 10 },
       { clave: 'etica', area: 'Etica', pre: 'E', total: 10 },
-      { clave: 'humano', area: 'Humano', pre: 'H', total: 7 }
+      { clave: 'humano', area: 'Humano', pre: 'H', total: 9 }
     ];
     const conResultados = students.filter(s =>
       s.assignmentItemResults?.[assignment.id] || s.assignmentAreaResults?.[assignment.id]);
@@ -2179,7 +2179,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                 { nombre: 'Lenguajes', pre: 'L', total: 14 },
                 { nombre: 'Saberes', pre: 'S', total: 10 },
                 { nombre: 'Ética y Sociedades', pre: 'E', total: 10 },
-                { nombre: 'De lo Humano', pre: 'H', total: 7 }
+                { nombre: 'De lo Humano', pre: 'H', total: 9 }
               ];
               const claves = grupos.reduce<string[]>((acc, g) => {
                 for (let i = 1; i <= g.total; i++) acc.push(`${g.pre}${i}`);
