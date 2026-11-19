@@ -2007,6 +2007,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
                       <th className="border border-slate-200 p-2 text-center">Saberes y P.C.</th>
                       <th className="border border-slate-200 p-2 text-center">Ética, Nat. y Soc.</th>
                       <th className="border border-slate-200 p-2 text-center">De lo Humano</th>
+                      <th className="border border-slate-200 p-2 text-center">Reactivos</th>
                       <th className="border border-slate-200 p-2 text-center font-bold">Promedio</th>
                       <th className="border border-slate-200 p-2 text-center">Nivel</th>
                     </tr>
@@ -2015,7 +2016,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
                     {/* El diagnóstico se muestra aunque todavía no existan trimestres:
                         al inicio del ciclo suele ser el único dato capturado. */}
                     {(!reportStudent.grades || reportStudent.grades.length === 0) && !reportStudent.diagnosticGrade && (
-                      <tr><td colSpan={7} className="p-4 text-center text-slate-400">Sin calificaciones registradas</td></tr>
+                      <tr><td colSpan={8} className="p-4 text-center text-slate-400">Sin calificaciones registradas</td></tr>
                     )}
                     {reportStudent.diagnosticGrade && (() => {
                       const diag = reportStudent.diagnosticGrade as any;
@@ -2030,6 +2031,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
                           <td className="border border-slate-200 p-2 text-center text-amber-900">{sab > 0 ? sab.toFixed(1) : '-'}</td>
                           <td className="border border-slate-200 p-2 text-center text-amber-900">{eti > 0 ? eti.toFixed(1) : '-'}</td>
                           <td className="border border-slate-200 p-2 text-center text-amber-900">{hum > 0 ? hum.toFixed(1) : '-'}</td>
+                          <td className="border border-slate-200 p-2 text-center text-amber-900">-</td>
                           <td className="border border-slate-200 p-2 text-center font-bold text-amber-900">-</td>
                           <td className="border border-slate-200 p-2 text-center text-xs">-</td>
                         </tr>
@@ -2043,6 +2045,8 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
                           const sab = isObj ? Number(grade.saberes || 0) : Number(grade) || 0;
                           const eti = isObj ? Number(grade.etica || 0) : Number(grade) || 0;
                           const hum = isObj ? Number(grade.humano || 0) : Number(grade) || 0;
+                          const reac = isObj && (grade as any).reactivos !== undefined && (grade as any).reactivos !== null
+                            ? Number((grade as any).reactivos) : null;
 
                           return (
                             <tr key={idx}>
@@ -2051,6 +2055,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
                               <td className="border border-slate-200 p-2 text-center">{sab > 0 ? sab.toFixed(1) : '-'}</td>
                               <td className="border border-slate-200 p-2 text-center">{eti > 0 ? eti.toFixed(1) : '-'}</td>
                               <td className="border border-slate-200 p-2 text-center">{hum > 0 ? hum.toFixed(1) : '-'}</td>
+                              <td className="border border-slate-200 p-2 text-center">{reac !== null ? reac.toFixed(1) : '-'}</td>
                               <td className="border border-slate-200 p-2 text-center font-bold">{score > 0 ? score.toFixed(1) : '-'}</td>
                               <td className="border border-slate-200 p-2 text-center text-xs">
                                 {(() => {
