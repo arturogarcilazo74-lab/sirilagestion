@@ -7,6 +7,7 @@ import { Bell, Calendar as CalendarIcon, LogOut, MessageCircle, User, CheckCircl
 import { sendWhatsAppMessage } from '../whatsappUtils';
 import { buildGameSrcDoc } from '../services/htmlGameConfig';
 import { canStartAssignment } from '../services/assignmentLifecycle';
+import { generateCompleteStudentReport } from '../services/pdfGenerator';
 
 const CelebrationCanvas: React.FC = () => {
     const canvasRef = React.useRef<HTMLCanvasElement>(null);
@@ -394,6 +395,8 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
 
     // New Detail State
     const [behaviorLogs, setBehaviorLogs] = useState<BehaviorLog[]>([]);
+    // Descarga del informe completo en PDF (mismo generador que usa el docente)
+    const [descargandoInforme, setDescargandoInforme] = useState(false);
     const [activeDetail, setActiveDetail] = useState<'GRADES' | 'ATTENDANCE' | 'BEHAVIOR' | 'EXAM' | null>(null);
     const [honorRoll, setHonorRoll] = useState<any[]>([]);
     
@@ -1280,6 +1283,25 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                 }
             }
         } catch (e) { console.error("Refresh failed", e); }
+    };
+
+    /** Genera y descarga el informe completo del alumno (mismo PDF que usa el docente). */
+    const handleDescargarInforme = async () => {
+        if (!student) return;
+        setDescargandoInforme(true);
+        try {
+            let cfg: any = {};
+            try { cfg = JSON.parse(localStorage.getItem('SIRILA_CACHE_CONFIG') || '{}') || {}; } catch { cfg = {}; }
+            const logs = behaviorLogs && behaviorLogs.length
+                ? behaviorLogs
+                : await api.getStudentBehaviorLogs(student.id).catch(() => []);
+            await generateCompleteStudentReport(student, cfg, logs || [], assignments || []);
+        } catch (e) {
+            console.error('[Portal] informe completo', e);
+            alert('No se pudo generar el informe. Intenta de nuevo.');
+        } finally {
+            setDescargandoInforme(false);
+        }
     };
 
     const loadNotifications = async (studentId: string) => {
@@ -2296,6 +2318,16 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                 </span>
                             </div>
                         </div>
+
+                        {/* Descargar informe completo */}
+                        <button
+                            onClick={handleDescargarInforme}
+                            disabled={descargandoInforme}
+                            className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] disabled:opacity-60 text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-indigo-200 transition-all"
+                        >
+                            <Download size={18} />
+                            {descargandoInforme ? 'Generando informe…' : 'Descargar informe completo (PDF)'}
+                        </button>
 
                         {/* Data Sections */}
                         <div className="space-y-4">
