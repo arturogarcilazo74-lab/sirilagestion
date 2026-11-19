@@ -348,6 +348,17 @@ Si necesitas hacer modificaciones, aquí es donde debes buscar:
 
 ---
 
+### 33. Calificación como Dirección (5 bloques) y piso de 6 (Noviembre 19, 2026)
+- La calificación del examen se calcula como **promedio de 5 bloques de igual peso**: Lenguajes (15), Saberes (10), **Reactivos de respuesta construida** (3, rúbrica de 7 puntos), Ética (10) y De lo Humano (10), igual que FUNDAMENTACIÓN 6° GRADO PRIMER PERIODO.xlsx.
+- TrimesterGrade gana el campo opcional 
+eactivos; getTrimesterAvg divide entre 5 cuando existe. La boleta PDF agrega la columna **Reactivos**.
+- Datos en producción: grades[0] con los 5 bloques por alumno y ssignmentResults del examen con el promedio de 5 bloques. Verificado por API.
+- **Piso de 6:** toda calificación menor a 6 se sube a 6 (se reparte la diferencia entre los 5 bloques para que el promedio del trimestre dé exactamente 6.0). Subieron Dayanna, Miguel, Lian, Matías, Roy e Irán. Promedio del grupo: **6.93**.
+- **Pendiente:** la tabla de la boleta *en pantalla* (reporte del alumno) sigue con 4 columnas; falta la de Reactivos. El Excel con el piso quedó como 
+esultados_primer_trimestre_6A_minimo6.xlsx porque el original estaba bloqueado.
+
+---
+
 ## 4. Guía para Nuevas Modificaciones y Despliegue
 
 - **Base de Datos**: La base de datos de producción opera en MySQL en Hostinger. Las credenciales se gestionan a través de variables de entorno en el servidor (`server/.env`).
