@@ -502,7 +502,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn h-[calc(100vh-120px)] flex flex-col">
+    <div className="space-y-6 animate-fadeIn md:h-[calc(100vh-120px)] flex flex-col">
       {/* Header & Stats */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 flex-shrink-0">
         <div>
@@ -522,23 +522,23 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-shrink-0">
-        <div className="glass-card p-5 rounded-2xl flex items-center gap-4 hover:scale-[1.02] transition-transform cursor-default border border-white/50">
-          <div className="w-12 h-12 rounded-2xl bg-indigo-100 flex items-center justify-center text-indigo-600 shadow-sm">
+      <div className="grid grid-cols-3 gap-2 md:gap-4 flex-shrink-0">
+        <div className="glass-card p-3 md:p-5 rounded-2xl flex flex-col md:flex-row items-start md:items-center gap-1.5 md:gap-4 hover:scale-[1.02] transition-transform cursor-default border border-white/50">
+          <div className="hidden md:flex w-12 h-12 rounded-2xl bg-indigo-100 flex items-center justify-center text-indigo-600 shadow-sm">
             <Trophy size={24} />
           </div>
           <div>
-            <div className="text-2xl font-black text-slate-800">{assignments.length}</div>
-            <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Tareas</div>
+            <div className="text-lg md:text-2xl font-black text-slate-800">{assignments.length}</div>
+            <div className="text-[9px] md:text-xs font-bold text-slate-400 uppercase tracking-wider leading-tight">Total Tareas</div>
           </div>
         </div>
 
-        <div className="glass-card p-5 rounded-2xl flex items-center gap-4 hover:scale-[1.02] transition-transform cursor-default border border-white/50">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-100 flex items-center justify-center text-emerald-600 shadow-sm">
+        <div className="glass-card p-3 md:p-5 rounded-2xl flex flex-col md:flex-row items-start md:items-center gap-1.5 md:gap-4 hover:scale-[1.02] transition-transform cursor-default border border-white/50">
+          <div className="hidden md:flex w-12 h-12 rounded-2xl bg-emerald-100 flex items-center justify-center text-emerald-600 shadow-sm">
             <TrendingUp size={24} />
           </div>
           <div>
-            <div className="text-2xl font-black text-slate-800">
+            <div className="text-lg md:text-2xl font-black text-slate-800">
               {assignments.length > 0
                 ? Math.round(
                   assignments.reduce((acc, a) => {
@@ -548,19 +548,19 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                 )
                 : 0}%
             </div>
-            <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Cumplimiento</div>
+            <div className="text-[9px] md:text-xs font-bold text-slate-400 uppercase tracking-wider leading-tight">Cumplimiento</div>
           </div>
         </div>
 
-        <div className="glass-card p-5 rounded-2xl flex items-center gap-4 hover:scale-[1.02] transition-transform cursor-default border border-white/50">
-          <div className="w-12 h-12 rounded-2xl bg-blue-100 flex items-center justify-center text-blue-600 shadow-sm">
+        <div className="glass-card p-3 md:p-5 rounded-2xl flex flex-col md:flex-row items-start md:items-center gap-1.5 md:gap-4 hover:scale-[1.02] transition-transform cursor-default border border-white/50">
+          <div className="hidden md:flex w-12 h-12 rounded-2xl bg-blue-100 flex items-center justify-center text-blue-600 shadow-sm">
             <FileText size={24} />
           </div>
           <div>
-            <div className="text-2xl font-black text-slate-800">
+            <div className="text-lg md:text-2xl font-black text-slate-800">
               {assignments.filter(a => a.type !== 'TASK').length}
             </div>
-            <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Activas</div>
+            <div className="text-[9px] md:text-xs font-bold text-slate-400 uppercase tracking-wider leading-tight">Activas</div>
           </div>
         </div>
       </div>
@@ -1962,19 +1962,19 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                                   {isInteractive && (
                                     <button
                                       onClick={() => handleOpenInteractiveResult(student, assignment)}
-                                      className="p-1 text-indigo-600 hover:bg-indigo-100 rounded text-xs"
+                                      className="w-10 h-10 flex items-center justify-center text-indigo-600 active:bg-indigo-100 rounded-xl"
                                       title="Ver resultados e intentos"
                                     >
-                                      <Eye size={14} />
+                                      <Eye size={18} />
                                     </button>
                                   )}
                                   {isInteractive && (
                                     <button
                                       onClick={() => handleReopenAssignment(student, assignment.id)}
-                                      className="p-1 text-amber-600 hover:bg-amber-100 rounded"
+                                      className="w-10 h-10 flex items-center justify-center text-amber-600 active:bg-amber-100 rounded-xl"
                                       title="Reiniciar actividad para este alumno (en cualquier momento)"
                                     >
-                                      <RotateCcw size={14} />
+                                      <RotateCcw size={18} />
                                     </button>
                                   )}
                                 </div>
@@ -2051,10 +2051,10 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
 
       {/* INTERACTIVE RESULTS DETAIL MODAL */}
       {selectedInteractiveResult && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto space-y-6">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-end md:items-center justify-center p-0 md:p-4 z-50 animate-fadeIn">
+          <div className="bg-white rounded-t-3xl md:rounded-3xl max-w-lg w-full p-4 md:p-6 shadow-2xl border border-slate-100 max-h-[92vh] md:max-h-[90vh] overflow-y-auto space-y-5 md:space-y-6">
             {/* Header */}
-            <div className="flex items-start justify-between">
+            <div className="sticky -top-4 md:-top-6 z-20 bg-white -mx-4 md:-mx-6 px-4 md:px-6 -mt-4 md:-mt-6 pt-4 md:pt-6 pb-3 border-b border-slate-100 flex items-start justify-between">
               <div className="flex items-center gap-3">
                 <img
                   src={selectedInteractiveResult.student.avatar === "PENDING_LOAD" ? `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedInteractiveResult.student.name)}&background=random` : (selectedInteractiveResult.student.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedInteractiveResult.student.name)}&background=random`)}
@@ -2264,7 +2264,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
             </div>
 
             {/* Actions */}
-            <div className="flex flex-col sm:flex-row gap-2 pt-2">
+            <div className="sticky bottom-0 z-20 bg-white -mx-4 md:-mx-6 px-4 md:px-6 pb-1 pt-3 border-t border-slate-100 flex flex-col sm:flex-row gap-2">
               <button
                 onClick={() => handleReopenAssignment(selectedInteractiveResult.student, selectedInteractiveResult.assignment.id)}
                 className="flex-1 py-2.5 px-4 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-xl text-xs font-bold border border-amber-200 flex items-center justify-center gap-2 transition-all active:scale-95"
