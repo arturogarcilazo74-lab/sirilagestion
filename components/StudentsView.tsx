@@ -1492,7 +1492,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
         reportStudent && (
           <div className="fixed inset-0 z-[100] bg-white overflow-y-auto overflow-x-auto animate-fadeIn print:static print:overflow-visible print:h-auto print:bg-white">
             {/* Header Actions - Hidden on Print */}
-            <div className="sticky top-0 bg-slate-800 text-white p-4 flex flex-col md:flex-row justify-between items-center gap-4 print:hidden shadow-lg z-50">
+            <div className="sticky top-0 bg-slate-800 text-white p-2 md:p-4 flex flex-col md:flex-row justify-between items-center gap-2 md:gap-4 print:hidden shadow-lg z-50">
               <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-start">
                 <button
                   onClick={() => setReportStudent(null)}
@@ -1505,7 +1505,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
                 <h2 className="font-bold text-sm md:text-base">Vista Preliminar</h2>
               </div>
 
-              <div className="flex gap-2 flex-wrap justify-center w-full md:w-auto">
+              <div className="flex gap-1.5 md:gap-2 flex-wrap justify-center w-full md:w-auto">
                 <button
                   onClick={handlePrint}
                   className="bg-white text-slate-900 px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-slate-100 transition-colors text-sm flex-1 md:flex-none justify-center"
@@ -1716,7 +1716,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
             </div>
 
             {/* Report Content - A4 sized container */}
-            <div id="print-container" className="max-w-[210mm] mx-auto bg-white p-[10mm] min-h-[297mm] shadow-xl my-8 print:shadow-none print:m-0 print:w-full print:h-auto text-slate-900 text-sm">
+            <div id="print-container" className="max-w-[210mm] mx-auto bg-white p-3 md:p-[10mm] min-h-0 md:min-h-[297mm] shadow-xl my-2 md:my-8 print:shadow-none print:m-0 print:w-full print:h-auto text-slate-900 text-sm">
 
               {/* School Header */}
               <div className="flex border-b-2 border-slate-800 pb-6 mb-8 gap-6 items-center">
@@ -1862,7 +1862,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
               </div>
 
               {/* Stats Row */}
-              <div className="grid grid-cols-2 gap-8 mb-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 mb-8">
                 <div>
                   <h3 className="text-sm font-bold uppercase text-slate-600 border-b border-slate-200 pb-1 mb-3">Estadística de Asistencia</h3>
                   <div className="grid grid-cols-4 gap-2 text-center">
@@ -1999,7 +1999,8 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
               {/* Grades Table - Detailed components */}
               <div className="mb-8">
                 <h3 className="text-sm font-bold uppercase text-slate-600 border-b border-slate-200 pb-1 mb-4">Historial de Evaluaciones por Campo Formativo</h3>
-                <table className="w-full text-sm border-collapse border border-slate-200">
+                <div className="overflow-x-auto -mx-3 px-3 md:mx-0 md:px-0">
+                <table className="w-full text-xs md:text-sm border-collapse border border-slate-200 min-w-[560px]">
                   <thead className="bg-slate-100">
                     <tr>
                       <th className="border border-slate-200 p-2 text-left">Periodo</th>
@@ -2072,6 +2073,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
                         })}
                   </tbody>
                 </table>
+                </div>
               </div>
 
               {/* Observations and Suggestions Section */}
