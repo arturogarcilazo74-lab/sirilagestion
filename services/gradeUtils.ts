@@ -31,9 +31,13 @@ export const getTrimesterAvg = (g: any): number => {
   if (typeof g === 'number') return g;
   if (typeof g === 'string') return parseFloat(g) || 0;
   if (typeof g === 'object') {
-    // Siempre usar los 4 campos NEM y dividir entre 4
-    const suma = Number(g.lenguajes || 0) + Number(g.saberes || 0) + Number(g.etica || 0) + Number(g.humano || 0);
-    return suma / 4;
+    // Campos NEM y, si existe, el bloque de reactivos de respuesta construida
+    // (Dirección lo promedia como un quinto componente de igual peso).
+    const base = Number(g.lenguajes || 0) + Number(g.saberes || 0) + Number(g.etica || 0) + Number(g.humano || 0);
+    if (g.reactivos !== undefined && g.reactivos !== null) {
+      return (base + Number(g.reactivos || 0)) / 5;
+    }
+    return base / 4;
   }
   return 0;
 };

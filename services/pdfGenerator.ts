@@ -264,6 +264,7 @@ export const generateReportCard = async (student: Student, config: SchoolConfig)
                 sab > 0 ? sab.toFixed(1) : '-',
                 eti > 0 ? eti.toFixed(1) : '-',
                 hum > 0 ? hum.toFixed(1) : '-',
+                '-',
                 '-'
             ]);
         }
@@ -277,12 +278,14 @@ export const generateReportCard = async (student: Student, config: SchoolConfig)
                 const validFields = [leng, sab, eti, hum].filter(v => v > 0);
                 const avgBase = validFields.length > 0 ? (validFields.reduce((a, b) => a + b, 0) / validFields.length) : 0;
                 const avg = avgBase > 0 ? Math.min(10, avgBase + getSupportPoints(student, index)) : 0;
+                const reac = (grade as any).reactivos;
                 gradesData.push([
                     `Evaluación ${index + 1}`,
                     leng > 0 ? leng.toFixed(1) : '-',
                     sab > 0 ? sab.toFixed(1) : '-',
                     eti > 0 ? eti.toFixed(1) : '-',
                     hum > 0 ? hum.toFixed(1) : '-',
+                    reac !== undefined && reac !== null ? Number(reac).toFixed(1) : '-',
                     avg > 0 ? avg.toFixed(1) : '-'
                 ]);
             } else {
@@ -293,6 +296,7 @@ export const generateReportCard = async (student: Student, config: SchoolConfig)
                     val > 0 ? val.toFixed(1) : '-',
                     val > 0 ? val.toFixed(1) : '-',
                     val > 0 ? val.toFixed(1) : '-',
+                    '-',
                     val > 0 ? val.toFixed(1) : '-'
                 ]);
             }
@@ -325,19 +329,20 @@ export const generateReportCard = async (student: Student, config: SchoolConfig)
 
         autoTable(doc, {
             startY: 85,
-            head: [['Periodo', 'Lenguajes', 'Saberes y P.C.', 'Ética Nat. y Soc.', 'De lo Humano', 'Promedio']],
-            body: [...gradesData, ['PROMEDIO ACTUAL', '', '', '', '', average]],
+            head: [['Periodo', 'Lenguajes', 'Saberes y P.C.', 'Ética Nat. y Soc.', 'De lo Humano', 'Reactivos', 'Promedio']],
+            body: [...gradesData, ['PROMEDIO ACTUAL', '', '', '', '', '', average]],
             theme: 'grid',
             headStyles: { fillColor: COLORS.primary },
             footStyles: { fillColor: [240, 240, 240], textColor: COLORS.text, fontStyle: 'bold' },
             styles: { fontSize: 8, cellPadding: 2 },
             columnStyles: {
-                0: { cellWidth: 28, fontStyle: 'bold' },
-                1: { cellWidth: 24, halign: 'center' },
-                2: { cellWidth: 28, halign: 'center' },
-                3: { cellWidth: 32, halign: 'center' },
-                4: { cellWidth: 28, halign: 'center' },
-                5: { cellWidth: 22, halign: 'center', fontStyle: 'bold' }
+                0: { cellWidth: 26, fontStyle: 'bold' },
+                1: { cellWidth: 22, halign: 'center' },
+                2: { cellWidth: 26, halign: 'center' },
+                3: { cellWidth: 30, halign: 'center' },
+                4: { cellWidth: 24, halign: 'center' },
+                5: { cellWidth: 20, halign: 'center' },
+                6: { cellWidth: 20, halign: 'center', fontStyle: 'bold' }
             },
             didParseCell: (data) => {
                 if (data.section === 'body' && data.row.index === gradesData.length) {

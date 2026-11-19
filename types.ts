@@ -68,6 +68,8 @@ export interface TrimesterGrade {
   saberes: number;
   etica: number;
   humano: number;
+  /** Reactivos de respuesta construida (bloque que promedia Dirección como quinto componente). */
+  reactivos?: number;
 }
 
 export interface BehaviorLog {
