@@ -2026,6 +2026,16 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => {
+                                      setEditandoAlumnos(assignment);
+                                      setAlumnosEdit(Array.isArray((assignment as any).targetStudents) ? [...(assignment as any).targetStudents] : []);
+                                    }}
+                                    className="w-10 h-10 flex items-center justify-center text-indigo-600 active:bg-indigo-100 rounded-xl"
+                                    title="Editar alumnos asignados"
+                                  >
+                                    <Users size={18} />
+                                  </button>
                                   {score !== undefined && (
                                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${score >= 6 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
                                       {score}/10
