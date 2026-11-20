@@ -1796,7 +1796,6 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                 <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">Promedio final</span>
                                 {student?.grades && student.grades.length > 0 && (() => {
                                     const b = calculateStudentMetrics(student, assignments).breakdown;
-                                    if (!b.weighted) return null;
                                     return (
                                         <span className="text-[9px] text-slate-400 font-medium mt-1 leading-tight">
                                             Examen {b.academic.toFixed(1)} · Tareas {b.homework.toFixed(1)} · Cond. {b.conduct.toFixed(1)} · Asist. {b.attendance.toFixed(1)}
