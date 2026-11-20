@@ -1187,7 +1187,7 @@ export const DashboardView: React.FC<DashboardProps> = ({
                 </div>
               ) : (
                 honorRollStudents.map(({ student, metrics, globalAvg, position }) => {
-                  const honorScore = (metrics as any).honorScore || globalAvg;
+                  const honorScore = globalAvg;
                   return (
                     <div key={student.id} className="bg-white border border-slate-100 p-2.5 rounded-lg flex items-center justify-between shadow-sm hover:shadow-md transition-shadow">
                       <div className="flex items-center gap-2 truncate">
