@@ -1086,6 +1086,7 @@ export const DashboardView: React.FC<DashboardProps> = ({
           <div className="md:hidden space-y-2">
             {sortedStudents.map(student => {
               const { chips, avg } = getHistorialAlumno(student);
+              const met = calculateStudentMetrics(student, assignments);
               return (
                 <button
                   key={student.id}
@@ -1113,13 +1114,16 @@ export const DashboardView: React.FC<DashboardProps> = ({
                         </span>
                       ))}
                     </div>
+                    <p className="text-[10px] text-slate-500 font-semibold mt-1">
+                      Tareas {met.breakdown.homework.toFixed(1)} · Conducta {met.breakdown.conduct.toFixed(1)} · Asist. {met.breakdown.attendance.toFixed(1)}
+                    </p>
                   </div>
                   <span className={`shrink-0 font-bold text-sm px-2 py-1 rounded-full ${avg === 0 ? 'text-slate-400' :
                     avg >= 9 ? 'bg-emerald-100 text-emerald-800' :
                       avg >= 8 ? 'bg-blue-100 text-blue-800' :
                         avg >= 6 ? 'bg-yellow-100 text-yellow-800' :
                           'bg-red-100 text-red-800'}`}>
-                    {avg > 0 ? avg.toFixed(1) : '-'}
+                    {met.finalAvg !== '-' ? met.finalAvg : '-'}
                   </span>
                 </button>
               );
