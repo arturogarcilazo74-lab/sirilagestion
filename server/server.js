@@ -1156,6 +1156,31 @@ app.post('/sirila-v1/assignments', async (req, res) => {
 
     try {
         const pool = getPool();
+        // Protección del contenido HTML: el panel recibe las actividades sin
+        // htmlContent (pesa mucho y se recorta en /full-state), así que al
+        // guardar cambios menores (visibilidad, alumnos asignados) se conserva
+        // el HTML que ya estaba en la base en lugar de borrarlo.
+        try {
+            const [prevRows] = await pool.query('SELECT data_json FROM assignments WHERE id = ?', [a.id]);
+            if (prevRows.length) {
+                let prev = prevRows[0].data_json;
+                if (typeof prev === 'string') {
+                    try { prev = JSON.parse(prev); } catch (e) { prev = null; }
+                }
+                const prevHtml = prev && prev.interactiveData && prev.interactiveData.htmlContent;
+                if (prevHtml && (!a.interactiveData || !a.interactiveData.htmlContent)) {
+                    a.interactiveData = {
+                        ...(prev.interactiveData || {}),
+                        ...(a.interactiveData || {}),
+                        htmlContent: prevHtml
+                    };
+                    console.log('[ASSIGNMENT] htmlContent previo conservado:', prevHtml.length, 'chars');
+                }
+            }
+        } catch (e) {
+            console.warn('[ASSIGNMENT] No se pudo leer la actividad previa:', e.message);
+        }
+
         await pool.query(`
       INSERT INTO assignments (id, title, due_date, data_json)
       VALUES (?, ?, ?, ?)
