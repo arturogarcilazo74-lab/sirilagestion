@@ -1904,13 +1904,8 @@ export const StudentsView: React.FC<StudentsViewProps> = ({ students, onAdd, onE
                     <div className="bg-slate-50 p-2 rounded border border-slate-200">
                       <div className="text-xl font-bold text-blue-700">
                         {(() => {
-                          const studentAssignments = assignments.filter(a => 
-                            !a.targetGroup || a.targetGroup === reportStudent.group
-                          );
-                          const completedCount = studentAssignments.filter(a => (reportStudent.completedAssignmentIds || []).includes(a.id)).length;
-                          const actualTotal = studentAssignments.length;
-                          const rate = actualTotal > 0 ? (completedCount / actualTotal) * 100 : 0;
-                          return Math.round(Math.min(100, rate));
+                          // Mismo cálculo que el desglose del promedio (evita 78% vs 79%)
+                          return calculateStudentMetrics(reportStudent, assignments).hwPercentage;
                         })()}%
                       </div>
                       <div className="text-[10px] uppercase font-bold text-slate-500">Tareas</div>
