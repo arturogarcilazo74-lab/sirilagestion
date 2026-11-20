@@ -403,7 +403,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
     // UI State for pending WhatsApp notifications (bypasses popup blocker)
     const [pendingWhatsApp, setPendingWhatsApp] = useState<{ phone: string, msg: string, scoreStr: string, title: string, passed: boolean, feedback?: string } | null>(null);
 
-    const loadAssignments = useCallback(async (groupId?: string) => {
+    const loadAssignments = useCallback(async (groupId?: string, studentId?: string) => {
         if (!groupId) {
             console.warn('[ParentsPortal] loadAssignments: groupId is undefined/null! Student group missing.');
             return;
@@ -419,6 +419,11 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
             const filtered = all.filter((a: any) => {
                 // 1. Check basic visibility flag
                 if (a.isVisibleInParentsPortal === false) return false;
+
+                // 1b. Asignación individual: si la actividad trae alumnos, solo esos la ven
+                if (Array.isArray(a.targetStudents) && a.targetStudents.length > 0) {
+                    if (!studentId || !a.targetStudents.includes(studentId)) return false;
+                }
 
                 // 2. Global assignments (null, GLOBAL, TODOS, or empty)
                 const target = (a.targetGroup || '').toUpperCase().trim();
@@ -463,14 +468,14 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
         if (!isLoggedIn || !student) return;
 
         // Initial load of assignments when student is set
-        loadAssignments(student.group);
+        loadAssignments(student.group, student.id);
 
         const interval = setInterval(() => {
             loadMessages(student.id);
             loadNotifications(student.id);
             loadHonorRoll(student.group);
             refreshStudentData(); // Keep progress in sync
-            loadAssignments(student.group);   // Check for new tasks
+            loadAssignments(student.group, student.id);   // Check for new tasks
         }, 15000);
 
         return () => clearInterval(interval);
@@ -661,7 +666,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                     }, student).then(() => {
                         api.processQueue().catch(console.error);
                         if (student?.group) {
-                            loadAssignments(student.group);
+                            loadAssignments(student.group, student.id);
                         }
                     }).catch(submitErr => {
                         console.warn("submitAssignment notice:", submitErr);
@@ -952,7 +957,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
 
             setActiveWorksheet(null);
             if (student?.group) {
-                loadAssignments(student.group);
+                loadAssignments(student.group, student.id);
             }
 
             // 4. Download evidence
@@ -983,7 +988,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
             setSelectedZoneIds([]);
             setMatchedPairs([]);
             if (student?.group) {
-                loadAssignments(student.group); // Refresh assignments after completion
+                loadAssignments(student.group, student.id); // Refresh assignments after completion
             }
         }
     };
@@ -1201,7 +1206,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
             setActiveQuiz(null);
         }
         if (student?.group) {
-            loadAssignments(student.group); // Refresh assignments after completion
+            loadAssignments(student.group, student.id); // Refresh assignments after completion
         }
     };
     const [messages, setMessages] = useState<any[]>([]);
@@ -1223,7 +1228,7 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
         loadEvents();
         loadMessages(selStudent.id);
         console.log('[ParentsPortal] Calling loadAssignments with group:', selStudent.group);
-        loadAssignments(selStudent.group); // Fetch assignments with context
+        loadAssignments(selStudent.group, selStudent.id); // Fetch assignments with context
 
         // Fetch Behavior Logs
         api.getStudentBehaviorLogs(selStudent.id).then(logs => setBehaviorLogs(logs)).catch(err => console.error(err));

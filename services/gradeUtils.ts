@@ -107,7 +107,11 @@ export const calculateStudentMetrics = (
   const studentGroupName = normalizeGroup(student.group);
   const studentAssignments = finalAssignments.filter(a => {
     const tg = normalizeGroup(a.targetGroup);
-    return !tg || tg === 'GLOBAL' || tg === 'TODOS' || tg === studentGroupName;
+    if (tg && tg !== 'GLOBAL' && tg !== 'TODOS' && tg !== studentGroupName) return false;
+    // Asignación individual: si la actividad trae alumnos, solo cuenta para ellos.
+    const ts = (a as any).targetStudents;
+    if (Array.isArray(ts) && ts.length > 0) return ts.includes(student.id);
+    return true;
   });
   const completedCount = studentAssignments.filter(a =>
     (student.completedAssignmentIds || []).includes(a.id)

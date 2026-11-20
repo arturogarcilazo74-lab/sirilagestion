@@ -40,6 +40,9 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
   const [newDate, setNewDate] = useState(new Date().toISOString().split('T')[0]);
   const [isVisibleInParentsPortal, setIsVisibleInParentsPortal] = useState(true);
   const [targetGroup, setTargetGroup] = useState(defaultTargetGroup); // Default group
+  // Asignación individual: vacío = todo el grupo
+  const [soloAlumnos, setSoloAlumnos] = useState(false);
+  const [alumnosAsignados, setAlumnosAsignados] = useState<string[]>([]);
   // Campos formativos que evalúa la actividad (todos por defecto)
   const [enabledFields, setEnabledFields] = useState<CampoFormativo[]>([...CAMPOS_FORMATIVOS]);
 
@@ -336,6 +339,10 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newTitle.trim()) {
+      if (soloAlumnos && alumnosAsignados.length === 0) {
+        alert('Selecciona al menos un alumno o cambia a "Todo el grupo".');
+        return;
+      }
       setIsSaving(true);
       try {
         const newAssignment: Partial<Assignment> = {
@@ -344,6 +351,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
           type: (activityType === 'TASK' || activityType === 'CLASSWORK') ? activityType as any : 'INTERACTIVE',
           isVisibleInParentsPortal: isVisibleInParentsPortal,
           targetGroup: targetGroup.trim().toUpperCase() || 'GLOBAL',
+          targetStudents: soloAlumnos && alumnosAsignados.length > 0 ? alumnosAsignados : undefined,
           // Si el docente no marca ninguno, la actividad evalúa los cuatro campos.
           enabledFields: enabledFields.length > 0 ? enabledFields : [...CAMPOS_FORMATIVOS],
           instructions: (activityType === 'TASK' && newInstructions.trim()) ? newInstructions.trim() : undefined,
@@ -458,6 +466,8 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
         // Reset
         setNewTitle('');
         setIsAdding(false);
+        setSoloAlumnos(false);
+        setAlumnosAsignados([]);
         setActivityType('TASK');
         setIsVisibleInParentsPortal(true);
         setEnabledFields([...CAMPOS_FORMATIVOS]);
@@ -739,6 +749,60 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                         <div className="font-bold text-slate-700 text-sm">Visible inmediatamente en la App de Padres</div>
                         <div className="text-xs text-slate-400">Si desactivas esto, podrás publicarla después.</div>
                       </div>
+                    </div>
+
+                    {/* Asignación: grupo completo o alumnos específicos */}
+                    <div className="md:col-span-2 bg-white p-4 rounded-xl border border-slate-200">
+                      <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
+                        <div>
+                          <div className="font-bold text-slate-700 text-sm">¿A quién se le asigna?</div>
+                          <div className="text-xs text-slate-400">Todo el grupo o solo algunos alumnos.</div>
+                        </div>
+                        <div className="flex gap-1 bg-slate-100 rounded-xl p-1">
+                          <button
+                            type="button"
+                            onClick={() => { setSoloAlumnos(false); setAlumnosAsignados([]); }}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${!soloAlumnos ? 'bg-white shadow text-indigo-700' : 'text-slate-500'}`}
+                          >
+                            Todo el grupo
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSoloAlumnos(true)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${soloAlumnos ? 'bg-white shadow text-indigo-700' : 'text-slate-500'}`}
+                          >
+                            Algunos alumnos
+                          </button>
+                        </div>
+                      </div>
+
+                      {soloAlumnos && (
+                        <>
+                          <div className="flex items-center gap-2 mb-2">
+                            <button type="button" onClick={() => setAlumnosAsignados(students.map(s => s.id))} className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800">Todos</button>
+                            <span className="text-slate-300">·</span>
+                            <button type="button" onClick={() => setAlumnosAsignados([])} className="text-[11px] font-bold text-slate-500 hover:text-slate-700">Ninguno</button>
+                            <span className="ml-auto text-[11px] font-bold text-slate-500">{alumnosAsignados.length} seleccionado(s)</span>
+                          </div>
+                          <div className="max-h-56 overflow-y-auto divide-y divide-slate-100 rounded-xl border border-slate-100">
+                            {students.map(s => {
+                              const on = alumnosAsignados.includes(s.id);
+                              return (
+                                <label key={s.id} className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-slate-50">
+                                  <input
+                                    type="checkbox"
+                                    checked={on}
+                                    onChange={() => setAlumnosAsignados(prev => on ? prev.filter(x => x !== s.id) : [...prev, s.id])}
+                                    className="w-4 h-4 accent-indigo-600"
+                                  />
+                                  <span className="text-sm text-slate-700 truncate">{s.name}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                          <p className="text-[11px] text-slate-400 mt-2">Solo estos alumnos verán la actividad en su portal y contará para su avance.</p>
+                        </>
+                      )}
                     </div>
 
                     {/* Campos formativos evaluados */}
@@ -1732,7 +1796,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                     {assignments.map(assignment => (
                       <th key={assignment.id} className="p-4 font-medium text-slate-600 min-w-[180px] border-l border-slate-200 relative group bg-slate-50">
                         <div className="flex justify-between items-start gap-2">
-                          <span className="line-clamp-2 text-xs" title={assignment.title}>{assignment.title}</span>
+                          <span className="line-clamp-2 text-xs" title={assignment.title}>{assignment.title}{Array.isArray((assignment as any).targetStudents) && (assignment as any).targetStudents.length > 0 ? ` · ${(assignment as any).targetStudents.length} alumno(s)` : ""}</span>
                           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button
                               onClick={() => onUpdateAssignment(assignment.id, { isVisibleInParentsPortal: !assignment.isVisibleInParentsPortal })}
@@ -1944,7 +2008,7 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                                     <Circle size={20} className="text-slate-200" />
                                   )}
                                   <div>
-                                    <p className={`text-xs font-bold ${isCompleted ? 'text-emerald-700' : 'text-slate-600'}`}>{assignment.title}</p>
+                                    <p className={`text-xs font-bold ${isCompleted ? 'text-emerald-700' : 'text-slate-600'}`}>{assignment.title}{Array.isArray((assignment as any).targetStudents) && (assignment as any).targetStudents.length > 0 && !(assignment as any).targetStudents.includes(student.id) && <span className="text-[9px] font-bold text-amber-600"> (no asignada)</span>}</p>
                                     <p className="text-[9px] text-slate-400">Vence: {new Date(assignment.dueDate + (assignment.dueDate.includes('T') ? '' : 'T12:00:00')).toLocaleDateString()}</p>
                                   </div>
                                 </div>

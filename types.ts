@@ -163,6 +163,8 @@ export interface Assignment {
   interactiveData?: InteractiveData;
   isVisibleInParentsPortal?: boolean;
   targetGroup?: string; // NEW: To filter assignments by teacher group
+  /** Si viene con contenido, la actividad solo se asigna a esos alumnos (id). */
+  targetStudents?: string[];
   assignmentType?: 'STANDARD' | 'NEM_EVALUATION'; // To distinguish normal quizzes from teacher-only evaluations
   instructions?: string; // NEW: Optional instructions for the activity
   externalLinks?: string[]; // NEW: Optional links to videos or other pages
