@@ -359,6 +359,18 @@ esultados_primer_trimestre_6A_minimo6.xlsx porque el original estaba bloqueado.
 
 ---
 
+### 34. Consistencia de calificaciones, desglose y trabajo móvil (Noviembre 19-20, 2026)
+- **Un solo criterio de promedio del trimestre:** 5 bloques (4 campos + reactivos de respuesta construida) vía `getTrimesterAvg`, aplicado en el informe completo PDF, boleta, portal y panel. La columna **Reactivos** ya aparece en el PDF, la boleta en pantalla, el portal y el Excel.
+- **Desglose visible:** historial del panel (escritorio y móvil) y Lista de Promedios muestran Examen/Tareas/Conducta/Asistencia y el **promedio final**; el **Cuadro de Honor** se ordena, filtra y muestra con ese mismo promedio (antes usaba el puntaje interno).
+- **Portal de padres:** tarjeta “Promedio final” con desglose, descarga del **informe completo en PDF**, y la sección *Examen del trimestre* con **un solo examen** (el que tiene nota) y su desglose arriba.
+- **Asignación individual de actividades:** `targetStudents` en la creación y botón para **editar alumnos** después; el portal filtra por alumno, el cálculo de avance lo respeta y la matriz lo señala.
+- **Protección del HTML:** el servidor conserva `interactiveData.htmlContent` al guardar cambios menores (visibilidad o alumnos), que antes podían borrarlo.
+- **Móvil:** barra inferior de navegación, menú agrupado, panel con tarjetas y desglose, actividades con hojas inferiores y informe del alumno adaptable.
+- **Taller de refuerzo** (`Documents\6to_grado_26\taller_refuerzo_6to_primer_trimestre.html`): 20 reactivos (5 por campo) sobre los temas más fallados, **2 intentos** con opciones mezcladas en el segundo, **45 s por pregunta** y envío manual del resultado.
+- **Pendiente:** replicar en el PDF del portal el bloque “Criterios y Desglose del Promedio” con los cuatro recuadros.
+
+---
+
 ## 4. Guía para Nuevas Modificaciones y Despliegue
 
 - **Base de Datos**: La base de datos de producción opera en MySQL en Hostinger. Las credenciales se gestionan a través de variables de entorno en el servidor (`server/.env`).
