@@ -1239,18 +1239,23 @@ export const DashboardView: React.FC<DashboardProps> = ({
                 else if (globalAvg >= 6.5) badgeColor = 'bg-blue-50 text-blue-700 border-blue-100';
 
                 return (
-                  <div key={student.id} className="bg-white border border-slate-100 p-2.5 rounded-lg flex items-center justify-between shadow-sm hover:shadow-md transition-shadow">
-                    <div className="flex items-center gap-2 truncate">
-                      <img
-                        src={student.avatar === "PENDING_LOAD" ? `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random` : (student.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random`)}
-                        alt={student.name}
-                        className="w-7 h-7 rounded-full object-cover border border-slate-100 shrink-0"
-                      />
-                      <span className="font-semibold text-slate-700 text-xs truncate">{student.name}</span>
+                  <div key={student.id} className="bg-white border border-slate-100 p-2.5 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 truncate">
+                        <img
+                          src={student.avatar === "PENDING_LOAD" ? `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random` : (student.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=random`)}
+                          alt={student.name}
+                          className="w-7 h-7 rounded-full object-cover border border-slate-100 shrink-0"
+                        />
+                        <span className="font-semibold text-slate-700 text-xs truncate">{student.name}</span>
+                      </div>
+                      <span className={`font-bold text-xs px-2 py-0.5 border rounded-full shrink-0 ${badgeColor}`}>
+                        {globalAvg > 0 ? globalAvg.toFixed(1) : '-'}
+                      </span>
                     </div>
-                    <span className={`font-bold text-xs px-2 py-0.5 border rounded-full shrink-0 ${badgeColor}`}>
-                      {globalAvg > 0 ? globalAvg.toFixed(1) : '-'}
-                    </span>
+                    <p className="text-[10px] text-slate-500 font-medium mt-1 pl-9">
+                      Tareas {metrics.breakdown.homework.toFixed(1)} · Conducta {metrics.breakdown.conduct.toFixed(1)} · Asist. {metrics.breakdown.attendance.toFixed(1)}
+                    </p>
                   </div>
                 );
               })}
