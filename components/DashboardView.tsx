@@ -130,8 +130,8 @@ export const DashboardView: React.FC<DashboardProps> = ({
   // Ranking completo: se ordena a TODOS los alumnos para que el lugar sea real,
   // no el índice dentro de la lista filtrada.
   const rankedStudents = [...studentsWithMetrics].sort((a, b) => {
-    const scoreB = (b.metrics as any).honorScore ?? b.globalAvg;
-    const scoreA = (a.metrics as any).honorScore ?? a.globalAvg;
+    const scoreB = b.globalAvg;
+    const scoreA = a.globalAvg;
     if (scoreB !== scoreA) return scoreB - scoreA;
     if (b.metrics.behaviorPoints !== a.metrics.behaviorPoints) return b.metrics.behaviorPoints - a.metrics.behaviorPoints;
     return a.student.name.localeCompare(b.student.name);
@@ -140,7 +140,7 @@ export const DashboardView: React.FC<DashboardProps> = ({
   // Cuadro de Honor: solo los destacados, conservando su posición en el grupo.
   const honorRollStudents = rankedStudents
     .map((entry, index) => ({ ...entry, position: index + 1 }))
-    .filter(entry => ((entry.metrics as any).honorScore ?? entry.globalAvg) >= 8.0);
+    .filter(entry => entry.globalAvg >= 8.0);
 
   const interventionStudents = studentsWithMetrics.filter(s => {
     const avg = s.globalAvg;
@@ -1006,13 +1006,17 @@ export const DashboardView: React.FC<DashboardProps> = ({
               <thead>
                 <tr className="border-b border-slate-100 text-slate-500 text-xs uppercase tracking-wider">
                   <th className="py-3 pl-2 font-medium">Estudiante</th>
-                  <th className="py-3 font-medium">Evaluaciones Recientes</th>
-                  <th className="py-3 font-medium text-right pr-2">Promedio del trimestre</th>
+                  <th className="py-3 font-medium text-center">Examen / trimestre</th>
+                  <th className="py-3 font-medium text-center">Tareas</th>
+                  <th className="py-3 font-medium text-center">Conducta</th>
+                  <th className="py-3 font-medium text-center">Asistencia</th>
+                  <th className="py-3 font-medium text-right pr-2">Promedio final</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {sortedStudents.map((student) => {
                   const { chips, total, avg } = getHistorialAlumno(student);
+                  const met = calculateStudentMetrics(student, assignments);
 
                   return (
                     <tr
@@ -1055,14 +1059,17 @@ export const DashboardView: React.FC<DashboardProps> = ({
                           ))}
                         </div>
                       </td>
+                      <td className="py-3 text-center text-xs font-bold text-slate-600">{met.breakdown.weighted ? met.breakdown.homework.toFixed(1) : '-'}</td>
+                      <td className="py-3 text-center text-xs font-bold text-slate-600">{met.breakdown.weighted ? met.breakdown.conduct.toFixed(1) : '-'}</td>
+                      <td className="py-3 text-center text-xs font-bold text-slate-600">{met.breakdown.weighted ? met.breakdown.attendance.toFixed(1) : '-'}</td>
                       <td className="py-3 text-right pr-2">
-                        {avg > 0 ? (
-                          <span className={`font-bold text-sm px-2 py-1 rounded-full ${avg >= 9 ? 'bg-emerald-100 text-emerald-800' :
-                            avg >= 8 ? 'bg-blue-100 text-blue-800' :
-                              avg >= 6 ? 'bg-yellow-100 text-yellow-800' :
+                        {met.finalAvg !== '-' ? (
+                          <span className={`font-bold text-sm px-2 py-1 rounded-full ${Number(met.finalAvg) >= 9 ? 'bg-emerald-100 text-emerald-800' :
+                            Number(met.finalAvg) >= 8 ? 'bg-blue-100 text-blue-800' :
+                              Number(met.finalAvg) >= 6 ? 'bg-yellow-100 text-yellow-800' :
                                 'bg-red-100 text-red-800'
                             } `}>
-                            {avg.toFixed(1)}
+                            {met.finalAvg}
                           </span>
                         ) : (
                           <span className="text-slate-400 font-bold text-sm px-2 py-1">-</span>
