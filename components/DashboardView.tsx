@@ -34,11 +34,8 @@ const getHistorialAlumno = (student: any) => {
   const valorDe = (g: any) => {
     if (typeof g === 'number') return g;
     if (typeof g === 'string' && !isNaN(parseFloat(g))) return parseFloat(g);
-    if (typeof g === 'object' && g !== null) {
-      const campos = [g.lenguajes, g.saberes, g.etica, g.humano].map(v => Number(v) || 0).filter(v => v > 0);
-      return campos.length > 0 ? campos.reduce((a, b) => a + b, 0) / campos.length : 0;
-    }
-    return 0;
+    // Mismo criterio que la plataforma: 5 bloques cuando hay reactivos.
+    return getTrimesterAvg(g);
   };
   const chips = grades.slice(-5).map(valorDe);
   const evaluadas = grades
@@ -844,8 +841,7 @@ export const DashboardView: React.FC<DashboardProps> = ({
       </div>
 
       {/* KPI Cards - Navigation Enabled */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-        <div
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">        <div
           onClick={() => onNavigate('ATTENDANCE')}
           className="glass-card p-5 rounded-2xl cursor-pointer group relative overflow-hidden"
         >
@@ -1001,7 +997,8 @@ export const DashboardView: React.FC<DashboardProps> = ({
         <div className="lg:col-span-2 glass-card p-6 rounded-2xl">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg"><History size={20} /></div>
-            <h3 className="font-semibold text-slate-700">Historial de Calificaciones (Últimas 5)</h3>
+            <h3 className="font-semibold text-slate-700">Calificaciones por trimestre</h3>
+            <p className="text-[11px] text-slate-400 -mt-1">Es la calificación académica del trimestre (5 bloques). No incluye tareas, conducta ni asistencia.</p>
           </div>
 
           <div className="hidden md:block overflow-x-auto">
@@ -1010,7 +1007,7 @@ export const DashboardView: React.FC<DashboardProps> = ({
                 <tr className="border-b border-slate-100 text-slate-500 text-xs uppercase tracking-wider">
                   <th className="py-3 pl-2 font-medium">Estudiante</th>
                   <th className="py-3 font-medium">Evaluaciones Recientes</th>
-                  <th className="py-3 font-medium text-right pr-2">Promedio</th>
+                  <th className="py-3 font-medium text-right pr-2">Promedio del trimestre</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
