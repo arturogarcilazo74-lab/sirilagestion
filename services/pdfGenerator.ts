@@ -1286,6 +1286,7 @@ export const generateCompleteStudentReport = async (
             eti > 0 ? eti.toFixed(1) : '-',
             hum > 0 ? hum.toFixed(1) : '-',
             '-',
+            '-',
             '-'
         ]);
     }
@@ -1296,8 +1297,11 @@ export const generateCompleteStudentReport = async (
             const sab = Number(grade.saberes || 0);
             const eti = Number(grade.etica || 0);
             const hum = Number(grade.humano || 0);
-            const validFields = [leng, sab, eti, hum].filter(v => v > 0);
-            const avg = validFields.length > 0 ? (validFields.reduce((a, b) => a + b, 0) / validFields.length) : 0;
+            const reac = (grade as any).reactivos;
+            const tieneReactivos = reac !== undefined && reac !== null;
+            // Promedio del trimestre igual que en la plataforma: 5 bloques
+            // (los 4 campos + reactivos de respuesta construida) cuando existe.
+            const avg = getTrimesterAvg(grade);
             let nivel = '-';
             if (avg >= 9) nivel = 'DESTACADO';
             else if (avg >= 8) nivel = 'SATISFACTORIO';
@@ -1310,6 +1314,7 @@ export const generateCompleteStudentReport = async (
                 sab > 0 ? sab.toFixed(1) : '-',
                 eti > 0 ? eti.toFixed(1) : '-',
                 hum > 0 ? hum.toFixed(1) : '-',
+                tieneReactivos ? Number(reac).toFixed(1) : '-',
                 avg > 0 ? avg.toFixed(1) : '-',
                 nivel
             ]);
@@ -1327,26 +1332,27 @@ export const generateCompleteStudentReport = async (
         return 0;
     };
     const sum = grades.reduce((acc, g) => acc + getGradeValue(g), 0);
-    const evaluadasReporte = grades.map(getGradeValue).filter(v => v > 0);
+    const evaluadasReporte = grades.map(getTrimesterAvg).filter(v => v > 0);
     const overallAvg = evaluadasReporte.length > 0
         ? (evaluadasReporte.reduce((a, b) => a + b, 0) / evaluadasReporte.length).toFixed(1)
         : '-';
 
     autoTable(doc, {
         startY: y + 2,
-        head: [['Periodo', 'Lenguajes', 'Saberes P.C.', 'Ética Nat.Soc.', 'De lo Humano', 'Promedio', 'Nivel']],
-        body: [...gradesBody, ['PROMEDIO GENERAL', '', '', '', '', overallAvg, '']],
+        head: [['Periodo', 'Lenguajes', 'Saberes P.C.', 'Ética Nat.Soc.', 'De lo Humano', 'Reactivos', 'Promedio', 'Nivel']],
+        body: [...gradesBody, ['PROMEDIO GENERAL', '', '', '', '', '', overallAvg, '']],
         theme: 'grid',
         headStyles: { fillColor: COLORS.primary, fontSize: 7 },
         styles: { fontSize: 7, cellPadding: 2 },
         columnStyles: {
             0: { cellWidth: 24, fontStyle: 'bold' },
-            1: { cellWidth: 20, halign: 'center' },
-            2: { cellWidth: 22, halign: 'center' },
-            3: { cellWidth: 26, halign: 'center' },
-            4: { cellWidth: 24, halign: 'center' },
-            5: { cellWidth: 20, halign: 'center', fontStyle: 'bold' },
-            6: { cellWidth: 26, halign: 'center' }
+            1: { cellWidth: 18, halign: 'center' },
+            2: { cellWidth: 20, halign: 'center' },
+            3: { cellWidth: 24, halign: 'center' },
+            4: { cellWidth: 22, halign: 'center' },
+            5: { cellWidth: 18, halign: 'center' },
+            6: { cellWidth: 18, halign: 'center', fontStyle: 'bold' },
+            7: { cellWidth: 22, halign: 'center' }
         },
         didParseCell: (data) => {
             if (data.section === 'body' && data.row.index === gradesBody.length) {

@@ -2484,6 +2484,14 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
                                                             {Number(evalItem.gradeObj.humano).toFixed(1)}
                                                         </span>
                                                     </div>
+                                                    {(evalItem.gradeObj as any).reactivos !== undefined && (evalItem.gradeObj as any).reactivos !== null && (
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="text-[10px] font-bold text-slate-500">Reactivos</span>
+                                                            <span className={`text-[11px] font-black ${Number((evalItem.gradeObj as any).reactivos) >= 6 ? 'text-slate-700' : 'text-red-500'}`}>
+                                                                {Number((evalItem.gradeObj as any).reactivos).toFixed(1)}
+                                                            </span>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             )}
                                         </div>
