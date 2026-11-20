@@ -1367,13 +1367,13 @@ export const generateCompleteStudentReport = async (
     // Cómo se forma el promedio final (lo que más interesa a las familias)
     try {
         const met = calculateStudentMetrics(student, assignments as any);
-        if (met.breakdown.weighted) {
+        {
             const b = met.breakdown;
             doc.setFontSize(8);
             doc.setFont('helvetica', 'italic');
             doc.setTextColor(90, 90, 90);
             doc.text(
-                `Promedio final ${met.finalAvg} = Examen/trimestre ${b.academic.toFixed(1)} (${b.wAcademic}%) + Tareas ${b.homework.toFixed(1)} (${b.wHomework}%) + Conducta ${b.conduct.toFixed(1)} (${b.wConduct}%) + Asistencia ${b.attendance.toFixed(1)} (${b.wAttendance}%)`,
+                `Promedio final ${met.finalAvg} · Examen/trimestre ${b.academic.toFixed(1)} (${b.wAcademic}%) · Tareas ${b.homework.toFixed(1)} (${b.wHomework}%) · Conducta ${b.conduct.toFixed(1)} (${b.wConduct}%) · Asistencia ${b.attendance.toFixed(1)} (${b.wAttendance}%)`,
                 20, currentY
             );
             currentY += 6;
