@@ -1364,6 +1364,23 @@ export const generateCompleteStudentReport = async (
 
     let currentY = (doc as any).lastAutoTable.finalY + 10;
 
+    // Cómo se forma el promedio final (lo que más interesa a las familias)
+    try {
+        const met = calculateStudentMetrics(student, assignments as any);
+        if (met.breakdown.weighted) {
+            const b = met.breakdown;
+            doc.setFontSize(8);
+            doc.setFont('helvetica', 'italic');
+            doc.setTextColor(90, 90, 90);
+            doc.text(
+                `Promedio final ${met.finalAvg} = Examen/trimestre ${b.academic.toFixed(1)} (${b.wAcademic}%) + Tareas ${b.homework.toFixed(1)} (${b.wHomework}%) + Conducta ${b.conduct.toFixed(1)} (${b.wConduct}%) + Asistencia ${b.attendance.toFixed(1)} (${b.wAttendance}%)`,
+                20, currentY
+            );
+            currentY += 6;
+            doc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2]);
+        }
+    } catch (e) { /* el desglose es informativo */ }
+
     // === SECTION 2: ATTENDANCE AND CONDUCT SUMMARY ===
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
