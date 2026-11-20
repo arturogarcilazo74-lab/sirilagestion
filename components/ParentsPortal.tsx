@@ -2509,14 +2509,32 @@ export const ParentsPortal: React.FC<ParentsPortalProps> = ({ onBack, standalone
 
                             {/* Resultados del examen con desglose por reactivo */}
                             {(() => {
-                                const ids = Object.keys(student?.assignmentItemResults || {});
+                                // Solo las actividades que ya tienen calificación (evita
+                                // mostrar entregas viejas o incompletas duplicadas).
+                                const ids = Object.keys(student?.assignmentItemResults || {})
+                                    .filter(id => student?.assignmentResults?.[id] !== undefined)
+                                    .sort((a, b) => Number(student?.assignmentResults?.[b] || 0) - Number(student?.assignmentResults?.[a] || 0))
+                                    .slice(0, 1);
                                 if (!ids.length) return null;
+                                const met = calculateStudentMetrics(student as any, assignments);
+                                const bd = met.breakdown;
                                 return (
                                     <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
                                         <h4 className="text-xs font-black uppercase tracking-widest text-indigo-600 mb-4 flex items-center gap-2">
                                             <div className="w-1.5 h-1.5 rounded-full bg-indigo-600"></div>
                                             Examen del Trimestre
                                         </h4>
+                                        <div className="flex items-center justify-between gap-3 bg-slate-50 border border-slate-100 rounded-2xl p-3 mb-4">
+                                            <div className="min-w-0">
+                                                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Promedio final</p>
+                                                <p className="text-[10px] text-slate-500 mt-0.5 leading-tight">
+                                                    Examen {bd.academic.toFixed(1)} · Tareas {bd.homework.toFixed(1)} · Cond. {bd.conduct.toFixed(1)} · Asist. {bd.attendance.toFixed(1)}
+                                                </p>
+                                            </div>
+                                            <span className={`text-2xl font-black ${met.finalAvg === '-' ? 'text-slate-300' : Number(met.finalAvg) >= 6 ? 'text-emerald-600' : 'text-red-500'}`}>
+                                                {met.finalAvg}
+                                            </span>
+                                        </div>
                                         <div className="space-y-5">
                                             {ids.map(id => {
                                                 const asig = (assignments || []).find(a => a.id === id);
