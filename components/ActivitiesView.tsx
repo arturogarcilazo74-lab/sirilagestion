@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react'; // AI Feature Enable
 import { Student, Assignment, InteractiveQuestion, DraggableItem, InteractiveZone, CampoFormativo, CAMPOS_FORMATIVOS, CAMPO_FORMATIVO_LABELS } from '../types';
 import { api } from '../services/api';
 import { reopenAssignmentForStudent } from '../services/assignmentLifecycle';
-import { CheckCircle, Circle, Plus, Trash2, Calendar, BarChart3, AlertCircle, X, Save, Trophy, TrendingUp, Sparkles, HelpCircle, Eye, EyeOff, Upload, FileText, Image as ImageIcon, Move, Play, BrainCircuit, Settings, Check, MessageCircle, Gamepad2, ChevronDown, ChevronUp, Users, RotateCcw } from 'lucide-react';
+import { CheckCircle, Circle, Plus, Trash2, Calendar, BarChart3, AlertCircle, X, Save, Trophy, TrendingUp, Sparkles, HelpCircle, Eye, EyeOff, Upload, FileText, Image as ImageIcon, Move, Play, BrainCircuit, Settings, Check, MessageCircle, Gamepad2, ChevronDown, ChevronUp, Users, RotateCcw, Download } from 'lucide-react';
 import { sendWhatsAppMessage, getTaskMessage } from '../whatsappUtils';
 
 import { generateInteractiveQuiz, generateInteractiveQuizFromContext, generateWorksheetSVG, generateCompleteWorksheet, autoDetectWorksheetZones, generateNEMPlanning, generateHtmlGame } from '../services/ai';
@@ -338,6 +338,54 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
     setCurrentRect(null);
   };
 
+
+  /** Descarga un CSV (Excel) con las evidencias de una actividad: nota, campos y reactivos. */
+  const exportarEvidencias = (assignment: Assignment) => {
+    const conDatos = students.filter(s =>
+      s.assignmentResults?.[assignment.id] !== undefined ||
+      s.assignmentItemResults?.[assignment.id] ||
+      s.assignmentAreaResults?.[assignment.id] ||
+      (s.completedAssignmentIds || []).includes(assignment.id));
+    if (!conDatos.length) {
+      alert('Todavía no hay alumnos con resultados en esta actividad.');
+      return;
+    }
+
+    // Reactivos presentes en la actividad (L1.., S1.., E1.., H1..)
+    const claves = new Set<string>();
+    conDatos.forEach(s => Object.keys(s.assignmentItemResults?.[assignment.id] || {}).forEach(k => claves.add(k)));
+    const orden = (k: string) => 'LSEH'.indexOf(k[0]);
+    const items = Array.from(claves).sort((a, b) => orden(a) - orden(b) || Number(a.slice(1)) - Number(b.slice(1)));
+
+    const sep = ';';
+    const fila = (arr: (string | number)[]) => arr.map(v => `"${String(v).replace(/"/g, '""')}"`).join(sep);
+
+    const encabezado = ['Alumno', 'Grupo', 'Calificación', 'Intentos', 'Lenguajes %', 'Saberes %', 'Ética %', 'De lo Humano %', ...items];
+    const filas = conDatos.map(s => {
+      const areas = s.assignmentAreaResults?.[assignment.id] || {};
+      const it = s.assignmentItemResults?.[assignment.id] || {};
+      return fila([
+        s.name,
+        s.group || '',
+        s.assignmentResults?.[assignment.id] ?? '',
+        s.assignmentAttempts?.[assignment.id] ?? '',
+        areas['Lenguajes'] ?? '', areas['Saberes'] ?? '', areas['Etica'] ?? '', areas['Humano'] ?? '',
+        ...items.map(k => (it[k] === undefined ? '' : it[k]))
+      ]);
+    });
+
+    const titulo = `Actividad: ${assignment.title} | Vence: ${assignment.dueDate} | Exportado: ${new Date().toLocaleString('es-MX')}`;
+    const contenido = '\uFEFF' + fila([titulo]) + '\r\n' + fila(encabezado) + '\r\n' + filas.join('\r\n') + '\r\n';
+    const blob = new Blob([contenido], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Evidencias_${(assignment.title || 'actividad').replace(/[^\wáéíóúñÁÉÍÓÚÑ -]/g, '').replace(/\s+/g, '_')}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1818,6 +1866,13 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                               title="Compartir por WhatsApp"
                             >
                               <MessageCircle size={14} />
+                            </button>
+                            <button
+                              onClick={() => exportarEvidencias(assignment)}
+                              className="text-slate-400 hover:text-indigo-600 p-0.5"
+                              title="Exportar evidencias (Excel)"
+                            >
+                              <Download size={14} />
                             </button>
                             <button
                               onClick={() => {
