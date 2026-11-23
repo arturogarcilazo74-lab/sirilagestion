@@ -2965,3 +2965,89 @@ export const generateFirstMeetingPDF = async (
 
     doc.save(`Acta_Primera_Reunion_${options.groupName.replace(/\s+/g, '_')}.pdf`);
 };
+
+
+/**
+ * Lista de cotejo de una actividad: alumno, calificación, entregó y espacio
+ * para la firma. Sirve como evidencia para el expediente del grupo.
+ */
+export const generateActivityEvidencePDF = async (
+    assignment: Assignment,
+    students: Student[],
+    config: SchoolConfig
+) => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.width;
+
+    let printConfig = { ...config };
+    if (config.schoolLogo && !config.schoolLogo.startsWith('data:')) {
+        const base64Logo = await getBase64ImageFromUrl(config.schoolLogo);
+        if (base64Logo) printConfig.schoolLogo = base64Logo;
+    }
+
+    addHeader(doc, printConfig, 'EVIDENCIA DE ACTIVIDAD');
+
+    // Datos de la actividad
+    doc.setFontSize(11);
+    doc.setTextColor(COLORS.text[0], COLORS.text[1], COLORS.text[2]);
+    doc.setFont('helvetica', 'bold');
+    doc.text(String(assignment.title || 'Actividad'), 20, 60);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    const fecha = new Date(assignment.dueDate + (assignment.dueDate?.includes('T') ? '' : 'T12:00:00')).toLocaleDateString('es-MX');
+    doc.text(`Vence: ${fecha}   ·   Grupo: ${assignment.targetGroup || 'GLOBAL'}   ·   Tipo: ${assignment.type || 'ACTIVIDAD'}`, 20, 66);
+    doc.text(`Generado: ${new Date().toLocaleString('es-MX')}`, 20, 71);
+
+    const conDatos = students.filter(s =>
+        s.assignmentResults?.[assignment.id] !== undefined ||
+        s.assignmentItemResults?.[assignment.id] ||
+        (s.completedAssignmentIds || []).includes(assignment.id));
+    const lista = (conDatos.length ? conDatos : students).slice().sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+    const filas = lista.map((s, i) => {
+        const nota = s.assignmentResults?.[assignment.id];
+        const items = s.assignmentItemResults?.[assignment.id] || {};
+        const claves = Object.keys(items);
+        const aciertos = claves.filter(k => Number(items[k]) === 1).length;
+        const entrego = (s.completedAssignmentIds || []).includes(assignment.id) || nota !== undefined;
+        return [
+            String(i + 1),
+            s.name || '',
+            nota !== undefined ? Number(nota).toFixed(1) : '—',
+            claves.length ? `${aciertos}/${claves.length}` : '—',
+            entrego ? 'Sí' : 'No',
+            ''
+        ];
+    });
+
+    const entregas = filas.filter(f => f[4] === 'Sí').length;
+    const notas = filas.map(f => Number(f[2])).filter(n => !isNaN(n) && n > 0);
+    const promedio = notas.length ? (notas.reduce((a, b) => a + b, 0) / notas.length).toFixed(1) : '—';
+
+    autoTable(doc, {
+        startY: 76,
+        head: [['No.', 'Alumno', 'Calificación', 'Aciertos', 'Entregó', 'Firma']],
+        body: filas,
+        theme: 'grid',
+        headStyles: { fillColor: COLORS.primary, fontSize: 9 },
+        styles: { fontSize: 9, cellPadding: 3, minCellHeight: 10 },
+        columnStyles: {
+            0: { cellWidth: 12, halign: 'center' },
+            1: { cellWidth: 72 },
+            2: { cellWidth: 24, halign: 'center', fontStyle: 'bold' },
+            3: { cellWidth: 22, halign: 'center' },
+            4: { cellWidth: 18, halign: 'center' },
+            5: { cellWidth: 0 }
+        },
+        margin: { left: 20, right: 20 }
+    });
+
+    const finalY = (doc as any).lastAutoTable.finalY + 8;
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Entregas: ${entregas} de ${filas.length}   ·   Promedio del grupo: ${promedio}`, 20, finalY);
+
+    addFooter(doc, printConfig, String(assignment.targetGroup || 'GLOBAL'));
+    const limpio = String(assignment.title || 'actividad').replace(/[^\wáéíóúñÁÉÍÓÚÑ -]/g, '').replace(/\s+/g, '_');
+    doc.save(`Evidencia_${limpio}.pdf`);
+};

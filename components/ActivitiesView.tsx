@@ -4,6 +4,7 @@ import { api } from '../services/api';
 import { reopenAssignmentForStudent } from '../services/assignmentLifecycle';
 import { CheckCircle, Circle, Plus, Trash2, Calendar, BarChart3, AlertCircle, X, Save, Trophy, TrendingUp, Sparkles, HelpCircle, Eye, EyeOff, Upload, FileText, Image as ImageIcon, Move, Play, BrainCircuit, Settings, Check, MessageCircle, Gamepad2, ChevronDown, ChevronUp, Users, RotateCcw, Download } from 'lucide-react';
 import { sendWhatsAppMessage, getTaskMessage } from '../whatsappUtils';
+import { generateActivityEvidencePDF } from '../services/pdfGenerator';
 
 import { generateInteractiveQuiz, generateInteractiveQuizFromContext, generateWorksheetSVG, generateCompleteWorksheet, autoDetectWorksheetZones, generateNEMPlanning, generateHtmlGame } from '../services/ai';
 import * as pdfjsLib from 'pdfjs-dist';
@@ -1866,6 +1867,20 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
                               title="Compartir por WhatsApp"
                             >
                               <MessageCircle size={14} />
+                            </button>
+                            <button
+                              onClick={() => {
+                                let cfg: any = {};
+                                try { cfg = JSON.parse(localStorage.getItem('SIRILA_CACHE_CONFIG') || '{}') || {}; } catch { cfg = {}; }
+                                generateActivityEvidencePDF(assignment, students, cfg).catch(e => {
+                                  console.error('[evidencias PDF]', e);
+                                  alert('No se pudo generar el PDF de evidencias.');
+                                });
+                              }}
+                              className="text-slate-400 hover:text-red-600 p-0.5"
+                              title="Lista de cotejo en PDF (firmas)"
+                            >
+                              <FileText size={14} />
                             </button>
                             <button
                               onClick={() => exportarEvidencias(assignment)}
