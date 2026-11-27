@@ -336,6 +336,7 @@ const App: React.FC = () => {
             <ActivitiesView
               students={visibleStudents}
               assignments={visibleAssignments}
+              defaultTargetGroup={currentUser?.group}
               onToggleAssignment={store.handleToggleAssignment}
               onAddAssignment={handleAddAssignmentWrapper as any}
               onUpdateAssignment={store.handleUpdateAssignment}

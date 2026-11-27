@@ -33,14 +33,24 @@ export const ActivitiesView: React.FC<ActivitiesViewProps> = ({
   onAddAssignment,
   onUpdateAssignment,
   onDeleteAssignment,
-  defaultTargetGroup = '4 A',
+  defaultTargetGroup = '',
   onReopenAssignment
 }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newDate, setNewDate] = useState(new Date().toISOString().split('T')[0]);
   const [isVisibleInParentsPortal, setIsVisibleInParentsPortal] = useState(true);
-  const [targetGroup, setTargetGroup] = useState(defaultTargetGroup); // Default group
+  // Grupo por defecto: el del docente en sesión o, si no hay, el más frecuente del grupo visible
+  const grupoPorDefecto = defaultTargetGroup || (() => {
+    const conteo: Record<string, number> = {};
+    (students || []).forEach(s => {
+      const g = (s.group || '').trim().toUpperCase();
+      if (g) conteo[g] = (conteo[g] || 0) + 1;
+    });
+    const top = Object.entries(conteo).sort((a, b) => b[1] - a[1])[0];
+    return top ? top[0] : '';
+  })();
+  const [targetGroup, setTargetGroup] = useState(grupoPorDefecto); // Default group
   // Asignación individual: vacío = todo el grupo
   const [soloAlumnos, setSoloAlumnos] = useState(false);
   const [alumnosAsignados, setAlumnosAsignados] = useState<string[]>([]);
