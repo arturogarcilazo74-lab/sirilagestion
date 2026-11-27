@@ -1,3 +1,4 @@
+﻿import { normalizarAlumno, normalizarActividad, normalizarConfig } from '../services/groupUtils';
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../services/api';
 import { Student, Assignment, BehaviorLog, SchoolEvent, SchoolConfig, FinanceEvent, AttendanceStatus, StaffTask, Book, StaffAttendanceRecord, CTEGame, CTEPresentation, CTEGameResult, UseMovement } from '../types';
@@ -13,13 +14,13 @@ export const useAppStore = () => {
         try {
             const val = localStorage.getItem(key);
             if (val) {
-                console.log(`%c󰆓 Cargado de caché: ${key}`, "color: gray; font-size: 10px;");
+                console.log(`%có°†“ Cargado de cachÃ©: ${key}`, "color: gray; font-size: 10px;");
                 return JSON.parse(val);
             }
 
             const hasRealData = localStorage.getItem('SIRILA_HAS_REAL_DATA') === 'true';
             if (hasRealData) {
-                console.log(`%c󰆓 ${key} vacío (pero hay datos reales en otro lado)`, "color: gray; font-size: 10px;");
+                console.log(`%có°†“ ${key} vacÃ­o (pero hay datos reales en otro lado)`, "color: gray; font-size: 10px;");
                 if (Array.isArray(fallback)) return [];
                 if (key === 'SIRILA_CACHE_CONFIG') return DEFAULT_CONFIG;
                 return fallback;
@@ -62,7 +63,7 @@ export const useAppStore = () => {
             try {
                 await apiCall(data);
             } catch (e) {
-                console.log(`Acción encolada para ${key}`);
+                console.log(`AcciÃ³n encolada para ${key}`);
                 setPendingActions(api.getQueueLength());
             }
         }
@@ -72,7 +73,7 @@ export const useAppStore = () => {
     const saveToCache = (key: string, data: any) => {
         try {
             let dataToSave = data;
-            // Optimización: No guardar PDFs ni portadas en LocalStorage para no saturar los 5MB
+            // OptimizaciÃ³n: No guardar PDFs ni portadas en LocalStorage para no saturar los 5MB
             if (key === 'SIRILA_CACHE_BOOKS' && Array.isArray(data)) {
                 dataToSave = data.map((b: any) => {
                     const { fileUrl, cover, ...rest } = b;
@@ -81,7 +82,7 @@ export const useAppStore = () => {
             }
             if (key === 'SIRILA_CACHE_STUDENTS' && Array.isArray(data)) {
                 dataToSave = data.map((s: any) => {
-                    // Si el avatar es un Base64 muy largo, lo eliminamos del caché para no crashear la memoria de iOS
+                    // Si el avatar es un Base64 muy largo, lo eliminamos del cachÃ© para no crashear la memoria de iOS
                     if (s.avatar && s.avatar.length > 500) {
                         const { avatar, ...rest } = s;
                         return rest;
@@ -102,10 +103,10 @@ export const useAppStore = () => {
 
             localStorage.setItem(key, JSON.stringify(dataToSave));
         } catch (e) {
-            console.error(`ERROR CRÍTICO: No se pudo guardar ${key} en el dispositivo.`, e);
+            console.error(`ERROR CRÃTICO: No se pudo guardar ${key} en el dispositivo.`, e);
             const win = window as any;
             if (!win.localStorage_alert_shown) {
-                console.warn("⚠️ LocalStorage limit reached. Offline backup might be incomplete, but Cloud data is safe.");
+                console.warn("âš ï¸ LocalStorage limit reached. Offline backup might be incomplete, but Cloud data is safe.");
                 win.localStorage_alert_shown = true;
             }
         }
@@ -124,7 +125,7 @@ export const useAppStore = () => {
         saveToCache('SIRILA_CACHE_TASKS', t);
         saveToCache('SIRILA_CACHE_BOOKS', b);
         localStorage.setItem('SIRILA_HAS_REAL_DATA', 'true');
-        console.log("%c✓ Caché persistida localmente", "color: green; font-weight: bold;");
+        console.log("%câœ“ CachÃ© persistida localmente", "color: green; font-weight: bold;");
     };
 
     const [unreadCount, setUnreadCount] = useState(0);
@@ -157,7 +158,7 @@ export const useAppStore = () => {
             if (lsFinance) { setFinanceEvents(JSON.parse(lsFinance)); found = true; }
 
             if (found) {
-                if (!silent) alert("¡Datos antiguos recuperados! Pulsa 'Sincronizar con MySQL' en Configuración.");
+                if (!silent) alert("Â¡Datos antiguos recuperados! Pulsa 'Sincronizar con MySQL' en ConfiguraciÃ³n.");
                 setNeedsSync(true);
                 return true;
             }
@@ -233,18 +234,18 @@ export const useAppStore = () => {
     // -- AUTO-SYNC FROM SERVER UTIL --
     const reloadFromServer = async () => {
         try {
-            console.log("%c☁ Buscando datos en el servidor...", "color: blue; font-weight: bold;");
+            console.log("%câ˜ Buscando datos en el servidor...", "color: blue; font-weight: bold;");
             const result = await api.checkStatus();
 
             if (result) {
-                // Optimización crítica: Evitar re-renderizados y escrituras a localStorage si los datos no cambiaron.
+                // OptimizaciÃ³n crÃ­tica: Evitar re-renderizados y escrituras a localStorage si los datos no cambiaron.
                 const currentHash = JSON.stringify(result);
                 if (currentHash === lastSyncHashRef.current) {
                     return true;
                 }
                 lastSyncHashRef.current = currentHash;
 
-                console.log("%c✓ Datos recibidos del servidor (con cambios)", "color: green; font-weight: bold;");
+                console.log("%câœ“ Datos recibidos del servidor (con cambios)", "color: green; font-weight: bold;");
                 if (result.schoolConfig) setSchoolConfig(result.schoolConfig);
 
                 if (!result.isEmpty) {
@@ -286,10 +287,10 @@ export const useAppStore = () => {
 
                     // If response was optimized (stripped avatars), fetch them now
                     if (result.isOptimized) {
-                        console.log("%c🖼 Iniciando carga de avatars...", "color: purple;");
+                        console.log("%cðŸ–¼ Iniciando carga de avatars...", "color: purple;");
                         api.getAvatars().then(avatarMap => {
                             const count = Object.keys(avatarMap).length;
-                            console.log(`%c🖼 Avatars recibidos: ${count}`, "color: purple; font-weight: bold;");
+                            console.log(`%cðŸ–¼ Avatars recibidos: ${count}`, "color: purple; font-weight: bold;");
 
                             setStudents(prev => {
                                 const updated = prev.map(student => {
@@ -301,21 +302,21 @@ export const useAppStore = () => {
                                 saveToCache('SIRILA_CACHE_STUDENTS', updated);
                                 return updated;
                             });
-                            console.log("%c✓ Avatars aplicados y cacheados", "color: purple; font-weight: bold;");
+                            console.log("%câœ“ Avatars aplicados y cacheados", "color: purple; font-weight: bold;");
                         }).catch(err => console.error("Failed to lazy load avatars:", err));
                     }
 
                     // Flush to cache immediately
                     flushCache(cleanedStudents, a, e, l, result.schoolConfig || schoolConfig, f, t, b);
                 } else {
-                    console.warn("Servidor vacío. Intentando recuperación local...");
+                    console.warn("Servidor vacÃ­o. Intentando recuperaciÃ³n local...");
                     recoverLocalData(true);
                 }
                 return true;
             }
             return false;
         } catch (e) {
-            console.log("%c📵 Servidor desconectado. Usando memoria local del dispositivo.", "color: orange; font-weight: bold;");
+            console.log("%cðŸ“µ Servidor desconectado. Usando memoria local del dispositivo.", "color: orange; font-weight: bold;");
             return false;
         }
     };
@@ -340,7 +341,7 @@ export const useAppStore = () => {
         };
 
         const handleOnline = async () => {
-            console.log("%c✓ Conexión restaurada. Sincronizando...", "color: green; font-weight: bold;");
+            console.log("%câœ“ ConexiÃ³n restaurada. Sincronizando...", "color: green; font-weight: bold;");
             await checkQueue();
             const success = await reloadFromServer();
             setIsServerOffline(!success);
@@ -457,7 +458,7 @@ export const useAppStore = () => {
         });
         // Send to Server
         api.saveStudent(newStudent).catch(err => {
-            console.log("Acción encolada para sincronización manual.");
+            console.log("AcciÃ³n encolada para sincronizaciÃ³n manual.");
             setPendingActions(api.getQueueLength());
         });
     };
@@ -686,7 +687,7 @@ export const useAppStore = () => {
             totalAssignments: currentStudent.totalAssignments || assignments.length
         };
 
-        // ACTUALIZACIÓN SEGURA: Evitar sobrescribir entregas recientes del alumno
+        // ACTUALIZACIÃ“N SEGURA: Evitar sobrescribir entregas recientes del alumno
         api.checkStatus().then(state => {
             const serverStudent = state.students.find((s: any) => s.id === studentId);
             const baseStudent = serverStudent || currentStudent;
@@ -978,7 +979,7 @@ export const useAppStore = () => {
             createdAt: new Date().toISOString()
         };
         setUseMovements(prev => {
-            // Más reciente primero: el libro se lee de arriba hacia abajo.
+            // MÃ¡s reciente primero: el libro se lee de arriba hacia abajo.
             const next = [newMovement, ...prev];
             saveToCache('SIRILA_CACHE_USE_MOVEMENTS', next);
             return next;
@@ -996,8 +997,8 @@ export const useAppStore = () => {
     };
 
     /**
-     * Aplica en el estado global un alumno al que se le reabrió una actividad.
-     * Se recibe ya transformado para no duplicar la lógica de reapertura.
+     * Aplica en el estado global un alumno al que se le reabriÃ³ una actividad.
+     * Se recibe ya transformado para no duplicar la lÃ³gica de reapertura.
      */
     const handleApplyReopenedStudent = async (updatedStudent: Student) => {
         setStudents(prev => {
@@ -1101,20 +1102,20 @@ export const useAppStore = () => {
         const IS_LARGE_FILE = file.size > 1 * 1024 * 1024;
 
         if (IS_LARGE_FILE) {
-            const proceed = confirm(`⚠️ Archivo Pesado Detectado (${(file.size / 1024 / 1024).toFixed(2)} MB)\n\nIntentar mostrar estos datos en pantalla podría congelar tu navegador (pantalla blanca).\n\n¿Deseas enviarlos DIRECTAMENTE al servidor de base de datos? (Recomendado)\n\n[Aceptar] = Subir directo y recargar (Seguro)\n[Cancelar] = Intentar mostrar en pantalla (Riesgoso)`);
+            const proceed = confirm(`âš ï¸ Archivo Pesado Detectado (${(file.size / 1024 / 1024).toFixed(2)} MB)\n\nIntentar mostrar estos datos en pantalla podrÃ­a congelar tu navegador (pantalla blanca).\n\nÂ¿Deseas enviarlos DIRECTAMENTE al servidor de base de datos? (Recomendado)\n\n[Aceptar] = Subir directo y recargar (Seguro)\n[Cancelar] = Intentar mostrar en pantalla (Riesgoso)`);
 
             if (proceed) {
                 const reader = new FileReader();
                 reader.onload = async (e) => {
                     try {
-                        alert("Iniciando carga segura en segundo plano... Por favor espere y NO cierre esta ventana hasta ver el mensaje de éxito.");
+                        alert("Iniciando carga segura en segundo plano... Por favor espere y NO cierre esta ventana hasta ver el mensaje de Ã©xito.");
                         const content = e.target?.result as string;
                         const data = JSON.parse(content);
 
                         // Send directly to API avoiding React State (DOM) update
                         await api.syncAll(data);
 
-                        alert("✅ ¡Éxito! Los datos han sido restaurados directamente en la base de datos MySQL.\n\nLa página se recargará ahora.");
+                        alert("âœ… Â¡Ã‰xito! Los datos han sido restaurados directamente en la base de datos MySQL.\n\nLa pÃ¡gina se recargarÃ¡ ahora.");
                         window.location.reload();
                     } catch (err: any) {
                         console.error(err);
@@ -1135,27 +1136,27 @@ export const useAppStore = () => {
                 try {
                     data = JSON.parse(content);
                 } catch (jsonError) {
-                    alert("Error crítico: El archivo seleccionado no es un JSON válido o está corrupto.");
+                    alert("Error crÃ­tico: El archivo seleccionado no es un JSON vÃ¡lido o estÃ¡ corrupto.");
                     console.error("JSON Parse Error:", jsonError);
                     return;
                 }
 
                 // Basic Validation
                 if (!data.students && !data.schoolConfig && !data.assignments) {
-                    alert("Error: El archivo no parece contener datos válidos de Sirila (faltan estudiantes o configuración).");
+                    alert("Error: El archivo no parece contener datos vÃ¡lidos de Sirila (faltan estudiantes o configuraciÃ³n).");
                     return;
                 }
 
-                if (data.students && Array.isArray(data.students)) setStudents(data.students);
-                if (data.assignments && Array.isArray(data.assignments)) setAssignments(data.assignments);
+                if (data.students && Array.isArray(data.students)) setStudents(data.students.map(normalizarAlumno));
+                if (data.assignments && Array.isArray(data.assignments)) setAssignments(data.assignments.map(normalizarActividad));
                 if (data.behaviorLogs && Array.isArray(data.behaviorLogs)) setBehaviorLogs(data.behaviorLogs);
                 if (data.events && Array.isArray(data.events)) setEvents(data.events);
-                if (data.schoolConfig) setSchoolConfig(data.schoolConfig);
+                if (data.schoolConfig) setSchoolConfig(normalizarConfig(data.schoolConfig));
                 if (data.financeEvents && Array.isArray(data.financeEvents)) setFinanceEvents(data.financeEvents);
 
                 setNeedsSync(true);
 
-                alert('Datos cargados en memoria (Modo Seguro).\n\nAhora ve al botón verde "Sincronizar con MySQL" para guardarlos.');
+                alert('Datos cargados en memoria (Modo Seguro).\n\nAhora ve al botÃ³n verde "Sincronizar con MySQL" para guardarlos.');
 
             } catch (error: any) {
                 console.error('Import error:', error);
@@ -1169,20 +1170,20 @@ export const useAppStore = () => {
     };
 
     const handleSyncToDB = async () => {
-        if (!confirm('Esta acción iniciará una migración SECUENCIAL (paso a paso) de todos tus datos al servidor.\n\nEsto evitará errores de conexión, pero puede tomar unos minutos.\n\nMantén esta ventana abierta. ¿Continuar?')) return;
+        if (!confirm('Esta acciÃ³n iniciarÃ¡ una migraciÃ³n SECUENCIAL (paso a paso) de todos tus datos al servidor.\n\nEsto evitarÃ¡ errores de conexiÃ³n, pero puede tomar unos minutos.\n\nMantÃ©n esta ventana abierta. Â¿Continuar?')) return;
 
         let errores = [];
         let successCount = 0;
 
         try {
             // 1. CONFIG
-            console.log("Guardando Configuración...");
+            console.log("Guardando ConfiguraciÃ³n...");
             try {
                 await api.saveConfig(schoolConfig);
                 successCount++;
             } catch (e: any) {
                 console.error("Error Config:", e);
-                errores.push("Configuración: " + e.message);
+                errores.push("ConfiguraciÃ³n: " + e.message);
             }
 
             // 2. EVENTS
@@ -1228,11 +1229,11 @@ export const useAppStore = () => {
                 }
             }
 
-            let msg = `¡Proceso Finalizado!\n\nElementos guardados: ${successCount}`;
+            let msg = `Â¡Proceso Finalizado!\n\nElementos guardados: ${successCount}`;
             if (errores.length > 0) {
                 msg += `\n\nHubo ${errores.length} errores:\n` + errores.slice(0, 5).join('\n') + (errores.length > 5 ? '\n...' : '');
             } else {
-                msg += `\n\nTodo se guardó correctamente en la base de datos MySQL.`;
+                msg += `\n\nTodo se guardÃ³ correctamente en la base de datos MySQL.`;
             }
 
             setNeedsSync(false);
@@ -1241,7 +1242,7 @@ export const useAppStore = () => {
 
         } catch (error: any) {
             console.error("Error general:", error);
-            alert('Error inesperado en el proceso de migración: ' + error.message);
+            alert('Error inesperado en el proceso de migraciÃ³n: ' + error.message);
         }
     };
 
@@ -1251,7 +1252,7 @@ export const useAppStore = () => {
         setSchoolConfig(newConfig);
         // Cache is automatically saved by useEffect on schoolConfig
         api.saveConfig(newConfig).catch(err => {
-            console.log("Configuración guardada localmente (pendiente de servidor)");
+            console.log("ConfiguraciÃ³n guardada localmente (pendiente de servidor)");
             setPendingActions(api.getQueueLength());
         });
     };
