@@ -369,6 +369,16 @@ esultados_primer_trimestre_6A_minimo6.xlsx porque el original estaba bloqueado.
 - **Taller de refuerzo** (`Documents\6to_grado_26\taller_refuerzo_6to_primer_trimestre.html`): 20 reactivos (5 por campo) sobre los temas más fallados, **2 intentos** con opciones mezcladas en el segundo, **45 s por pregunta** y envío manual del resultado.
 - **Pendiente:** replicar en el PDF del portal el bloque “Criterios y Desglose del Promedio” con los cuatro recuadros.
 
+### 35. Carga de quinto, grupos por docente y protección de expedientes (Noviembre 27, 2026)
+- **Resultados de 5.° cargados:** actividad “Examen del Primer Periodo · 5.°” con 17 alumnos, nota oficial de la maestra (Fátima Yaniva Leal Llanes), los 45 reactivos y los porcentajes por campo. Jessica e Itzayana no se dieron de alta (no están en la plataforma) y Valeria quedó fuera por baja. El registro del cuaderno (asistencia, trabajo en clase, participación, tareas, disciplina y SI SAT) se guardó en **observaciones** de cada alumno, aplicando el piso de 6.
+- **Grupo por defecto en Actividades:** ya no está fijo en “4 A”; toma el grupo del **docente en sesión** y, si no lo tiene, el grupo más frecuente de los alumnos visibles.
+- **Grupos normalizados** (`services/groupUtils.ts`): “4 A”, “4a” y “4° A” se convierten en **4A** al cargar alumnos, actividades y personal, para que el nombre del maestro en los documentos coincida siempre con el grado y grupo.
+- **Expedientes protegidos:** `POST /students` ahora **combina** el registro previo con el nuevo (exámenes, reactivos, calificaciones y entregas) en lugar de reemplazarlo. Se detectó y restauró el caso de Yunuel Isaí, cuyo examen se había borrado al registrar el taller; quedó con 45 reactivos y 6.6 con desglose real por campo.
+- **Evidencias por actividad:** botón de exportación a **Excel (CSV)** con nota, campos y acierto por reactivo, y **lista de cotejo en PDF** con espacio para firma.
+- **Proyectos integradores de seis semanas:** sexto (“Agua y derechos”, eje Ética) y quinto (“Agua que nos une”, eje Saberes), con diagnóstico, fases, evaluación y metas por campo.
+- **Materiales del 25N:** plan de clase a distancia, tres hojas imprimibles, anexo con poema y relato originales, y actividad HTML que funciona sin conexión.
+- **Pendiente:** reiniciar la aplicación en Hostinger para que tome el servidor con la combinación de expedientes; y generar las actividades de la semana 1 de ambos proyectos para subirlas a la plataforma.
+
 ---
 
 ## 4. Guía para Nuevas Modificaciones y Despliegue
