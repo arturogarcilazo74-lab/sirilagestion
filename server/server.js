@@ -994,13 +994,49 @@ app.post('/sirila-v1/sync', async (req, res) => {
 // --- CRUD ENDPOINTS ---
 
 // STUDENTS
+/** Combina el registro previo con el nuevo: un guardado parcial no borra exámenes ni calificaciones. */
+function combinarAlumno(previo, nuevo) {
+    if (!previo || !Object.keys(previo).length) return nuevo;
+    const salida = { ...previo, ...nuevo };
+
+    ['grades'].forEach(k => {
+        const a = previo[k], b = nuevo[k];
+        if (Array.isArray(a) && Array.isArray(b)) {
+            const largo = Math.max(a.length, b.length);
+            salida[k] = Array.from({ length: largo }, (_, i) => {
+                const x = a[i], y = b[i];
+                if (y === undefined) return x;
+                if (x === undefined) return y;
+                if (x && y && typeof x === 'object' && typeof y === 'object' && !Array.isArray(y)) {
+                    return { ...x, ...y };
+                }
+                return y;
+            });
+        }
+    });
+
+    ['assignmentResults', 'assignmentAreaResults', 'assignmentItemResults', 'assignmentAttempts'].forEach(k => {
+        const a = previo[k], b = nuevo[k];
+        if (a && b && typeof a === 'object' && typeof b === 'object') {
+            salida[k] = { ...a, ...b };
+        }
+    });
+
+    salida.completedAssignmentIds = Array.from(new Set([
+        ...(previo.completedAssignmentIds || []),
+        ...(nuevo.completedAssignmentIds || [])
+    ]));
+
+    return salida;
+}
+
 app.post('/sirila-v1/students', async (req, res) => {
     const s = req.body;
     if (!useMySQL) {
         const data = readJSON();
         const idx = (data.students || []).findIndex(st => st.id === s.id);
         if (idx >= 0) {
-            data.students[idx] = s;
+            data.students[idx] = combinarAlumno(data.students[idx], s);
         } else {
             if (!data.students) data.students = [];
             data.students.push(s);
@@ -1010,8 +1046,21 @@ app.post('/sirila-v1/students', async (req, res) => {
     }
     const pool = getPool();
     try {
+        // Combinar con lo que ya está guardado: un guardado parcial no debe borrar
+        // el examen, los reactivos ni las calificaciones anteriores del alumno.
+        let previo = null;
+        try {
+            const [filas] = await pool.query('SELECT data_json FROM students WHERE id = ?', [s.id]);
+            if (filas.length) {
+                previo = typeof filas[0].data_json === 'string' ? JSON.parse(filas[0].data_json) : filas[0].data_json;
+            }
+        } catch (e) {
+            console.warn('[students] no se pudo leer el registro previo:', e.message);
+        }
+        const fusionado = combinarAlumno(previo || {}, s);
+
         // Remove PENDING_LOAD from data_json so it doesn't overwrite real avatar in DB
-        const studentForJson = { ...s };
+        const studentForJson = { ...fusionado };
         if (studentForJson.avatar === 'PENDING_LOAD') {
             delete studentForJson.avatar;
         }
